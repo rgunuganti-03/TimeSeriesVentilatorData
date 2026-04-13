@@ -1,6 +1,6 @@
 # Architecture — Ventilator Waveform Simulator
 **Project:** Time Series Ventilator Data — Aiden Medical Internship
-**Version:** 0.1 (Sandbox Prototype)
+**Version:** 0.2 (Phase 1 + Phase 2 Implemented)
 **Date:** March 2026
 
 ---
@@ -27,8 +27,9 @@ time-series-ventilator-data/
 │
 ├── generator/
 │   ├── __init__.py
-│   ├── waveforms.py           # Rule-based signal generation (Phase 1)
-│   └── conditions.py          # Condition presets (Normal, ARDS, COPD)
+│   ├── waveforms.py           # Phase 1: rule-based waveform generation
+│   ├── ode_solver.py          # Phase 2: scipy ODE single-compartment model
+│   └── conditions.py          # Condition presets (Normal, ARDS, COPD, Bronchospasm, Pneumonia)
 │
 ├── data/
 │   ├── exports/               # CSV exports of generated time-series
@@ -39,7 +40,8 @@ time-series-ventilator-data/
 │   └── dashboard.py           # Streamlit dashboard — sliders, plots, export
 │
 ├── tests/
-│   └── test_waveforms.py      # Basic unit tests for signal generation
+│   ├── test_waveforms.py      # Phase 1 unit tests (48 tests)
+│   └── test_ode_solver.py     # Phase 2 unit tests (32 tests)
 │
 └── requirements.txt           # Python dependencies
 ```
@@ -57,14 +59,14 @@ Responsible for all signal computation. Takes physiological parameters as input 
 - Sinusoidal and piecewise functions model the breath cycle
 - Parameters: respiratory rate, tidal volume, compliance, resistance, I:E ratio, PEEP
 
-**Phase 2 — ODE-Based (future):**
-- Replace `waveforms.py` with an ODE solver (e.g. `scipy.integrate.solve_ivp`)
-- Model lung as a single-compartment RC circuit
-- All other layers remain unchanged
+**Phase 2 — ODE-Based (implemented):**
+- `ode_solver.py` solves the single-compartment RC lung ODE using `scipy.integrate.solve_ivp`
+- Models PC-CMV ventilation; auto-PEEP emerges naturally in high-resistance conditions
+- All other layers (UI, data) are unchanged — same interface contract as Phase 1
 
-**Interface contract (must be preserved across phases):**
+**Interface contract (preserved across phases):**
 ```python
-def generate_breath_cycle(params: dict) -> dict:
+def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     # Returns: { "time": np.array, "pressure": np.array,
     #            "flow": np.array, "volume": np.array }
 ```
@@ -123,13 +125,15 @@ Streamlit dashboard providing:
 
 ---
 
-## Condition Presets (Phase 1)
+## Condition Presets
 
 | Condition | Compliance (mL/cmH₂O) | Resistance (cmH₂O/L/s) | Notes |
 |---|---|---|---|
 | Normal | 60 | 2 | Healthy adult baseline |
-| ARDS | 20 | 3 | Stiff lungs, low compliance |
-| COPD | 55 | 15 | Obstructed airways, high resistance |
+| ARDS | 18 | 4 | Severely stiff lungs, lung-protective TV |
+| COPD | 55 | 18 | High resistance, prolonged expiration, auto-PEEP risk |
+| Bronchospasm | 50 | 30 | Very high resistance, acute bronchoconstriction |
+| Pneumonia | 35 | 6 | Moderate compliance drop, alveolar consolidation |
 
 These values are adjustable via UI sliders — presets set the starting point.
 
@@ -138,7 +142,7 @@ These values are adjustable via UI sliders — presets set the starting point.
 ## Scaling Path
 
 ```
-Phase 1 (now)         Phase 2                  Phase 3
+Phase 1 (done)        Phase 2 (done)           Phase 3 (future)
 ─────────────         ──────────────────────   ──────────────────────────
 Rule-based        →   ODE lung mechanics    →  Learned generative model
 waveforms.py          ode_solver.py             ml_generator.py
@@ -175,5 +179,5 @@ numpy>=1.24
 pandas>=2.0
 plotly>=5.0
 streamlit>=1.30
-scipy>=1.10          # For Phase 2 ODE solver (install now, use later)
+scipy>=1.10          # Used by Phase 2 ODE solver (ode_solver.py)
 ```

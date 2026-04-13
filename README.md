@@ -119,12 +119,16 @@ required.
 # Run all tests
 python -m pytest tests/ -v
 
+# Run only Phase 1 rule-based tests
+python -m pytest tests/test_waveforms.py -v
+
 # Run only Phase 2 ODE tests
 python -m pytest tests/test_ode_solver.py -v
 ```
 
-The test suite covers interface contract, physiological plausibility, all five
-condition presets, and auto-PEEP detection (32 tests for Phase 2).
+The test suite covers interface contract, physiological plausibility, waveform
+shape, all five condition presets, condition differentiation, and auto-PEEP
+detection (48 tests for Phase 1, 32 tests for Phase 2).
 
 ---
 

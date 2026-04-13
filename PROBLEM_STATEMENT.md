@@ -1,6 +1,6 @@
 # Problem Statement — Ventilator Waveform Simulator
 **Project:** Time Series Ventilator Data — Aiden Medical Internship
-**Version:** 0.1 (Sandbox Prototype)
+**Version:** 0.2 (Phase 1 + Phase 2 Implemented)
 **Date:** March 2026
 
 ---
@@ -37,6 +37,8 @@ Build a modular, interactive ventilator waveform simulator that:
    - Normal healthy lung
    - ARDS (low compliance — stiff lungs)
    - COPD (high resistance — obstructed airways)
+   - Bronchospasm (very high resistance — acute bronchoconstriction)
+   - Pneumonia (moderate compliance reduction — alveolar consolidation)
 
 3. Provides an interactive UI with adjustable parameters via sliders
 
@@ -48,17 +50,21 @@ Build a modular, interactive ventilator waveform simulator that:
 
 ## Scope
 
-### In Scope (Phase 1 — Sandbox Prototype)
-- Rule-based synthetic waveform generation
-- Three condition presets
+### Implemented (Phase 1 — Rule-Based)
+- Rule-based synthetic waveform generation (`generator/waveforms.py`)
+- Five condition presets: Normal, ARDS, COPD, Bronchospasm, Pneumonia
 - Interactive visualization dashboard
 - CSV export of time-series data
 - JSON storage of scenario configuration
 - Locally runnable Python application
 
-### Out of Scope (Phase 1)
+### Implemented (Phase 2 — ODE Single-Compartment)
+- ODE lung mechanics model using `scipy.integrate.solve_ivp` (`generator/ode_solver.py`)
+- PC-CMV ventilation mode with emergent auto-PEEP in high-resistance conditions
+- Both models share the same interface and UI — switchable via sidebar radio button
+
+### Out of Scope (current)
 - Real patient data ingestion
-- ODE / differential equation lung mechanics model (Phase 2)
 - Cloud deployment
 - Multi-user access
 - Clinical validation
