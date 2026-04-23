@@ -76,6 +76,16 @@ class TestInterfaceContract:
         bad = {**NORMAL_PARAMS, "respiratory_rate": 100}
         with pytest.raises(ValueError):
             generate_breath_cycles(bad)
+    
+    def test_out_of_range_tidal_volume_raises(self):
+        bad = {**NORMAL_PARAMS, "tidal_volume_mL": 50}
+        with pytest.raises(ValueError):
+            generate_breath_cycles(bad)
+
+    def test_out_of_range_peep_raises(self):
+        bad = {**NORMAL_PARAMS, "peep_cmH2O": 25}
+        with pytest.raises(ValueError):
+            generate_breath_cycles(bad)
 
 
 # ---------------------------------------------------------------------------
@@ -184,4 +194,137 @@ class TestAutoPEEP:
         assert v_end_copd >= v_end_normal, (
             f"Expected COPD residual volume ({v_end_copd:.1f} mL) >= "
             f"Normal ({v_end_normal:.1f} mL)"
+        )
+
+class TestConditionDifferentiation:
+    """
+    Verifies that conditions produce outputs that are directionally correct
+    relative to each other — not just that they run, but that the ODE engine
+    reflects the right pathophysiology.
+
+    Note on COPD: the ODE engine expresses high resistance primarily through
+    the expiratory time constant (slow decay), not peak expiratory flow.
+    The COPD test therefore measures mid-expiration flow rather than peak flow,
+    which is the correct physiological signature for an RC circuit with high R.
+    """
+
+    def test_ards_peak_pressure_higher_than_normal(self):
+        """
+        ARDS (low compliance) must produce higher peak pressure than Normal
+        for a similar tidal volume target. Lower C means V/C is larger,
+        driving pressure must be higher to deliver the target volume.
+        """
+        normal = generate_breath_cycles(get_condition("Normal"), n_cycles=5)
+        ards   = generate_breath_cycles(get_condition("ARDS"),   n_cycles=5)
+        assert ards["pressure"].max() > normal["pressure"].max(), (
+            "ARDS peak pressure should exceed Normal due to lower compliance"
+        )
+
+    def test_copd_slower_expiratory_decay_than_normal(self):
+        """
+        COPD (high resistance) must show a slower expiratory flow decay than
+        Normal. At 1 second into expiration, COPD should have more remaining
+        flow magnitude than Normal — its expiratory tail persists longer.
+
+        This tests the RC time constant effect directly:
+            tau_COPD  = 18 × 55 / 1000 = 0.99s
+            tau_Normal =  2 × 60 / 1000 = 0.12s
+        COPD's time constant is ~8× longer, so at t=1s into expiration
+        COPD retains exp(-1/0.99) ≈ 37% of peak expiratory flow,
+        while Normal retains exp(-1/0.12) ≈ 0.02% — effectively zero.
+        """
+        normal = generate_breath_cycles(get_condition("Normal"), n_cycles=5)
+        copd   = generate_breath_cycles(get_condition("COPD"),   n_cycles=5)
+
+        def flow_at_1s_into_expiration(result, params):
+            """
+            Find the index where expiration begins (peak volume) in the
+            first breath cycle, then sample flow 1 second later.
+            """
+            rr       = params["respiratory_rate"]
+            ie       = params["ie_ratio"]
+            t_cycle  = 60.0 / rr
+            t_insp   = t_cycle * ie / (1.0 + ie)
+            # Expiration starts at t_insp in the first cycle
+            t_target = t_insp + 1.0
+            idx      = np.searchsorted(result["time"], t_target)
+            idx      = min(idx, len(result["flow"]) - 1)
+            return abs(result["flow"][idx])
+
+        flow_normal_at_1s = flow_at_1s_into_expiration(normal, get_condition("Normal"))
+        flow_copd_at_1s   = flow_at_1s_into_expiration(copd,   get_condition("COPD"))
+
+        assert flow_copd_at_1s > flow_normal_at_1s, (
+            f"COPD expiratory flow at 1s ({flow_copd_at_1s:.4f} L/s) should exceed "
+            f"Normal ({flow_normal_at_1s:.4f} L/s) — COPD decays more slowly"
+        )
+
+    def test_bronchospasm_peak_pressure_higher_than_normal(self):
+        """
+        Bronchospasm (very high resistance) must produce higher peak pressure
+        than Normal. The resistive term R × Flow is large at high R, driving
+        peak airway pressure well above the elastic component alone.
+        """
+        normal       = generate_breath_cycles(get_condition("Normal"),      n_cycles=5)
+        bronchospasm = generate_breath_cycles(get_condition("Bronchospasm"), n_cycles=5)
+        assert bronchospasm["pressure"].max() > normal["pressure"].max(), (
+            "Bronchospasm peak pressure should exceed Normal due to very high resistance"
+        )
+
+    def test_ards_peak_pressure_higher_than_pneumonia(self):
+        """
+        ARDS compliance (18) is lower than Pneumonia compliance (35),
+        so for similar tidal volume targets ARDS must produce higher
+        peak pressure than Pneumonia.
+        """
+        ards     = generate_breath_cycles(get_condition("ARDS"),     n_cycles=5)
+        pneumonia = generate_breath_cycles(get_condition("Pneumonia"), n_cycles=5)
+        assert ards["pressure"].max() > pneumonia["pressure"].max(), (
+            "ARDS peak pressure should exceed Pneumonia — ARDS has lower compliance"
+        )
+
+    def test_bronchospasm_slower_expiratory_decay_than_copd(self):
+        """
+        Bronchospasm resistance (30) exceeds COPD resistance (18), so
+        Bronchospasm must show an even slower expiratory decay than COPD.
+
+        We compare normalised flow — flow as a fraction of each condition's
+        own peak expiratory flow — to isolate the decay rate from the
+        difference in starting tidal volumes (COPD=550mL, Bronchospasm=420mL).
+
+            tau_Bronchospasm = 30 × 50 / 1000 = 1.50s
+            tau_COPD         = 18 × 55 / 1000 = 0.99s
+
+        At t=0.5s into expiration:
+            Bronchospasm retains exp(-0.5/1.50) ≈ 71% of peak flow
+            COPD         retains exp(-0.5/0.99) ≈ 60% of peak flow
+        """
+        copd         = generate_breath_cycles(get_condition("COPD"),        n_cycles=5)
+        bronchospasm = generate_breath_cycles(get_condition("Bronchospasm"), n_cycles=5)
+
+        def normalised_flow_at_0_5s(result, params):
+            """
+            Return flow magnitude at 0.5s into expiration, divided by the
+            peak expiratory flow magnitude for that condition.
+            """
+            rr       = params["respiratory_rate"]
+            ie       = params["ie_ratio"]
+            t_cycle  = 60.0 / rr
+            t_insp   = t_cycle * ie / (1.0 + ie)
+            t_target = t_insp + 0.5
+            idx      = np.searchsorted(result["time"], t_target)
+            idx      = min(idx, len(result["flow"]) - 1)
+
+            flow_at_0_5s   = abs(result["flow"][idx])
+            peak_exp_flow  = abs(result["flow"].min())   # most negative = peak expiratory
+
+            return flow_at_0_5s / peak_exp_flow if peak_exp_flow > 0 else 0.0
+
+        norm_copd         = normalised_flow_at_0_5s(copd,         get_condition("COPD"))
+        norm_bronchospasm = normalised_flow_at_0_5s(bronchospasm, get_condition("Bronchospasm"))
+
+        assert norm_bronchospasm > norm_copd, (
+            f"Bronchospasm normalised flow at 0.5s ({norm_bronchospasm:.4f}) "
+            f"should exceed COPD ({norm_copd:.4f}) — higher resistance means "
+            f"slower proportional decay"
         )
