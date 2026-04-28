@@ -45,10 +45,10 @@ COLOR_BORDER    = "#1e2a38"       # subtle border
 COLOR_TEXT      = "#c9d6e3"       # soft white text
 COLOR_MUTED     = "#4a5a6a"       # muted labels
 
-COLOR_PRESSURE  = "#38bdf8"       # sky blue  — Pressure
+COLOR_VOLUME    = "#38bdf8"       # sky blue  — Volume
+COLOR_PRESSURE  = "#34d399"       # emerald   — Pressure
 COLOR_FLOW      = "#fbbf24"       # amber     — Flow
-COLOR_VOLUME    = "#34d399"       # emerald   — Volume
-COLOR_ACCENT    = "#38bdf8"       # matches pressure
+COLOR_ACCENT    = "#38bdf8"       # matches volume
 
 SIGNAL_COLORS = {
     "pressure": COLOR_PRESSURE,
@@ -356,12 +356,18 @@ def render_metrics(result: dict, params: dict):
     plateau = np.percentile(result["pressure"], 90)   # proxy for plateau pressure
 
     c1, c2, c3, c4, c5, c6 = st.columns(6)
-    c1.metric("Peak Pressure",  f"{peak_p:.1f} cmH₂O")
-    c2.metric("Plateau ~P",     f"{plateau:.1f} cmH₂O")
-    c3.metric("Peak Flow ↑",    f"{peak_f:.2f} L/s")
-    c4.metric("Peak Flow ↓",    f"{min_f:.2f} L/s")
-    c5.metric("Tidal Volume",   f"{peak_v:.0f} mL")
-    c6.metric("Duration",       f"{t_total:.1f} s")
+    c1.metric("Peak Pressure", f"{peak_p:.1f}")
+    c1.write("cmH₂O")
+    c2.metric("Plateau ~P",     f"{plateau:.1f}")
+    c2.write("cmH₂O")
+    c3.metric("Peak Flow ↑",    f"{peak_f:.2f}")
+    c3.write("L/s")
+    c4.metric("Peak Flow ↓",    f"{min_f:.2f}")
+    c4.write("L/s")
+    c5.metric("Tidal Volume",   f"{peak_v:.0f}")
+    c5.write("mL")
+    c6.metric("Duration",       f"{t_total:.1f}")
+    c6.write("s")
 
 
 # ---------------------------------------------------------------------------
