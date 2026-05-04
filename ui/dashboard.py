@@ -3,9 +3,24 @@ ui/dashboard.py
 ---------------
 Streamlit dashboard for the Ventilator Waveform Simulator.
 
+Phase 3 changes:
+    - Engines: VCV and PCV only (rule-based and ODE models removed)
+    - Mode-specific sidebar parameters:
+        VCV: tidal volume slider, flow pattern radio button
+        PCV: inspiratory pressure slider, rise time slider
+        Both: respiratory rate, compliance, resistance, PEEP, I:E selectbox
+    - Tidal volume hidden in PCV (dependent variable)
+    - Inspiratory pressure hidden in VCV (not a VCV setting)
+    - I:E ratio as selectbox with labeled clinical options (1:1, 1:2, 1:3)
+    - Updated metric strip:
+        VCV: PPeak, Pplat, Driving P, Mean Paw, Peak Flow up,
+             Peak Flow down, Minute Vent, Auto-PEEP
+        PCV: PPeak, Delivered VT, Driving P, Mean Paw, Peak Flow up,
+             Fill Fraction, Minute Vent, Auto-PEEP
+    - Duration removed from metric strip (no clinical value)
+    - Plateau ~P hidden in PCV (equals PPeak by definition)
+
 Aesthetic direction: Clinical dark — precision instrument.
-Feels like an ICU monitor. Sharp signal colors, monospaced readouts,
-tight layout. Not a generic data app.
 
 Run from project root:
     streamlit run app.py
@@ -13,6 +28,7 @@ Run from project root:
 
 import json
 import os
+import sys
 from datetime import datetime
 
 import numpy as np
@@ -21,47 +37,67 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
-# Adjust path so this module works when called from app.py at project root
-import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from generator.conditions import get_condition, get_condition_meta, list_conditions
-from generator.waveforms import generate_breath_cycles as _generate_phase1
-from generator.ode_solver import generate_breath_cycles as _generate_phase2
+from generator.conditions    import get_condition, get_condition_meta, list_conditions
+from generator.vcv_generator import generate_breath_cycles as _gen_vcv
+from generator.pcv_generator import generate_breath_cycles as _gen_pcv
 
-_GENERATORS = {
-    "Phase 1 — Rule-Based":           _generate_phase1,
-    "Phase 2 — ODE Single-Compartment": _generate_phase2,
+
+# ---------------------------------------------------------------------------
+# Engine registry — VCV and PCV only
+# ---------------------------------------------------------------------------
+
+ENGINES = {
+    "VCV": {
+        "key":   "vcv",
+        "fn":    _gen_vcv,
+        "label": "VCV · Volume-Controlled",
+        "icon":  "▣",
+    },
+    "PCV": {
+        "key":   "pcv",
+        "fn":    _gen_pcv,
+        "label": "PCV · Pressure-Controlled",
+        "icon":  "◈",
+    },
+}
+
+ENGINE_NAMES = list(ENGINES.keys())
+
+# I:E ratio selectbox options — label → float value
+IE_OPTIONS = {
+    "1:1  (ie = 1.0)": 1.0,
+    "1:2  (ie = 0.5)": 0.5,
+    "1:3  (ie = 0.33)": 0.33,
 }
 
 
 # ---------------------------------------------------------------------------
-# Theme constants — one place to change colors
+# Theme constants
 # ---------------------------------------------------------------------------
 
-COLOR_BG        = "#0a0e14"       # near-black background
-COLOR_PANEL     = "#111720"       # slightly lighter panel
-COLOR_BORDER    = "#1e2a38"       # subtle border
-COLOR_TEXT      = "#c9d6e3"       # soft white text
-COLOR_MUTED     = "#4a5a6a"       # muted labels
+COLOR_BG       = "#0a0e14"
+COLOR_PANEL    = "#111720"
+COLOR_BORDER   = "#1e2a38"
+COLOR_TEXT     = "#c9d6e3"
+COLOR_MUTED    = "#4a5a6a"
 
-COLOR_VOLUME    = "#38bdf8"       # sky blue  — Volume
-COLOR_PRESSURE  = "#34d399"       # emerald   — Pressure
-COLOR_FLOW      = "#fbbf24"       # amber     — Flow
-COLOR_ACCENT    = "#38bdf8"       # matches volume
+COLOR_PRESSURE = "#38bdf8"   # sky blue
+COLOR_FLOW     = "#fbbf24"   # amber
+COLOR_VOLUME   = "#34d399"   # emerald
+COLOR_ACCENT   = "#a78bfa"   # violet — engine badge, PCV accents
 
 SIGNAL_COLORS = {
     "pressure": COLOR_PRESSURE,
     "flow":     COLOR_FLOW,
     "volume":   COLOR_VOLUME,
 }
-
 SIGNAL_UNITS = {
-    "pressure": "cmH₂O",
+    "pressure": "cmH\u2082O",
     "flow":     "L/s",
     "volume":   "mL",
 }
-
 SIGNAL_LABELS = {
     "pressure": "Pressure",
     "flow":     "Flow",
@@ -70,20 +106,20 @@ SIGNAL_LABELS = {
 
 
 # ---------------------------------------------------------------------------
-# Page config — must be the very first Streamlit call
+# Page config
 # ---------------------------------------------------------------------------
 
 def configure_page():
     st.set_page_config(
         page_title="Ventilator Waveform Simulator",
-        page_icon="🫁",
+        page_icon="\U0001fac1",
         layout="wide",
         initial_sidebar_state="expanded",
     )
 
 
 # ---------------------------------------------------------------------------
-# CSS injection — clinical dark theme
+# CSS
 # ---------------------------------------------------------------------------
 
 def inject_css():
@@ -91,13 +127,10 @@ def inject_css():
     <style>
       @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap');
 
-      /* Global background */
       .stApp, [data-testid="stAppViewContainer"] {{
           background-color: {COLOR_BG};
           color: {COLOR_TEXT};
       }}
-
-      /* Sidebar */
       [data-testid="stSidebar"] {{
           background-color: {COLOR_PANEL};
           border-right: 1px solid {COLOR_BORDER};
@@ -106,26 +139,17 @@ def inject_css():
           color: {COLOR_TEXT} !important;
           font-family: 'JetBrains Mono', monospace !important;
       }}
-
-      /* Sidebar sliders accent */
       .stSlider [data-baseweb="slider"] div[role="slider"] {{
-          background-color: {COLOR_ACCENT} !important;
-          border-color: {COLOR_ACCENT} !important;
+          background-color: {COLOR_PRESSURE} !important;
+          border-color: {COLOR_PRESSURE} !important;
       }}
-      .stSlider [data-baseweb="slider"] div[data-testid="stThumbValue"] {{
-          color: {COLOR_ACCENT} !important;
-      }}
-
-      /* Select box */
-      .stSelectbox label, .stSlider label {{
+      .stSelectbox label, .stSlider label, .stRadio label {{
           font-family: 'JetBrains Mono', monospace !important;
           font-size: 0.75rem !important;
           text-transform: uppercase;
           letter-spacing: 0.08em;
           color: {COLOR_MUTED} !important;
       }}
-
-      /* Metric cards */
       [data-testid="metric-container"] {{
           background-color: {COLOR_PANEL};
           border: 1px solid {COLOR_BORDER};
@@ -141,12 +165,10 @@ def inject_css():
       }}
       [data-testid="metric-container"] [data-testid="stMetricValue"] {{
           font-family: 'JetBrains Mono', monospace !important;
-          font-size: 1.4rem !important;
+          font-size: 1.35rem !important;
           font-weight: 600;
           color: {COLOR_TEXT} !important;
       }}
-
-      /* Header */
       .dash-header {{
           font-family: 'Syne', sans-serif;
           font-size: 1.6rem;
@@ -163,7 +185,22 @@ def inject_css():
           letter-spacing: 0.12em;
           margin-top: 2px;
       }}
-      .condition-badge {{
+      .badge {{
+          display: inline-block;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.65rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          padding: 3px 10px;
+          border-radius: 2px;
+          background-color: {COLOR_BORDER};
+          color: {COLOR_PRESSURE};
+          border: 1px solid {COLOR_PRESSURE}44;
+          margin-top: 6px;
+          margin-right: 6px;
+      }}
+      .badge-engine {{
           display: inline-block;
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.65rem;
@@ -176,89 +213,89 @@ def inject_css():
           color: {COLOR_ACCENT};
           border: 1px solid {COLOR_ACCENT}44;
           margin-top: 6px;
+          margin-right: 6px;
       }}
-      .signal-tag {{
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 0.6rem;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-      }}
-
-      /* Dividers */
-      hr {{ border-color: {COLOR_BORDER}; margin: 8px 0; }}
-
-      /* Download button */
-      .stDownloadButton button {{
-          font-family: 'JetBrains Mono', monospace !important;
-          font-size: 0.72rem !important;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          background-color: transparent !important;
-          border: 1px solid {COLOR_ACCENT}88 !important;
-          color: {COLOR_ACCENT} !important;
-          border-radius: 3px !important;
-      }}
-      .stDownloadButton button:hover {{
-          background-color: {COLOR_ACCENT}15 !important;
-          border-color: {COLOR_ACCENT} !important;
-      }}
-
-      /* Description box */
       .condition-desc {{
           font-family: 'JetBrains Mono', monospace;
           font-size: 0.68rem;
           color: {COLOR_MUTED};
           line-height: 1.6;
           padding: 8px 10px;
-          border-left: 2px solid {COLOR_ACCENT}66;
-          background-color: {COLOR_ACCENT}08;
+          border-left: 2px solid {COLOR_PRESSURE}66;
+          background-color: {COLOR_PRESSURE}08;
           border-radius: 0 3px 3px 0;
           margin-top: 6px;
       }}
-
-      /* Hide Streamlit branding */
+      .section-label {{
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 0.65rem;
+          color: {COLOR_MUTED};
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          margin: 10px 0 4px 0;
+      }}
+      .stDownloadButton button {{
+          font-family: 'JetBrains Mono', monospace !important;
+          font-size: 0.72rem !important;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          background-color: transparent !important;
+          border: 1px solid {COLOR_PRESSURE}88 !important;
+          color: {COLOR_PRESSURE} !important;
+          border-radius: 3px !important;
+      }}
+      .stDownloadButton button:hover {{
+          background-color: {COLOR_PRESSURE}15 !important;
+          border-color: {COLOR_PRESSURE} !important;
+      }}
+      hr {{ border-color: {COLOR_BORDER}; margin: 8px 0; }}
       #MainMenu, footer, header {{ visibility: hidden; }}
     </style>
     """, unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
-# Sidebar — condition selector + parameter sliders
+# Sidebar
 # ---------------------------------------------------------------------------
 
-def render_sidebar() -> tuple[dict, str, int, str]:
+def _ie_default_index(ie_value: float) -> int:
+    """Return the IE_OPTIONS index whose value is closest to ie_value."""
+    values = list(IE_OPTIONS.values())
+    return min(range(len(values)), key=lambda i: abs(values[i] - ie_value))
+
+
+def render_sidebar():
     """
     Render sidebar controls.
-    Returns (params dict, condition_name, n_cycles, model_name).
+    Returns (params dict, condition_name, engine_name, n_cycles).
     """
     with st.sidebar:
         st.markdown(
-            '<div class="dash-sub" style="margin-bottom:12px;">— Signal Parameters —</div>',
+            '<div class="dash-sub" style="margin-bottom:12px;">'
+            '— Signal Parameters —</div>',
             unsafe_allow_html=True,
         )
 
-        # Model selector
-        model_name = st.radio(
-            "Generator Model",
-            options=list(_GENERATORS.keys()),
+        # --- Engine selector --------------------------------------------
+        engine_name = st.selectbox(
+            "Simulation Engine",
+            options=ENGINE_NAMES,
             index=0,
             help=(
-                "Phase 1 uses rule-based analytical waveforms. "
-                "Phase 2 solves the single-compartment lung ODE with scipy."
+                "VCV: ventilator prescribes flow — pressure is derived. "
+                "PCV: ventilator prescribes pressure — volume is derived."
             ),
         )
+        engine_key = ENGINES[engine_name]["key"]
 
         st.markdown("<hr>", unsafe_allow_html=True)
 
-        # Condition selector
-        conditions = list_conditions()
+        # --- Condition selector -----------------------------------------
         condition_name = st.selectbox(
             "Respiratory Condition",
-            options=conditions,
+            options=list_conditions(),
             index=0,
         )
-
-        # Show condition description
         meta = get_condition_meta(condition_name)
         st.markdown(
             f'<div class="condition-desc">{meta["description"]}</div>',
@@ -266,115 +303,267 @@ def render_sidebar() -> tuple[dict, str, int, str]:
         )
 
         st.markdown("<hr>", unsafe_allow_html=True)
-
-        # Load preset as defaults for sliders
-        preset = get_condition(condition_name)
-
         st.markdown(
-            '<div class="dash-sub" style="margin-bottom:8px;">Adjust Parameters</div>',
+            '<div class="section-label">Parameters</div>',
             unsafe_allow_html=True,
         )
 
+        # Load condition preset — drives all slider default values.
+        # The key= argument on each widget includes condition_name and
+        # engine_name so Streamlit reinitialises the slider from value=
+        # whenever the condition or engine changes. Manual adjustments
+        # within a session are preserved until a new condition is selected.
+        preset = get_condition(condition_name)
+
+        # --- Shared parameters ------------------------------------------
         rr = st.slider(
-            "Respiratory Rate (bpm)",
-            min_value=5, max_value=40,
-            value=int(preset["respiratory_rate"]), step=1,
-        )
-        tv = st.slider(
-            "Tidal Volume (mL)",
-            min_value=100, max_value=900,
-            value=int(preset["tidal_volume_mL"]), step=10,
+            "Respiratory Rate (bpm)", 5, 40,
+            value=int(preset["respiratory_rate"]),
+            step=1,
+            key=f"rr_{condition_name}_{engine_name}",
         )
         compliance = st.slider(
-            "Compliance (mL/cmH₂O)",
-            min_value=5, max_value=150,
-            value=int(preset["compliance_mL_per_cmH2O"]), step=1,
+            "Compliance (mL/cmH\u2082O)", 5, 150,
+            value=int(preset["compliance_mL_per_cmH2O"]),
+            step=1,
+            key=f"compliance_{condition_name}_{engine_name}",
         )
         resistance = st.slider(
-            "Resistance (cmH₂O/L/s)",
-            min_value=1, max_value=50,
-            value=int(preset["resistance_cmH2O_L_s"]), step=1,
-        )
-        ie = st.slider(
-            "I:E Ratio (Insp fraction)",
-            min_value=0.20, max_value=1.0,
-            value=float(preset["ie_ratio"]), step=0.05,
-            help="0.5 = 1:2 ratio (standard). Lower = more time for expiration.",
-        )
-        peep = st.slider(
-            "PEEP (cmH₂O)",
-            min_value=0, max_value=20,
-            value=int(preset["peep_cmH2O"]), step=1,
-        )
-        n_cycles = st.slider(
-            "Breath Cycles",
-            min_value=1, max_value=20,
-            value=5, step=1,
+            "Resistance (cmH\u2082O/L/s)", 1, 50,
+            value=int(preset["resistance_cmH2O_L_s"]),
+            step=1,
+            key=f"resistance_{condition_name}_{engine_name}",
         )
 
+        # I:E ratio — selectbox with clinical labels, default from preset
+        ie_label = st.selectbox(
+            "I:E Ratio",
+            options=list(IE_OPTIONS.keys()),
+            index=_ie_default_index(preset["ie_ratio"]),
+            help="Inspiratory to expiratory time ratio.",
+            key=f"ie_{condition_name}_{engine_name}",
+        )
+        ie = IE_OPTIONS[ie_label]
+
+        peep = st.slider(
+            "PEEP (cmH\u2082O)", 0, 20,
+            value=int(preset["peep_cmH2O"]),
+            step=1,
+            key=f"peep_{condition_name}_{engine_name}",
+        )
+
+        # --- VCV-specific parameters ------------------------------------
+        if engine_key == "vcv":
+            st.markdown(
+                '<div class="section-label" style="margin-top:10px;">'
+                'VCV Settings</div>',
+                unsafe_allow_html=True,
+            )
+            tv = st.slider(
+                "Tidal Volume (mL)", 100, 900,
+                value=int(preset["tidal_volume_mL"]),
+                step=10,
+                help="Target volume delivered per breath.",
+                key=f"tv_{condition_name}_{engine_name}",
+            )
+            flow_pattern = st.radio(
+                "Flow Pattern",
+                options=["decelerating", "square"],
+                index=0,
+                help=(
+                    "Decelerating: higher initial flow, tapers through "
+                    "inspiration — most common clinical default. "
+                    "Square: constant flow — easier to read compliance "
+                    "and resistance from the pressure waveform."
+                ),
+                key=f"flow_{condition_name}_{engine_name}",
+            )
+
+        # --- PCV-specific parameters ------------------------------------
+        if engine_key == "pcv":
+            st.markdown(
+                '<div class="section-label" style="margin-top:10px;">'
+                'PCV Settings</div>',
+                unsafe_allow_html=True,
+            )
+            insp_pressure = st.slider(
+                "Inspiratory Pressure (cmH\u2082O above PEEP)",
+                min_value=1, max_value=35,
+                value=15, step=1,
+                help=(
+                    "Driving pressure above PEEP applied during inspiration. "
+                    "Delivered tidal volume depends on this setting plus "
+                    "patient compliance and resistance."
+                ),
+                key=f"insp_p_{condition_name}_{engine_name}",
+            )
+            rise_time = st.slider(
+                "Rise Time (s)",
+                min_value=0.0, max_value=0.4,
+                value=0.0, step=0.1,
+                help=(
+                    "Time for pressure to ramp from PEEP to PIP. "
+                    "0.0 = square wave step (maximum initial flow). "
+                    "Longer rise times reduce peak flow and improve "
+                    "patient comfort in spontaneously breathing patients."
+                ),
+                key=f"rise_{condition_name}_{engine_name}",
+            )
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+
+        n_cycles = st.slider("Breath Cycles", 1, 20, 5, step=1)
+
+        # --- Assemble params dict ---------------------------------------
         params = {
-            "respiratory_rate":          rr,
-            "tidal_volume_mL":           tv,
-            "compliance_mL_per_cmH2O":   compliance,
-            "resistance_cmH2O_L_s":      resistance,
-            "ie_ratio":                  ie,
-            "peep_cmH2O":                peep,
+            "respiratory_rate":        rr,
+            "compliance_mL_per_cmH2O": compliance,
+            "resistance_cmH2O_L_s":    resistance,
+            "ie_ratio":                ie,
+            "peep_cmH2O":              peep,
         }
 
-        return params, condition_name, n_cycles, model_name
+        if engine_key == "vcv":
+            params["tidal_volume_mL"] = tv
+            params["flow_pattern"]    = flow_pattern
+        else:
+            # tidal_volume_mL required by validator — actual volume
+            # is derived from insp_pressure inside the PCV generator
+            params["tidal_volume_mL"]     = 500
+            params["insp_pressure_cmH2O"] = insp_pressure
+            params["rise_time_s"]         = rise_time
+
+        return params, condition_name, engine_name, n_cycles
 
 
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
 
-def render_header(condition_name: str, model_name: str):
-    phase_label = "Phase 2 — ODE" if "Phase 2" in model_name else "Phase 1 — Rule-Based"
-    col_title, col_spacer = st.columns([3, 1])
-    with col_title:
-        st.markdown(
-            f"""
-            <div class="dash-header">Ventilator Waveform Simulator</div>
-            <div class="dash-sub">Aiden Medical · Time Series Ventilator Data · {phase_label}</div>
-            <div class="condition-badge">▶ {condition_name}</div>
-            """,
-            unsafe_allow_html=True,
-        )
+def render_header(condition_name, engine_name):
+    engine_label = ENGINES[engine_name]["label"]
+    engine_icon  = ENGINES[engine_name]["icon"]
+    st.markdown(
+        f'<div class="dash-header">Ventilator Waveform Simulator</div>'
+        f'<div class="dash-sub">Aiden Medical \u00b7 '
+        f'Time Series Ventilator Data</div>'
+        f'<span class="badge">\u25b6 {condition_name}</span>'
+        f'<span class="badge-engine">{engine_icon} {engine_label}</span>',
+        unsafe_allow_html=True,
+    )
     st.markdown("<hr style='margin-top:14px;'>", unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
-# Metric strip — peak values
+# Metric strip
 # ---------------------------------------------------------------------------
 
-def render_metrics(result: dict, params: dict):
-    peak_p  = result["pressure"].max()
-    peak_f  = result["flow"].max()
-    peak_v  = result["volume"].max()
-    min_f   = result["flow"].min()
-    t_total = result["time"].max()
-    plateau = np.percentile(result["pressure"], 90)   # proxy for plateau pressure
+def _metric_card(col, label, value, unit):
+    """Render one metric as a custom HTML card — no truncation."""
+    col.markdown(
+        f"""
+        <div style="
+            background-color: {COLOR_PANEL};
+            border: 1px solid {COLOR_BORDER};
+            border-radius: 4px;
+            padding: 12px 16px;
+        ">
+            <div style="
+                font-family: \'JetBrains Mono\', monospace;
+                font-size: 0.7rem;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: {COLOR_ACCENT};
+                margin-bottom: 4px;
+            ">{label}</div>
+            <div style="
+                font-family: \'JetBrains Mono\', monospace;
+                font-size: 1.4rem;
+                font-weight: 600;
+                color: {COLOR_TEXT};
+                line-height: 1;
+            ">{value} <span style="
+                font-size: 0.8rem;
+                font-weight: 400;
+                color: {COLOR_MUTED};
+            ">{unit}</span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    c1, c2, c3, c4, c5, c6 = st.columns(6)
-    c1.metric("Peak Pressure", f"{peak_p:.1f}")
-    c1.write("cmH₂O")
-    c2.metric("Plateau ~P",     f"{plateau:.1f}")
-    c2.write("cmH₂O")
-    c3.metric("Peak Flow ↑",    f"{peak_f:.2f}")
-    c3.write("L/s")
-    c4.metric("Peak Flow ↓",    f"{min_f:.2f}")
-    c4.write("L/s")
-    c5.metric("Tidal Volume",   f"{peak_v:.0f}")
-    c5.write("mL")
-    c6.metric("Duration",       f"{t_total:.1f}")
-    c6.write("s")
+
+def render_metrics(result, params, engine_key):
+    """
+    VCV strip (8 metrics):
+        PPeak | Pplat | Driving P | Mean Paw |
+        Peak Flow up | Peak Flow down | Minute Vent | Auto-PEEP
+
+    PCV strip (8 metrics):
+        PPeak | Delivered VT | Driving P | Mean Paw |
+        Peak Flow up | Fill Fraction | Minute Vent | Auto-PEEP
+
+    Pplat hidden in PCV — equals PPeak by definition.
+    Tidal volume shown as delivered VT in PCV (dependent variable).
+    Duration removed — no clinical diagnostic value.
+    Uses custom HTML cards to prevent value truncation.
+    """
+    peep      = params["peep_cmH2O"]
+    peak_p    = float(result["pressure"].max())
+    peak_f    = float(result["flow"].max())
+    min_f     = float(result["flow"].min())
+    peak_v    = float(result["volume"].max())
+    mean_paw  = float(np.mean(result["pressure"]))
+    auto_peep = max(0.0, float(result["pressure"][-1]) - peep)
+    rr        = params["respiratory_rate"]
+    minute_vent = rr * peak_v / 1000.0
+
+    cols = st.columns(8)
+
+    if engine_key == "vcv":
+        pplat     = float(np.percentile(result["pressure"], 90))
+        driving_p = pplat - peep
+
+        metrics = [
+            ("Peak Pressure", f"{peak_p:.1f}",    "cmH₂O"),
+            ("Plateau ~P",    f"{pplat:.1f}",     "cmH₂O"),
+            ("Driving P",     f"{driving_p:.1f}", "cmH₂O"),
+            ("Mean Paw",      f"{mean_paw:.1f}",  "cmH₂O"),
+            ("Peak Flow ↑", f"{peak_f:.2f}", "L/s"),
+            ("Peak Flow ↓", f"{min_f:.2f}",  "L/s"),
+            ("Minute Vent",   f"{minute_vent:.1f}", "L/min"),
+            ("Auto-PEEP",     f"{auto_peep:.2f}", "cmH₂O"),
+        ]
+
+    else:
+        insp_p    = params.get("insp_pressure_cmH2O", 0)
+        driving_p = float(insp_p)
+        pip       = peep + insp_p
+        pip_mask  = result["pressure"] >= (pip - 0.5)
+        fill_frac = float(np.clip(
+            np.sum(pip_mask) / len(result["pressure"]), 0.0, 1.0
+        )) if pip > peep else 0.0
+
+        metrics = [
+            ("Peak Pressure",  f"{peak_p:.1f}",    "cmH₂O"),
+            ("Delivered VT",   f"{peak_v:.0f}",    "mL"),
+            ("Driving P",      f"{driving_p:.1f}", "cmH₂O"),
+            ("Mean Paw",       f"{mean_paw:.1f}",  "cmH₂O"),
+            ("Peak Flow ↑", f"{peak_f:.2f}",  "L/s"),
+            ("Fill Fraction",  f"{fill_frac:.2f}", ""),
+            ("Minute Vent",    f"{minute_vent:.1f}", "L/min"),
+            ("Auto-PEEP",      f"{auto_peep:.2f}", "cmH₂O"),
+        ]
+
+    for col, (label, value, unit) in zip(cols, metrics):
+        _metric_card(col, label, value, unit)
 
 
 # ---------------------------------------------------------------------------
-# Waveform plot — 3 stacked subplots
+# Waveform plot
 # ---------------------------------------------------------------------------
 
-def render_waveform_plot(result: dict, condition_name: str):
+def render_waveform_plot(result, condition_name):
     time = result["time"]
 
     fig = make_subplots(
@@ -383,39 +572,37 @@ def render_waveform_plot(result: dict, condition_name: str):
         vertical_spacing=0.06,
     )
 
-    signals = ["pressure", "flow", "volume"]
+    for i, sig in enumerate(["pressure", "flow", "volume"], start=1):
+        col   = SIGNAL_COLORS[sig]
+        unit  = SIGNAL_UNITS[sig]
+        label = SIGNAL_LABELS[sig]
 
-    for i, sig in enumerate(signals, start=1):
-        y    = result[sig]
-        col  = SIGNAL_COLORS[sig]
-        unit = SIGNAL_UNITS[sig]
-        label= SIGNAL_LABELS[sig]
-
-        # Fill under curve for visual depth
-        fill_color = col.replace("#", "") 
         fig.add_trace(
             go.Scatter(
-                x=time, y=y,
+                x=time, y=result[sig],
                 mode="lines",
                 name=f"{label} ({unit})",
                 line=dict(color=col, width=1.8),
                 fill="tozeroy",
                 fillcolor=f"rgba({_hex_to_rgb(col)}, 0.07)",
-                hovertemplate=f"<b>{label}</b><br>t=%{{x:.3f}}s<br>%{{y:.2f}} {unit}<extra></extra>",
+                hovertemplate=(
+                    f"<b>{label}</b><br>"
+                    f"t=%{{x:.3f}}s<br>%{{y:.2f}} {unit}<extra></extra>"
+                ),
             ),
             row=i, col=1,
         )
 
-        # Y-axis zero line
         fig.add_hline(
             y=0,
             line=dict(color=COLOR_BORDER, width=1, dash="dot"),
             row=i, col=1,
         )
-
-        # Y-axis label
         fig.update_yaxes(
-            title_text=f"{label}<br><span style='font-size:9px'>{unit}</span>",
+            title_text=(
+                f"{label}<br>"
+                f"<span style='font-size:9px'>{unit}</span>"
+            ),
             title_font=dict(color=col, size=11, family="JetBrains Mono"),
             tickfont=dict(color=COLOR_MUTED, size=9, family="JetBrains Mono"),
             gridcolor=COLOR_BORDER,
@@ -432,12 +619,11 @@ def render_waveform_plot(result: dict, condition_name: str):
         showgrid=True,
         row=3, col=1,
     )
-    # Hide x-axis labels on rows 1 and 2
     for r in [1, 2]:
         fig.update_xaxes(showticklabels=False, row=r, col=1)
 
     fig.update_layout(
-        height=620,
+        height=640,
         paper_bgcolor=COLOR_BG,
         plot_bgcolor=COLOR_PANEL,
         font=dict(family="JetBrains Mono", color=COLOR_TEXT),
@@ -446,79 +632,80 @@ def render_waveform_plot(result: dict, condition_name: str):
         hovermode="x unified",
     )
 
-    # Signal label annotations — one per subplot row
-    # yref paper coords: row1 top ~0.99, row2 ~0.64, row3 ~0.30
     row_y_positions = [0.99, 0.64, 0.30]
-    for idx, sig in enumerate(signals):
+    for idx, sig in enumerate(["pressure", "flow", "volume"]):
         sig_col = SIGNAL_COLORS[sig]
         fig.add_annotation(
             text=(
-                f"<span style='color:{sig_col};font-family:JetBrains Mono;"
+                f"<span style='color:{sig_col};"
+                f"font-family:JetBrains Mono;"
                 f"font-size:11px;text-transform:uppercase;"
-                f"letter-spacing:0.1em'>● {SIGNAL_LABELS[sig]}</span>"
+                f"letter-spacing:0.1em'>\u25cf {SIGNAL_LABELS[sig]}</span>"
             ),
             xref="paper", yref="paper",
             x=0.01, y=row_y_positions[idx],
             xanchor="left", yanchor="top",
-            showarrow=False,
-            font=dict(size=11),
+            showarrow=False, font=dict(size=11),
         )
 
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(
+        fig, use_container_width=True, config={"displayModeBar": False}
+    )
 
 
 # ---------------------------------------------------------------------------
 # Export panel
 # ---------------------------------------------------------------------------
 
-def render_export(result: dict, params: dict, condition_name: str):
+def render_export(result, params, condition_name, engine_name):
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown(
         '<div class="dash-sub" style="margin-bottom:10px;">— Export —</div>',
         unsafe_allow_html=True,
     )
 
-    col_csv, col_json, col_spacer = st.columns([1, 1, 3])
+    col_csv, col_json, _ = st.columns([1, 1, 3])
+    ts         = datetime.now().strftime("%Y%m%d_%H%M%S")
+    engine_key = ENGINES[engine_name]["key"]
 
-    # --- CSV export ---
-    df = pd.DataFrame({
-        "time_s":           result["time"],
-        "pressure_cmH2O":   result["pressure"],
-        "flow_Ls":          result["flow"],
-        "volume_mL":        result["volume"],
-    })
-    csv_bytes = df.to_csv(index=False).encode("utf-8")
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_filename = f"ventilator_{condition_name.lower()}_{ts}.csv"
+    csv_bytes = pd.DataFrame({
+        "time_s":         result["time"],
+        "pressure_cmH2O": result["pressure"],
+        "flow_Ls":        result["flow"],
+        "volume_mL":      result["volume"],
+    }).to_csv(index=False).encode("utf-8")
 
     with col_csv:
         st.download_button(
-            label="↓ Download CSV",
+            label="\u2193 Download CSV",
             data=csv_bytes,
-            file_name=csv_filename,
+            file_name=(
+                f"ventilator_{condition_name.lower()}_"
+                f"{engine_key}_{ts}.csv"
+            ),
             mime="text/csv",
         )
 
-    # --- JSON scenario config ---
+    # Build JSON scenario — include all params cleanly
     scenario = {
-        "condition":             condition_name,
-        "generated_at":          datetime.now().isoformat(),
-        "n_cycles":              int(result["time"].max() * params["respiratory_rate"] / 60) + 1,
-        "respiratory_rate":      params["respiratory_rate"],
-        "tidal_volume_mL":       params["tidal_volume_mL"],
-        "compliance_mL_per_cmH2O": params["compliance_mL_per_cmH2O"],
-        "resistance_cmH2O_L_s":  params["resistance_cmH2O_L_s"],
-        "ie_ratio":              params["ie_ratio"],
-        "peep_cmH2O":            params["peep_cmH2O"],
+        "condition":    condition_name,
+        "engine":       engine_key,
+        "generated_at": datetime.now().isoformat(),
     }
+    scenario.update({
+        k: v for k, v in params.items()
+        if k != "tidal_volume_mL" or engine_key == "vcv"
+    })
     json_bytes = json.dumps(scenario, indent=2).encode("utf-8")
-    json_filename = f"scenario_{condition_name.lower()}_{ts}.json"
 
     with col_json:
         st.download_button(
-            label="↓ Download JSON",
+            label="\u2193 Download JSON",
             data=json_bytes,
-            file_name=json_filename,
+            file_name=(
+                f"scenario_{condition_name.lower()}_"
+                f"{engine_key}_{ts}.json"
+            ),
             mime="application/json",
         )
 
@@ -527,31 +714,33 @@ def render_export(result: dict, params: dict, condition_name: str):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _hex_to_rgb(hex_color: str) -> str:
-    """Convert #rrggbb to 'r, g, b' string for rgba() CSS."""
+def _hex_to_rgb(hex_color):
     h = hex_color.lstrip("#")
-    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
-    return f"{r}, {g}, {b}"
+    return f"{int(h[0:2],16)}, {int(h[2:4],16)}, {int(h[4:6],16)}"
+
+
+def _run_engine(engine_name, params, n_cycles):
+    """Dispatch to the correct generator with mode-specific param defaults."""
+    return ENGINES[engine_name]["fn"](params, n_cycles=n_cycles)
 
 
 # ---------------------------------------------------------------------------
-# Main render function — called by app.py
+# Main render — called by app.py
 # ---------------------------------------------------------------------------
 
 def render():
     configure_page()
     inject_css()
 
-    params, condition_name, n_cycles, model_name = render_sidebar()
+    params, condition_name, engine_name, n_cycles = render_sidebar()
+    engine_key = ENGINES[engine_name]["key"]
 
-    render_header(condition_name, model_name)
+    render_header(condition_name, engine_name)
 
-    # Generate waveforms using the selected model
-    generate = _GENERATORS[model_name]
     with st.spinner("Generating waveforms..."):
-        result = generate(params, n_cycles=n_cycles)
+        result = _run_engine(engine_name, params, n_cycles)
 
-    render_metrics(result, params)
+    render_metrics(result, params, engine_key)
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
     render_waveform_plot(result, condition_name)
-    render_export(result, params, condition_name)
+    render_export(result, params, condition_name, engine_name)

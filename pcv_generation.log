@@ -1,0 +1,53 @@
+======================================================================
+  PCV Dataset Generation
+  Started : 2026-04-28T22:27:28.996560+00:00
+  Output  : /Users/riyagunuganti/TimeSeriesVentilatorData/data/exports/pcv
+  Cycles  : 10 per scenario
+  Note    : ODE solver — estimated 8–10 hours total runtime
+  Tip     : Run with nohup and tail -f pcv_generation.log
+======================================================================
+
+  [Normal]
+    Mechanics pairs : 24
+    Total    : 84,672
+    Valid    : 23,922  (28.3%)
+    Invalid  : 60,750  (71.7%)
+    Time     : 22759.8s
+    ETA      : ~1612 min remaining
+
+  [Mild ARDS]
+    Mechanics pairs : 20
+    Total    : 70,560
+    Valid    : 32,616  (46.2%)
+    Invalid  : 37,944  (53.8%)
+    Time     : 18349.6s
+    ETA      : ~1277 min remaining
+
+  [Moderate ARDS]
+    Mechanics pairs : 9
+Traceback (most recent call last):
+  File "/Users/riyagunuganti/TimeSeriesVentilatorData/generate_pcv_dataset.py", line 345, in <module>
+    run()
+  File "/Users/riyagunuganti/TimeSeriesVentilatorData/generate_pcv_dataset.py", line 215, in run
+    waveform_file = _write_waveform_csv(s, OUTPUT_DIR)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/riyagunuganti/TimeSeriesVentilatorData/generate_pcv_dataset.py", line 159, in _write_waveform_csv
+    df.to_csv(path, index=False)
+  File "/opt/anaconda3/lib/python3.12/site-packages/pandas/util/_decorators.py", line 333, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.12/site-packages/pandas/core/generic.py", line 3967, in to_csv
+    return DataFrameRenderer(formatter).to_csv(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/lib/python3.12/site-packages/pandas/io/formats/format.py", line 1014, in to_csv
+    csv_formatter.save()
+  File "/opt/anaconda3/lib/python3.12/site-packages/pandas/io/formats/csvs.py", line 270, in save
+    self._save()
+  File "/opt/anaconda3/lib/python3.12/site-packages/pandas/io/formats/csvs.py", line 275, in _save
+    self._save_body()
+  File "/opt/anaconda3/lib/python3.12/site-packages/pandas/io/formats/csvs.py", line 313, in _save_body
+    self._save_chunk(start_i, end_i)
+  File "/opt/anaconda3/lib/python3.12/site-packages/pandas/io/formats/csvs.py", line 324, in _save_chunk
+    libwriters.write_csv_rows(
+  File "writers.pyx", line 73, in pandas._libs.writers.write_csv_rows
+OSError: [Errno 28] No space left on device

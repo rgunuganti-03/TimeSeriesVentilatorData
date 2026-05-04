@@ -1,0 +1,107 @@
+{
+  "mode": "VCV",
+  "dataset_type": "thinned",
+  "generated_at": "2026-05-01T20:38:42.984386+00:00",
+  "n_cycles": 10,
+  "ibw_kg": 70.0,
+  "output_dir": "/Users/riyagunuganti/TimeSeriesVentilatorData/data/exports/vcv",
+  "thinned_grid": {
+    "tidal_volume_mL_per_kg": [
+      4,
+      6,
+      10
+    ],
+    "respiratory_rate": [
+      8,
+      16,
+      24,
+      30
+    ],
+    "peep_cmH2O": [
+      0,
+      8,
+      16,
+      20
+    ],
+    "ie_ratio": [
+      1.0,
+      0.5,
+      0.33
+    ],
+    "flow_pattern": [
+      "square",
+      "decelerating"
+    ]
+  },
+  "combos_per_point": 288,
+  "grand_total": 36288,
+  "grand_valid": 28164,
+  "grand_invalid": 8124,
+  "valid_pct": 77.6,
+  "total_elapsed_s": 5.4,
+  "tiers": [
+    {
+      "condition": "Normal",
+      "mechanics_pairs": 24,
+      "total": 6912,
+      "valid": 6908,
+      "invalid": 4,
+      "valid_pct": 99.9,
+      "elapsed_s": 0.9
+    },
+    {
+      "condition": "Mild ARDS",
+      "mechanics_pairs": 20,
+      "total": 5760,
+      "valid": 4892,
+      "invalid": 868,
+      "valid_pct": 84.9,
+      "elapsed_s": 0.8
+    },
+    {
+      "condition": "Moderate ARDS",
+      "mechanics_pairs": 9,
+      "total": 2592,
+      "valid": 1416,
+      "invalid": 1176,
+      "valid_pct": 54.6,
+      "elapsed_s": 0.4
+    },
+    {
+      "condition": "Severe ARDS",
+      "mechanics_pairs": 12,
+      "total": 3456,
+      "valid": 684,
+      "invalid": 2772,
+      "valid_pct": 19.8,
+      "elapsed_s": 0.5
+    },
+    {
+      "condition": "COPD",
+      "mechanics_pairs": 30,
+      "total": 8640,
+      "valid": 7506,
+      "invalid": 1134,
+      "valid_pct": 86.9,
+      "elapsed_s": 1.2
+    },
+    {
+      "condition": "Bronchospasm",
+      "mechanics_pairs": 16,
+      "total": 4608,
+      "valid": 3438,
+      "invalid": 1170,
+      "valid_pct": 74.6,
+      "elapsed_s": 0.6
+    },
+    {
+      "condition": "Pneumonia",
+      "mechanics_pairs": 15,
+      "total": 4320,
+      "valid": 3320,
+      "invalid": 1000,
+      "valid_pct": 76.9,
+      "elapsed_s": 0.6
+    }
+  ]
+}

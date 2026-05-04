@@ -1,0 +1,109 @@
+{
+  "mode": "PCV",
+  "dataset_type": "thinned",
+  "generated_at": "2026-05-01T20:39:32.415706+00:00",
+  "n_cycles": 10,
+  "ibw_kg": 70.0,
+  "output_dir": "/Users/riyagunuganti/TimeSeriesVentilatorData/data/exports/pcv",
+  "thinned_grid": {
+    "insp_pressure_cmH2O": [
+      5,
+      15,
+      25,
+      35
+    ],
+    "respiratory_rate": [
+      8,
+      16,
+      24,
+      30
+    ],
+    "peep_cmH2O": [
+      0,
+      8,
+      16,
+      20
+    ],
+    "ie_ratio": [
+      1.0,
+      0.5,
+      0.33
+    ],
+    "rise_time_s": [
+      0.0,
+      0.2,
+      0.4
+    ]
+  },
+  "combos_per_point": 576,
+  "grand_total": 72576,
+  "grand_valid": 29436,
+  "grand_invalid": 43140,
+  "valid_pct": 40.6,
+  "total_elapsed_s": 19131.1,
+  "tiers": [
+    {
+      "condition": "Normal",
+      "mechanics_pairs": 24,
+      "total": 13824,
+      "valid": 4184,
+      "invalid": 9640,
+      "valid_pct": 30.3,
+      "elapsed_s": 3897.2
+    },
+    {
+      "condition": "Mild ARDS",
+      "mechanics_pairs": 20,
+      "total": 11520,
+      "valid": 4564,
+      "invalid": 6956,
+      "valid_pct": 39.6,
+      "elapsed_s": 3016.3
+    },
+    {
+      "condition": "Moderate ARDS",
+      "mechanics_pairs": 9,
+      "total": 5184,
+      "valid": 2838,
+      "invalid": 2346,
+      "valid_pct": 54.7,
+      "elapsed_s": 1356.0
+    },
+    {
+      "condition": "Severe ARDS",
+      "mechanics_pairs": 12,
+      "total": 6912,
+      "valid": 3728,
+      "invalid": 3184,
+      "valid_pct": 53.9,
+      "elapsed_s": 1810.3
+    },
+    {
+      "condition": "COPD",
+      "mechanics_pairs": 30,
+      "total": 17280,
+      "valid": 6762,
+      "invalid": 10518,
+      "valid_pct": 39.1,
+      "elapsed_s": 4470.4
+    },
+    {
+      "condition": "Bronchospasm",
+      "mechanics_pairs": 16,
+      "total": 9216,
+      "valid": 3830,
+      "invalid": 5386,
+      "valid_pct": 41.6,
+      "elapsed_s": 2312.5
+    },
+    {
+      "condition": "Pneumonia",
+      "mechanics_pairs": 15,
+      "total": 8640,
+      "valid": 3530,
+      "invalid": 5110,
+      "valid_pct": 40.9,
+      "elapsed_s": 2265.8
+    }
+  ]
+}
