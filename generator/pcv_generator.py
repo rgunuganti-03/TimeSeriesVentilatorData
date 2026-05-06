@@ -274,7 +274,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     ppeak        = float(pressure_arr.max())
     delivered_vt = float(volume_arr.max())
     mean_paw     = float(np.mean(pressure_arr))
-    auto_peep    = max(0.0, float(pressure_arr[-1]) - peep)
+    auto_peep = max(0.0, float(volume_arr[-1]) / C)
     minute_vent  = (rr * delivered_vt) / 1000.0
 
     # Time to peak flow — find first sample index where flow is maximum

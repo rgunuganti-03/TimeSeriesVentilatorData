@@ -4,19 +4,22 @@ generator/conditions.py
 Respiratory condition presets for the ventilator waveform simulator.
 
 Each preset defines a complete parameter dictionary that can be passed
-directly to generator/waveforms.py::generate_breath_cycles().
+directly to any generator (waveforms.py or ode_solver.py) via
+generate_breath_cycles().
 
 Conditions defined:
-    - Normal        : Healthy adult baseline
-    - ARDS          : Acute Respiratory Distress Syndrome (low compliance)
-    - COPD          : Chronic Obstructive Pulmonary Disease (high resistance)
-    - Bronchospasm  : Acute airway narrowing (very high resistance, fast RR)
-    - Pneumonia     : Partially consolidated lung (moderate compliance drop)
+    - Normal          : Healthy adult baseline
+    - Mild ARDS       : Berlin Definition — mild tier (P/F 200–300)
+    - Moderate ARDS   : Berlin Definition — moderate tier (P/F 100–200)
+    - Severe ARDS     : Berlin Definition — severe tier (P/F < 100)
+    - COPD            : Chronic Obstructive Pulmonary Disease (high resistance)
+    - Bronchospasm    : Acute airway narrowing (very high resistance, fast RR)
+    - Pneumonia       : Partially consolidated lung (moderate compliance drop)
 
 Usage:
     from generator.conditions import get_condition, list_conditions
 
-    params = get_condition("ARDS")
+    params = get_condition("Moderate ARDS")
     # -> returns dict ready for generate_breath_cycles(params)
 """
 
@@ -48,19 +51,50 @@ CONDITIONS = {
         "peep_cmH2O":                 5,
     },
 
-    "ARDS": {
-        "label":                    "ARDS",
+    "Mild ARDS": {
+        "label":                    "Mild ARDS",
         "description": (
-            "Acute Respiratory Distress Syndrome. Severely reduced compliance "
-            "due to fluid-filled, collapsed alveoli. Higher RR and PEEP are "
-            "used clinically. Expect elevated peak pressures."
+            "Mild ARDS (Berlin Definition: P/F 200–300). Moderately stiff "
+            "lungs. Lung-protective tidal volume is still achievable without "
+            "dangerous driving pressures in most VCV scenarios. "
+            "Compliance 40 mL/cmH₂O."
         ),
-        "respiratory_rate":          20,   # faster RR to compensate
-        "tidal_volume_mL":          380,   # lung-protective: 6 mL/kg IBW
-        "compliance_mL_per_cmH2O":   18,   # severely reduced (normal: 60)
+        "respiratory_rate":          18,
+        "tidal_volume_mL":          400,   # lung-protective: ~6 mL/kg IBW
+        "compliance_mL_per_cmH2O":   40,   # moderately reduced
         "resistance_cmH2O_L_s":       4,   # mildly elevated
         "ie_ratio":                 0.5,
-        "peep_cmH2O":                10,   # higher PEEP to recruit alveoli
+        "peep_cmH2O":                 8,   # moderate PEEP to recruit alveoli
+    },
+
+    "Moderate ARDS": {
+        "label":                    "Moderate ARDS",
+        "description": (
+            "Moderate ARDS (Berlin Definition: P/F 100–200). Significantly "
+            "stiff lungs where driving pressure constraints become the dominant "
+            "clinical challenge. Compliance 25 mL/cmH₂O."
+        ),
+        "respiratory_rate":          20,
+        "tidal_volume_mL":          380,   # strict lung-protective strategy
+        "compliance_mL_per_cmH2O":   25,   # significantly reduced
+        "resistance_cmH2O_L_s":       6,   # moderately elevated
+        "ie_ratio":                 0.5,
+        "peep_cmH2O":                10,   # higher PEEP for alveolar recruitment
+    },
+
+    "Severe ARDS": {
+        "label":                    "Severe ARDS",
+        "description": (
+            "Severe ARDS (Berlin Definition: P/F < 100). Extremely stiff lungs "
+            "where even lung-protective volumes generate high driving pressures. "
+            "PEEP must be elevated to recruit alveoli. Compliance 15 mL/cmH₂O."
+        ),
+        "respiratory_rate":          22,
+        "tidal_volume_mL":          320,   # ultra-protective — 4–5 mL/kg IBW
+        "compliance_mL_per_cmH2O":   15,   # severely reduced
+        "resistance_cmH2O_L_s":       8,   # elevated from airway edema
+        "ie_ratio":                 0.5,
+        "peep_cmH2O":                14,   # high PEEP for severe recruitment
     },
 
     "COPD": {

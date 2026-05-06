@@ -263,6 +263,21 @@ def _ie_default_index(ie_value: float) -> int:
     values = list(IE_OPTIONS.values())
     return min(range(len(values)), key=lambda i: abs(values[i] - ie_value))
 
+def _pcv_default_driving_pressure(preset: dict) -> int:
+    rr  = preset["respiratory_rate"]
+    C   = preset["compliance_mL_per_cmH2O"]
+    R   = preset["resistance_cmH2O_L_s"]
+    ie  = preset["ie_ratio"]
+    V_T = preset["tidal_volume_mL"]
+
+    t_cycle = 60.0 / rr
+    t_insp  = t_cycle * ie / (1.0 + ie)
+    tau     = R * C / 1000.0
+    ff      = 1.0 - np.exp(-t_insp / tau)
+    delta_P = V_T / (C * ff)
+
+    return int(round(min(delta_P, 35)))  # clamp to slider max
+
 
 def render_sidebar():
     """
@@ -389,7 +404,7 @@ def render_sidebar():
             insp_pressure = st.slider(
                 "Inspiratory Pressure (cmH\u2082O above PEEP)",
                 min_value=1, max_value=35,
-                value=15, step=1,
+                value=_pcv_default_driving_pressure(preset), step=1,
                 help=(
                     "Driving pressure above PEEP applied during inspiration. "
                     "Delivered tidal volume depends on this setting plus "
@@ -514,7 +529,7 @@ def render_metrics(result, params, engine_key):
     min_f     = float(result["flow"].min())
     peak_v    = float(result["volume"].max())
     mean_paw  = float(np.mean(result["pressure"]))
-    auto_peep = max(0.0, float(result["pressure"][-1]) - peep)
+    auto_peep = result["auto_peep_cmH2O"]
     rr        = params["respiratory_rate"]
     minute_vent = rr * peak_v / 1000.0
 
