@@ -163,11 +163,12 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     t_insp  = t_cycle * ie / (1.0 + ie)
     t_exp   = t_cycle - t_insp
     tau     = _rc_tau(R, C)
-    t_pause = 0.3  # seconds — standard clinical inspiratory hold duration
-    n_pause = max(1, int(round(t_pause / dt)))
+    
 
     # --- Sample grid ------------------------------------------------------
     dt     = 0.01    # 100 Hz
+    t_pause = 0.3  # seconds — standard clinical inspiratory hold duration
+    n_pause = max(1, int(round(t_pause / dt)))
     n_insp = max(2, int(round(t_insp / dt)))
     n_exp  = max(2, int(round(t_exp  / dt)))
     n_tot = (n_insp + n_pause + n_exp) * n_cycles
@@ -186,7 +187,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     press_pause = np.full(n_pause, P_plateau)
 
     # Volume holds constant
-    vol_pause   = np.full(n_pause, V_end_insp)
+   
 
     # --- Build inspiratory flow profile -----------------------------------
     t_i = np.linspace(0, t_insp, n_insp, endpoint=False)
@@ -232,13 +233,14 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     for cycle in range(n_cycles):
         t0     = cycle * t_cycle
         offset = cycle * (n_insp + n_exp)
-        idx_i  = slice(offset,          offset + n_insp)
-        idx_e  = slice(offset + n_insp, offset + n_insp + n_exp)
+        idx_i  = slice(offset, offset + n_insp)
 
         # --- Inspiration — starts from residual volume, not zero ---
         vol_insp   = V_residual + np.cumsum(flow_insp) * dt * 1000.0
         press_insp = (vol_insp / C) + (R * flow_insp) + peep
         V_end_insp = vol_insp[-1]
+        press_pause = np.full(n_pause, V_end_insp / C + peep)
+        vol_pause   = np.full(n_pause, V_end_insp)
 
         # --- Expiration — decays from end-inspiratory volume ---
         vol_exp   = V_end_insp * np.exp(-t_e / tau)
@@ -255,10 +257,11 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         flow_arr[idx_p]     = flow_pause
         volume_arr[idx_p]   = vol_pause
         pressure_arr[idx_p] = press_pause
+        
 
         # --- Assemble ---
         time_arr[idx_i]     = t0 + t_i
-        time_arr[idx_e]     = t0 + t_insp + t_e
+        time_arr[idx_e]     = t0 + t_insp + t_pause + t_e
         flow_arr[idx_i]     = flow_insp
         flow_arr[idx_e]     = flow_exp
         volume_arr[idx_i]   = vol_insp
