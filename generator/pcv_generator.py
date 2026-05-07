@@ -255,6 +255,11 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         atol=1e-8,
     )
 
+    last_peak = volume_arr[(n_cycles - 1) * (n_insp + n_exp):].max()
+    prev_peak = volume_arr[(n_cycles - 2) * (n_insp + n_exp):
+                            (n_cycles - 1) * (n_insp + n_exp)].max()
+    equilibrium_reached = abs(last_peak - prev_peak) < 5.0
+
     if not sol.success:
         raise RuntimeError(f"ODE solver failed: {sol.message}")
 
@@ -332,6 +337,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         "fill_fraction":        round(fill_fraction,     4),
         "minute_vent_L":        round(minute_vent,       3),
         "time_to_peak_flow_s":  round(time_to_peak_flow, 4),
+        "equilibrium_reached": equilibrium_reached,
         # Validity
         "is_valid":             is_valid,
         "invalid_reason":       invalid_reason,

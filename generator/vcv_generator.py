@@ -205,25 +205,12 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         raise ValueError(f"Unknown flow_pattern: '{pattern}'. Use 'square' or 'decelerating'.")
 
     # --- Inspiratory volume and pressure ----------------------------------
-    # Volume: cumulative integral of flow (trapezoidal), L → mL
-    vol_insp   = np.cumsum(flow_insp) * dt * 1000.0            # mL
-
-    # Pressure from equation of motion — applied directly, no ODE needed
-    # P(t) = V(t)/C + R*Flow(t) + PEEP
-    press_insp = (vol_insp / C) + (R * flow_insp) + peep      # cmH2O
-
-    V_end_insp = vol_insp[-1]   # mL at end of inspiration
+   
 
     # --- Expiratory phase — analytical ODE solution -----------------------
     # Passive recoil: V(t) = V_end * exp(-t / tau)
     t_e      = np.linspace(0, t_exp, n_exp, endpoint=False)
-    vol_exp  = V_end_insp * np.exp(-t_e / tau)                # mL
-
-    # Flow: dV/dt → derivative of exponential decay, L → mL conversion
-    flow_exp = -(V_end_insp / tau) * np.exp(-t_e / tau) / 1000.0  # L/s (negative)
-
-    # Pressure: equation of motion during passive expiration
-    press_exp = (vol_exp / C) + (R * flow_exp) + peep         # cmH2O
+    
 
     # --- Assemble n_cycles ------------------------------------------------
     V_residual = 0.0  # carries forward between cycles
@@ -234,9 +221,12 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
        
 
         # --- Inspiration — starts from residual volume, not zero ---
+        V_residual_start = V_residual
         vol_insp   = V_residual + np.cumsum(flow_insp) * dt * 1000.0
         press_insp = (vol_insp / C) + (R * flow_insp) + peep
         V_end_insp = vol_insp[-1]
+        V_tidal = V_end_insp - V_residual_start    # volume added this breath only
+        P_plateau = V_tidal / C + peep      # elastic pressure of tidal volume + PEEP
         press_pause = np.full(n_pause, V_end_insp / C + peep)
         vol_pause   = np.full(n_pause, V_end_insp)
 
@@ -267,12 +257,16 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         pressure_arr[idx_i] = press_insp
         pressure_arr[idx_e] = press_exp
 
-       
+    last_cycle_start = (n_cycles - 1) * (n_insp + n_exp)
+    last_cycle_volume = volume_arr[last_cycle_start : last_cycle_start + n_insp + n_exp]
+
+    delivered_vt = float(last_cycle_volume.max() - last_cycle_volume[0])
+  
     # --- Derived metrics --------------------------------------------------
     ppeak         = pressure_arr.max()
     # Plateau pressure: pressure at end of inspiration (flow → 0)
     # Use last 10% of inspiratory samples where flow has decelerated most
-    P_plateau  = V_end_insp / C + peep
+    P_plateau     = V_tidal / C + peep
     pplat         = float(P_plateau)
     driving_p     = pplat - peep
     mean_paw      = float(np.mean(pressure_arr))

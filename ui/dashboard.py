@@ -572,6 +572,12 @@ def render_metrics(result, params, engine_key):
 
     for col, (label, value, unit) in zip(cols, metrics):
         _metric_card(col, label, value, unit)
+    
+    if not result.get("equilibrium_reached", True):
+        st.warning(
+            "⚠ Volume has not stabilized after the selected breath cycles. "
+            "Increase Breath Cycles for accurate delivered VT and auto-PEEP metrics."
+        )
 
 
 # ---------------------------------------------------------------------------
