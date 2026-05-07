@@ -531,13 +531,14 @@ def render_metrics(result, params, engine_key):
     mean_paw  = float(np.mean(result["pressure"]))
     auto_peep = result["auto_peep_cmH2O"]
     rr        = params["respiratory_rate"]
-    minute_vent = rr * peak_v / 1000.0
+    minute_vent = result.get("minute_vent_L", rr * peak_v / 1000.0)
 
     cols = st.columns(8)
 
     if engine_key == "vcv":
-        pplat     = float(np.percentile(result["pressure"], 90))
-        driving_p = pplat - peep
+        pplat     = result["pplat_cmH2O"]
+        driving_p = result["driving_p_cmH2O"]
+        
 
         metrics = [
             ("Peak Pressure", f"{peak_p:.1f}",    "cmH₂O"),
@@ -561,7 +562,7 @@ def render_metrics(result, params, engine_key):
 
         metrics = [
             ("Peak Pressure",  f"{peak_p:.1f}",    "cmH₂O"),
-            ("Delivered VT",   f"{peak_v:.0f}",    "mL"),
+            ("Delivered VT", f"{result['delivered_vt_mL']:.0f}", "mL"),
             ("Driving P",      f"{driving_p:.1f}", "cmH₂O"),
             ("Mean Paw",       f"{mean_paw:.1f}",  "cmH₂O"),
             ("Peak Flow ↑", f"{peak_f:.2f}",  "L/s"),
