@@ -266,7 +266,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     ppeak         = pressure_arr.max()
     # Plateau pressure: pressure at end of inspiration (flow → 0)
     # Use last 10% of inspiratory samples where flow has decelerated most
-    P_plateau     = V_tidal / C + peep
+    
     pplat         = float(P_plateau)
     driving_p     = pplat - peep
     mean_paw      = float(np.mean(pressure_arr))

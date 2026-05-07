@@ -277,7 +277,9 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
 
     # --- Derived metrics --------------------------------------------------
     ppeak        = float(pressure_arr.max())
-    delivered_vt = float(volume_arr.max())
+    last_start   = (n_cycles - 1) * (n_insp + n_exp)
+    last_cycle   = volume_arr[last_start : last_start + n_insp + n_exp]
+    delivered_vt = float(last_cycle.max() - last_cycle[0])
     mean_paw     = float(np.mean(pressure_arr))
     auto_peep = max(0.0, float(volume_arr[-1]) / C)
     minute_vent  = (rr * delivered_vt) / 1000.0
