@@ -255,16 +255,18 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         atol=1e-8,
     )
 
-    last_peak = volume_arr[(n_cycles - 1) * (n_insp + n_exp):].max()
-    prev_peak = volume_arr[(n_cycles - 2) * (n_insp + n_exp):
-                            (n_cycles - 1) * (n_insp + n_exp)].max()
-    equilibrium_reached = abs(last_peak - prev_peak) < 5.0
+    
 
     if not sol.success:
         raise RuntimeError(f"ODE solver failed: {sol.message}")
 
     time_arr   = sol.t
     volume_arr = sol.y[0]                        # mL
+
+    last_peak = volume_arr[(n_cycles - 1) * (n_insp + n_exp):].max()
+    prev_peak = volume_arr[(n_cycles - 2) * (n_insp + n_exp):
+                            (n_cycles - 1) * (n_insp + n_exp)].max()
+    equilibrium_reached = abs(last_peak - prev_peak) < 5.0
 
     # --- Derive flow and pressure -----------------------------------------
     # Flow (L/s) — numerical derivative of volume
