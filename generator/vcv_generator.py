@@ -183,9 +183,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     flow_pause  = np.zeros(n_pause)
 
     # Pressure holds at plateau — elastic only, no resistive component
-    P_plateau   = V_end_insp / C + peep
-    press_pause = np.full(n_pause, P_plateau)
-
+ 
     # Volume holds constant
    
 
@@ -232,8 +230,8 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
 
     for cycle in range(n_cycles):
         t0     = cycle * t_cycle
-        offset = cycle * (n_insp + n_exp)
-        idx_i  = slice(offset, offset + n_insp)
+        offset = cycle * (n_insp + n_pause + n_exp)
+       
 
         # --- Inspiration — starts from residual volume, not zero ---
         vol_insp   = V_residual + np.cumsum(flow_insp) * dt * 1000.0
