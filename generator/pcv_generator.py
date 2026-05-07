@@ -267,6 +267,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     prev_peak = volume_arr[(n_cycles - 2) * (n_insp + n_exp):
                             (n_cycles - 1) * (n_insp + n_exp)].max()
     equilibrium_reached = abs(last_peak - prev_peak) < 5.0
+    
 
     # --- Derive flow and pressure -----------------------------------------
     # Flow (L/s) — numerical derivative of volume

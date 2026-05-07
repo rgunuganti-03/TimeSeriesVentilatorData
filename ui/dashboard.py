@@ -554,11 +554,8 @@ def render_metrics(result, params, engine_key):
     else:
         insp_p    = params.get("insp_pressure_cmH2O", 0)
         driving_p = float(insp_p)
-        pip       = peep + insp_p
-        pip_mask  = result["pressure"] >= (pip - 0.5)
-        fill_frac = float(np.clip(
-            np.sum(pip_mask) / len(result["pressure"]), 0.0, 1.0
-        )) if pip > peep else 0.0
+        fill_frac = result["fill_fraction"]
+       
 
         metrics = [
             ("Peak Pressure",  f"{peak_p:.1f}",    "cmH₂O"),
@@ -574,12 +571,13 @@ def render_metrics(result, params, engine_key):
     for col, (label, value, unit) in zip(cols, metrics):
         _metric_card(col, label, value, unit)
     
+    
     if not result.get("equilibrium_reached", True):
         st.warning(
             "⚠ Volume has not stabilized after the selected breath cycles. "
             "Increase Breath Cycles for accurate delivered VT and auto-PEEP metrics."
         )
-
+        
 
 # ---------------------------------------------------------------------------
 # Waveform plot
@@ -761,6 +759,7 @@ def render():
 
     with st.spinner("Generating waveforms..."):
         result = _run_engine(engine_name, params, n_cycles)
+        
 
     render_metrics(result, params, engine_key)
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
