@@ -257,8 +257,9 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         pressure_arr[idx_i] = press_insp
         pressure_arr[idx_e] = press_exp
 
-    last_cycle_start = (n_cycles - 1) * (n_insp + n_exp)
-    last_cycle_volume = volume_arr[last_cycle_start : last_cycle_start + n_insp + n_exp]
+    
+    last_cycle_start = (n_cycles - 1) * (n_insp + n_pause + n_exp)
+    last_cycle_volume = volume_arr[last_cycle_start : last_cycle_start + n_insp + n_pause + n_exp]
 
     delivered_vt = float(last_cycle_volume.max() - last_cycle_volume[0])
   
@@ -270,7 +271,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     pplat         = float(P_plateau)
     driving_p     = pplat - peep
     mean_paw      = float(np.mean(pressure_arr))
-    delivered_vt  = float(volume_arr.max())
+    
     minute_vent   = (rr * delivered_vt) / 1000.0   # L/min
     # Auto-PEEP: elastic recoil pressure of residual volume at end of last
     # expiration. Reflects single-cycle residual only — VCV does not carry
