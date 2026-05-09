@@ -93,51 +93,51 @@ THINNED_PARAMETER_GRID = {
 CONDITION_TIERS = [
     {
         "name":             "Normal",
-        "compliance_range": (50, 100),
+        "compliance_range": (60, 100),   # healthy lungs: 60–100 mL/cmH2O
         "compliance_step":  10,
-        "resistance_range": (2, 5),
+        "resistance_range": (8, 15),     # ETT (5–7) + normal airways (3–5)
         "resistance_step":  1,
     },
     {
         "name":             "Mild ARDS",
-        "compliance_range": (30, 50),
+        "compliance_range": (40, 55),    # Berlin mild: moderately reduced
         "compliance_step":  5,
-        "resistance_range": (3, 6),
-        "resistance_step":  1,
+        "resistance_range": (10, 14),    # ETT + mild airway edema
+        "resistance_step":  2,
     },
     {
         "name":             "Moderate ARDS",
-        "compliance_range": (20, 30),
-        "compliance_step":  5,
-        "resistance_range": (4, 8),
+        "compliance_range": (28, 40),    # Berlin moderate: significantly reduced
+        "compliance_step":  4,
+        "resistance_range": (12, 16),    # ETT + peribronchial edema
         "resistance_step":  2,
     },
     {
         "name":             "Severe ARDS",
-        "compliance_range": (10, 20),
-        "compliance_step":  5,
-        "resistance_range": (5, 10),
-        "resistance_step":  2,
+        "compliance_range": (15, 28),    # Berlin severe: severely reduced
+        "compliance_step":  4,
+        "resistance_range": (14, 20),    # ETT + significant airway edema
+        "resistance_step":  3,
     },
     {
         "name":             "COPD",
-        "compliance_range": (40, 80),
-        "compliance_step":  10,
-        "resistance_range": (10, 20),
-        "resistance_step":  2,
+        "compliance_range": (80, 150),   # HIGH — emphysema destroys elastic recoil
+        "compliance_step":  20,
+        "resistance_range": (18, 35),    # ETT + severely obstructed airways
+        "resistance_step":  5,
     },
     {
         "name":             "Bronchospasm",
-        "compliance_range": (40, 70),
+        "compliance_range": (60, 90),    # near-normal compliance; problem is resistance
         "compliance_step":  10,
-        "resistance_range": (15, 30),
+        "resistance_range": (25, 50),    # very high — acute bronchoconstriction
         "resistance_step":  5,
     },
     {
         "name":             "Pneumonia",
-        "compliance_range": (25, 45),
+        "compliance_range": (40, 65),    # moderately reduced from consolidation
         "compliance_step":  5,
-        "resistance_range": (4, 8),
+        "resistance_range": (10, 16),    # ETT + secretions + inflamed airways
         "resistance_step":  2,
     },
 ]

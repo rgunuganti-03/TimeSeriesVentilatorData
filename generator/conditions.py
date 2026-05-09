@@ -38,109 +38,67 @@ Usage:
 CONDITIONS = {
 
     "Normal": {
-        "label":                    "Normal",
-        "description": (
-            "Healthy adult lung. Normal compliance and resistance. "
-            "Standard tidal volume and respiratory rate."
-        ),
-        "respiratory_rate":          15,
-        "tidal_volume_mL":          500,
-        "compliance_mL_per_cmH2O":   60,   # healthy: 60–100 mL/cmH2O
-        "resistance_cmH2O_L_s":       2,   # healthy: 1–3 cmH2O/L/s
-        "ie_ratio":                 0.5,   # 1:2 — standard
-        "peep_cmH2O":                 5,
-    },
+    "respiratory_rate":          15,
+    "tidal_volume_mL":          500,
+    "compliance_mL_per_cmH2O":   70,   # healthy: 60–100 mL/cmH2O
+    "resistance_cmH2O_L_s":      10,   # total system: ETT (~5–7) + normal airways (~3–5)
+    "ie_ratio":                 0.5,
+    "peep_cmH2O":                 5,
+},
 
-    "Mild ARDS": {
-        "label":                    "Mild ARDS",
-        "description": (
-            "Mild ARDS (Berlin Definition: P/F 200–300). Moderately stiff "
-            "lungs. Lung-protective tidal volume is still achievable without "
-            "dangerous driving pressures in most VCV scenarios. "
-            "Compliance 40 mL/cmH₂O."
-        ),
-        "respiratory_rate":          18,
-        "tidal_volume_mL":          400,   # lung-protective: ~6 mL/kg IBW
-        "compliance_mL_per_cmH2O":   40,   # moderately reduced
-        "resistance_cmH2O_L_s":       4,   # mildly elevated
-        "ie_ratio":                 0.5,
-        "peep_cmH2O":                 8,   # moderate PEEP to recruit alveoli
-    },
+"Mild ARDS": {
+    "respiratory_rate":          20,   # elevated drive; Berlin RR typically 18–25
+    "tidal_volume_mL":          420,   # ~6 mL/kg IBW for 70 kg patient
+    "compliance_mL_per_cmH2O":   45,   # moderately reduced (40–55 range)
+    "resistance_cmH2O_L_s":      12,   # ETT + mild airway edema/inflammation
+    "ie_ratio":                 0.5,
+    "peep_cmH2O":                 8,
+},
 
-    "Moderate ARDS": {
-        "label":                    "Moderate ARDS",
-        "description": (
-            "Moderate ARDS (Berlin Definition: P/F 100–200). Significantly "
-            "stiff lungs where driving pressure constraints become the dominant "
-            "clinical challenge. Compliance 25 mL/cmH₂O."
-        ),
-        "respiratory_rate":          20,
-        "tidal_volume_mL":          380,   # strict lung-protective strategy
-        "compliance_mL_per_cmH2O":   25,   # significantly reduced
-        "resistance_cmH2O_L_s":       6,   # moderately elevated
-        "ie_ratio":                 0.5,
-        "peep_cmH2O":                10,   # higher PEEP for alveolar recruitment
-    },
+"Moderate ARDS": {
+    "respiratory_rate":          24,
+    "tidal_volume_mL":          380,   # strict lung-protective
+    "compliance_mL_per_cmH2O":   30,   # significantly reduced (28–40 range)
+    "resistance_cmH2O_L_s":      14,   # ETT + peribronchial edema
+    "ie_ratio":                 0.5,
+    "peep_cmH2O":                12,
+},
 
-    "Severe ARDS": {
-        "label":                    "Severe ARDS",
-        "description": (
-            "Severe ARDS (Berlin Definition: P/F < 100). Extremely stiff lungs "
-            "where even lung-protective volumes generate high driving pressures. "
-            "PEEP must be elevated to recruit alveoli. Compliance 15 mL/cmH₂O."
-        ),
-        "respiratory_rate":          22,
-        "tidal_volume_mL":          320,   # ultra-protective — 4–5 mL/kg IBW
-        "compliance_mL_per_cmH2O":   15,   # severely reduced
-        "resistance_cmH2O_L_s":       8,   # elevated from airway edema
-        "ie_ratio":                 0.5,
-        "peep_cmH2O":                14,   # high PEEP for severe recruitment
-    },
+"Severe ARDS": {
+    "respiratory_rate":          28,
+    "tidal_volume_mL":          300,   # ultra-protective: ~4 mL/kg IBW
+    "compliance_mL_per_cmH2O":   18,   # severely reduced (15–28 range)
+    "resistance_cmH2O_L_s":      16,   # ETT + significant airway edema
+    "ie_ratio":                 0.5,
+    "peep_cmH2O":                16,
+},
 
-    "COPD": {
-        "label":                    "COPD",
-        "description": (
-            "Chronic Obstructive Pulmonary Disease. Markedly elevated airway "
-            "resistance due to narrowed airways. Prolonged expiration needed — "
-            "reduced IE ratio. Risk of auto-PEEP and air trapping."
-        ),
-        "respiratory_rate":          14,   # slower RR to allow full expiration
-        "tidal_volume_mL":          550,
-        "compliance_mL_per_cmH2O":   55,   # near normal (emphysema can increase C)
-        "resistance_cmH2O_L_s":      18,   # markedly elevated (normal: 2)
-        "ie_ratio":                 0.35,  # more time for slow expiration (1:2.9)
-        "peep_cmH2O":                 5,
-    },
+"COPD": {
+    "respiratory_rate":          12,   # slow RR — permissive hypercapnia strategy
+    "tidal_volume_mL":          550,
+    "compliance_mL_per_cmH2O":  100,   # HIGH — emphysema destroys elastic recoil
+    "resistance_cmH2O_L_s":      22,   # ETT + severely obstructed airways
+    "ie_ratio":                 0.33,  # 1:3 — extended expiratory time
+    "peep_cmH2O":                 5,
+},
 
-    "Bronchospasm": {
-        "label":                    "Bronchospasm",
-        "description": (
-            "Acute bronchospasm (e.g. asthma attack). Very high resistance "
-            "from bronchoconstriction. Rapid respiratory rate. Expect high "
-            "peak pressures and slow expiratory flow."
-        ),
-        "respiratory_rate":          22,
-        "tidal_volume_mL":          420,
-        "compliance_mL_per_cmH2O":   50,
-        "resistance_cmH2O_L_s":      30,   # very high
-        "ie_ratio":                 0.35,
-        "peep_cmH2O":                 5,
-    },
+"Bronchospasm": {
+    "respiratory_rate":          10,   # deliberately slow — maximize Te
+    "tidal_volume_mL":          420,   # protective; avoid overdistension
+    "compliance_mL_per_cmH2O":   70,   # near-normal (problem is resistance, not compliance)
+    "resistance_cmH2O_L_s":      35,   # very high — severe bronchoconstriction
+    "ie_ratio":                 0.30,  # 1:3.3 — maximize expiratory time (Tuxen strategy)
+    "peep_cmH2O":                 3,   # low/zero extrinsic PEEP in acute bronchospasm
+},
 
-    "Pneumonia": {
-        "label":                    "Pneumonia",
-        "description": (
-            "Consolidating pneumonia. Moderately reduced compliance due to "
-            "fluid and inflammatory exudate filling alveolar spaces. "
-            "Mild-to-moderate compliance drop with slightly elevated resistance."
-        ),
-        "respiratory_rate":          18,
-        "tidal_volume_mL":          450,
-        "compliance_mL_per_cmH2O":   35,   # moderately reduced
-        "resistance_cmH2O_L_s":       6,   # mildly elevated
-        "ie_ratio":                 0.5,
-        "peep_cmH2O":                 6,
-    },
+"Pneumonia": {
+    "respiratory_rate":          22,
+    "tidal_volume_mL":          450,
+    "compliance_mL_per_cmH2O":   50,   # moderately reduced from consolidation
+    "resistance_cmH2O_L_s":      12,   # ETT + secretions + inflamed airways
+    "ie_ratio":                 0.5,
+    "peep_cmH2O":                 8,
+},
 
 }
 

@@ -42,7 +42,7 @@ NORMAL_PARAMS_SQR = {
     "respiratory_rate":        15,
     "tidal_volume_mL":        500,
     "compliance_mL_per_cmH2O": 60,
-    "resistance_cmH2O_L_s":     2,
+    "resistance_cmH2O_L_s":     10,
     "ie_ratio":                0.5,
     "peep_cmH2O":                5,
     "flow_pattern":          "square",

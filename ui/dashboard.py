@@ -532,10 +532,11 @@ def render_metrics(result, params, engine_key):
     auto_peep = result["auto_peep_cmH2O"]
     rr        = params["respiratory_rate"]
     minute_vent = result.get("minute_vent_L", rr * peak_v / 1000.0)
-
-    cols = st.columns(8)
+    
 
     if engine_key == "vcv":
+        cols = st.columns(9)
+        
         pplat     = result["pplat_cmH2O"]
         driving_p = result["driving_p_cmH2O"]
         
@@ -544,6 +545,7 @@ def render_metrics(result, params, engine_key):
             ("Peak Pressure", f"{peak_p:.1f}",    "cmH₂O"),
             ("Plateau ~P",    f"{pplat:.1f}",     "cmH₂O"),
             ("Driving P",     f"{driving_p:.1f}", "cmH₂O"),
+            ("Tidal Vol",     f"{result['delivered_vt_mL']:.0f}",    "mL"),
             ("Mean Paw",      f"{mean_paw:.1f}",  "cmH₂O"),
             ("Peak Flow ↑", f"{peak_f:.2f}", "L/s"),
             ("Peak Flow ↓", f"{min_f:.2f}",  "L/s"),
@@ -552,6 +554,7 @@ def render_metrics(result, params, engine_key):
         ]
 
     else:
+        cols = st.columns(9)
         insp_p    = params.get("insp_pressure_cmH2O", 0)
         driving_p = float(insp_p)
         fill_frac = result["fill_fraction"]
@@ -563,6 +566,7 @@ def render_metrics(result, params, engine_key):
             ("Driving P",      f"{driving_p:.1f}", "cmH₂O"),
             ("Mean Paw",       f"{mean_paw:.1f}",  "cmH₂O"),
             ("Peak Flow ↑", f"{peak_f:.2f}",  "L/s"),
+            ("Peak Flow ↓", f"{min_f:.2f}",  "L/s"),
             ("Fill Fraction",  f"{fill_frac:.2f}", ""),
             ("Minute Vent",    f"{minute_vent:.1f}", "L/min"),
             ("Auto-PEEP",      f"{auto_peep:.2f}", "cmH₂O"),
