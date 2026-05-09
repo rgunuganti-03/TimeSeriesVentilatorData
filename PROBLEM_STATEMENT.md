@@ -1,7 +1,7 @@
 # Problem Statement — Ventilator Waveform Simulator
 **Project:** Time Series Ventilator Data — Aiden Medical Internship
-**Version:** 0.2 (Phase 1 + Phase 2 Implemented)
-**Date:** March 2026
+**Version:** 0.3 (VCV + PCV Implemented)
+**Date:** May 2026
 
 ---
 
@@ -18,6 +18,7 @@ This project addresses that gap by building a **synthetic data platform** that s
 There is no lightweight, accessible tool for generating and visualizing synthetic ventilator physiological time-series data that:
 
 - Supports multiple respiratory conditions (Normal, ARDS, COPD, etc.)
+- Supports multiple ventilation modes with mode-accurate control loop physics
 - Allows parameter-level control (compliance, resistance, respiratory rate, tidal volume)
 - Produces structured, exportable data in standard formats
 - Can scale from simple rule-based simulation toward full lung mechanics modeling
@@ -35,7 +36,9 @@ Build a modular, interactive ventilator waveform simulator that:
 
 2. Supports selectable respiratory condition presets including:
    - Normal healthy lung
-   - ARDS (low compliance — stiff lungs)
+   - Mild ARDS (P/F 200–300 — moderately stiff lungs)
+   - Moderate ARDS (P/F 100–200 — baby lung concept)
+   - Severe ARDS (P/F < 100 — critically reduced compliance)
    - COPD (high resistance — obstructed airways)
    - Bronchospasm (very high resistance — acute bronchoconstriction)
    - Pneumonia (moderate compliance reduction — alveolar consolidation)
@@ -44,24 +47,65 @@ Build a modular, interactive ventilator waveform simulator that:
 
 4. Exports generated data as structured CSV files for downstream modeling
 
-5. Is architected to scale from rule-based signal generation toward ODE-based lung mechanics models
+5. Is architected to scale from two implemented mandatory ventilation modes (VCV, PCV) toward spontaneous and hybrid modes (PSV, SIMV, PRVC)
 
 ---
 
 ## Scope
 
-### Implemented (Phase 1 — Rule-Based)
-- Rule-based synthetic waveform generation (`generator/waveforms.py`)
-- Five condition presets: Normal, ARDS, COPD, Bronchospasm, Pneumonia
-- Interactive visualization dashboard
-- CSV export of time-series data
-- JSON storage of scenario configuration
-- Locally runnable Python application
+### Implemented — VCV (Volume-Controlled Ventilation)
+- Analytical waveform generation with inspiratory pause phase (`generator/vcv_generator.py`)
+- Square and decelerating flow patterns
+- Ppeak, Pplat, driving pressure, stress index, and auto-PEEP computation
+- Inter-cycle residual volume carry-forward for dynamic hyperinflation modeling
+- Seven condition presets: Normal, Mild ARDS, Moderate ARDS, Severe ARDS,
+  COPD, Bronchospasm, Pneumonia
+- Interactive visualization dashboard with VCV-specific controls
+- Full parameter grid dataset generation with validity filter
+- CSV and JSON export of scenarios and time-series data
 
-### Implemented (Phase 2 — ODE Single-Compartment)
-- ODE lung mechanics model using `scipy.integrate.solve_ivp` (`generator/ode_solver.py`)
-- PC-CMV ventilation mode with emergent auto-PEEP in high-resistance conditions
-- Both models share the same interface and UI — switchable via sidebar radio button
+### Implemented — PCV (Pressure-Controlled Ventilation)
+- ODE-based waveform generation using `scipy.integrate.solve_ivp`
+  (`generator/pcv_generator.py`)
+- Three-phase pressure profile: rise ramp, plateau, expiration
+- Configurable rise time (0.0–0.4 s)
+- Fill fraction, delivered tidal volume, and auto-PEEP computation
+- Auto-PEEP emerges naturally in high-resistance conditions from the ODE
+- Same seven condition presets as VCV
+- Interactive visualization dashboard with PCV-specific controls
+- Full parameter grid dataset generation with validity filter
+
+### Next Steps — Additional Ventilation Modes
+
+The following modes are the planned next steps for the simulator. Each
+introduces a new dimension of complexity — patient effort, breath-to-breath
+adaptation, or hybrid mandatory/spontaneous sequencing — that builds directly
+on the VCV and PCV physics already implemented.
+
+**PSV (Pressure Support Ventilation)**
+Patient-triggered, pressure-limited, flow-cycled ventilation. The patient
+initiates every breath; the ventilator delivers a set pressure support above
+PEEP and cycles off when inspiratory flow decays to a threshold fraction of
+peak flow. Modeling PSV requires adding a patient effort term (Pmus) to the
+equation of motion, making tidal volume and breath timing both patient-
+dependent. Breath-to-breath variability is a feature, not an error.
+
+**SIMV (Synchronized Intermittent Mandatory Ventilation)**
+A hybrid mode that delivers a set number of mandatory breaths per minute
+(either VC or PC) synchronized to the patient's effort, while allowing
+spontaneous pressure-supported breaths between mandatory cycles. Generating
+SIMV waveforms requires producing two distinct breath types — mandatory and
+spontaneous — within the same time series, with correct synchronization windows
+and phase-appropriate waveform shapes for each.
+
+**PRVC (Pressure-Regulated Volume Control)**
+A dual-control mode that targets a set tidal volume but adjusts the applied
+inspiratory pressure breath-by-breath to achieve it. The control algorithm
+measures delivered Vt on each breath and increases or decreases the next
+breath's pressure by a fixed increment (typically 1–3 cmH₂O) to converge on
+the target. Generating PRVC requires multi-breath sequences where the pressure
+waveform changes across cycles — it cannot be produced from single-breath
+snapshots.
 
 ### Out of Scope (current)
 - Real patient data ingestion
@@ -73,10 +117,14 @@ Build a modular, interactive ventilator waveform simulator that:
 
 ## Success Criteria
 
-- A user can select a respiratory condition, adjust parameters, and immediately see updated waveforms
-- Generated data is physiologically plausible (correct shape, direction, and relative scale)
+- A user can select a respiratory condition and ventilation mode, adjust
+  parameters, and immediately see updated waveforms
+- Generated data is physiologically plausible (correct shape, direction,
+  relative scale, and mode-specific waveform morphology)
 - Output CSV can be loaded into a Python notebook for further analysis
-- Codebase is modular enough that the signal generator can be swapped without rewriting the UI
+- Codebase is modular enough that a new ventilation mode generator can be added
+  without rewriting the UI or data layer
+
 
 ---
 
@@ -108,6 +156,5 @@ Where:
 ## Open Questions (for discussion with mentor)
 
 1. Should the simulator model passive (fully ventilated) patients only, or also spontaneously breathing patients?
-2. What respiratory rate and I:E ratio ranges should be supported?
-3. How many breath cycles per export is useful for modeling purposes?
-4. What is the eventual target fidelity — rule-based, ODE, or learned generative model?
+2. What patient effort profile (Pmus waveform shape, amplitude range) should be used for PSV and SIMV spontaneous breaths?
+3. What is the target dataset size per mode — full grid sweep or a curated clinically representative subset?
