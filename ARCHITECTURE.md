@@ -219,29 +219,60 @@ All values are adjustable via UI sliders — presets set the starting point only
 
 ## Scaling Path
 
-VCV (done)          PCV (done)          PSV (next)
-──────────────      ──────────────      ──────────────────────────────
-vcv_generator.py →  pcv_generator.py →  psv_generator.py
-Mandatory,          Mandatory,          Spontaneous, patient-triggered,
-volume-targeted,    pressure-targeted,  pressure-supported, flow-cycled.
-analytical +        ODE (solve_ivp),    Requires Pmus(t) patient effort
-exp. expiration.    fill fraction.      term in equation of motion.
-
-SIMV (future)                   PRVC (future)
-──────────────────────────────  ──────────────────────────────────────
-simv_generator.py               prvc_generator.py
-Hybrid: mandatory VC/PC         Dual-control: pressure delivery with
-breaths + spontaneous PSV       breath-by-breath Vt-targeting.
-breaths. Two waveform types     PIP adapts ±1–3 cmH₂O per cycle until
-in one time series.             Vt target is met. Multi-breath only.
-Learned generative model (long-term future)
-──────────────────────────────────────────
-ml_generator.py
-Data-driven model trained on the synthetic dataset produced above.
-Generalizes across mode, condition, and parameter combinations.
+─────────────────────────────────────────────────────────────────┐
+│  VCV — done                                                     │
+│  vcv_generator.py                                               │
+│  Mandatory, volume-targeted. Analytical inspiration + expiry.   │
+│  Square and decelerating flow. Inspiratory pause for Pplat.     │
+└──────────────────────────────┬──────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PCV — done                                                     │
+│  pcv_generator.py                                               │
+│  Mandatory, pressure-targeted. Full ODE (solve_ivp, RK45).      │
+│  Rise ramp, plateau, passive expiry. Fill fraction computed.    │
+└──────────────────────────────┬──────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PSV — next                                                     │
+│  psv_generator.py                                               │
+│  Spontaneous, patient-triggered, pressure-supported, flow-      │
+│  cycled. Adds Pmus(t) patient effort term to equation of        │
+│  motion. Tidal volume and breath timing are patient-dependent.  │
+└──────────────────────────────┬──────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────────┐
+│  SIMV — future                                                  │
+│  simv_generator.py                                              │
+│  Hybrid: mandatory VC/PC breaths synchronized to patient        │
+│  effort, with spontaneous PSV breaths between mandatory         │
+│  cycles. Two distinct waveform types in one time series.        │
+└──────────────────────────────┬──────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PRVC — future                                                  │
+│  prvc_generator.py                                              │
+│  Dual-control: pressure delivery with breath-by-breath          │
+│  Vt-targeting. PIP adjusts ±1–3 cmH₂O per cycle until Vt       │
+│  target is met. Multi-breath sequences only.                    │
+└──────────────────────────────┬──────────────────────────────────┘
+│
+▼
+┌─────────────────────────────────────────────────────────────────┐
+│  Learned generative model — long-term future                    │
+│  ml_generator.py                                                │
+│  Data-driven model trained on the synthetic dataset produced    │
+│  above. Generalizes across mode, condition, and parameter       │
+│  combinations without explicit physics equations.               │
+└─────────────────────────────────────────────────────────────────┘
 
 Same interface contract throughout — only `generator/` changes.
 The UI and data layers require no modification when a new engine is added.
+
 ---
 
 ## Setup Instructions (to be expanded in README.md)
