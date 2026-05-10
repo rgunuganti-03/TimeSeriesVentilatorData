@@ -1,7 +1,7 @@
 {
   "mode": "VCV",
   "dataset_type": "thinned",
-  "generated_at": "2026-05-07T05:39:43.640366+00:00",
+  "generated_at": "2026-05-09T03:50:11.148995+00:00",
   "n_cycles": 10,
   "ibw_kg": 70.0,
   "output_dir": "/Users/riyagunuganti/TimeSeriesVentilatorData/data/exports/vcv",
@@ -34,74 +34,74 @@
     ]
   },
   "combos_per_point": 288,
-  "grand_total": 36288,
-  "grand_valid": 29905,
-  "grand_invalid": 6383,
-  "valid_pct": 82.4,
-  "total_elapsed_s": 15.7,
+  "grand_total": 43776,
+  "grand_valid": 35717,
+  "grand_invalid": 8059,
+  "valid_pct": 81.6,
+  "total_elapsed_s": 19.3,
   "tiers": [
     {
       "condition": "Normal",
-      "mechanics_pairs": 24,
-      "total": 6912,
-      "valid": 6912,
-      "invalid": 0,
-      "valid_pct": 100.0,
-      "elapsed_s": 2.9
+      "mechanics_pairs": 40,
+      "total": 11520,
+      "valid": 11402,
+      "invalid": 118,
+      "valid_pct": 99.0,
+      "elapsed_s": 5.0
     },
     {
       "condition": "Mild ARDS",
-      "mechanics_pairs": 20,
-      "total": 5760,
-      "valid": 5056,
-      "invalid": 704,
-      "valid_pct": 87.8,
-      "elapsed_s": 2.4
-    },
-    {
-      "condition": "Moderate ARDS",
-      "mechanics_pairs": 9,
-      "total": 2592,
-      "valid": 1440,
-      "invalid": 1152,
-      "valid_pct": 55.6,
-      "elapsed_s": 1.1
-    },
-    {
-      "condition": "Severe ARDS",
       "mechanics_pairs": 12,
       "total": 3456,
-      "valid": 768,
-      "invalid": 2688,
-      "valid_pct": 22.2,
+      "valid": 3404,
+      "invalid": 52,
+      "valid_pct": 98.5,
       "elapsed_s": 1.5
     },
     {
-      "condition": "COPD",
-      "mechanics_pairs": 30,
-      "total": 8640,
-      "valid": 8274,
-      "invalid": 366,
-      "valid_pct": 95.8,
-      "elapsed_s": 3.6
+      "condition": "Moderate ARDS",
+      "mechanics_pairs": 12,
+      "total": 3456,
+      "valid": 2806,
+      "invalid": 650,
+      "valid_pct": 81.2,
+      "elapsed_s": 1.5
     },
     {
-      "condition": "Bronchospasm",
-      "mechanics_pairs": 16,
-      "total": 4608,
-      "valid": 3951,
-      "invalid": 657,
-      "valid_pct": 85.7,
+      "condition": "Severe ARDS",
+      "mechanics_pairs": 15,
+      "total": 4320,
+      "valid": 2285,
+      "invalid": 2035,
+      "valid_pct": 52.9,
       "elapsed_s": 1.9
     },
     {
+      "condition": "COPD",
+      "mechanics_pairs": 25,
+      "total": 7200,
+      "valid": 4537,
+      "invalid": 2663,
+      "valid_pct": 63.0,
+      "elapsed_s": 2.5
+    },
+    {
+      "condition": "Bronchospasm",
+      "mechanics_pairs": 24,
+      "total": 6912,
+      "valid": 4518,
+      "invalid": 2394,
+      "valid_pct": 65.4,
+      "elapsed_s": 3.5
+    },
+    {
       "condition": "Pneumonia",
-      "mechanics_pairs": 15,
-      "total": 4320,
-      "valid": 3504,
-      "invalid": 816,
-      "valid_pct": 81.1,
-      "elapsed_s": 1.8
+      "mechanics_pairs": 24,
+      "total": 6912,
+      "valid": 6765,
+      "invalid": 147,
+      "valid_pct": 97.9,
+      "elapsed_s": 3.0
     }
   ]
 }

@@ -216,7 +216,8 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     V_residual = 0.0  # carries forward between cycles
 
     for cycle in range(n_cycles):
-        t0     = cycle * t_cycle
+        
+        t0 = cycle * (t_cycle + t_pause)
         offset = cycle * (n_insp + n_pause + n_exp)
        
 

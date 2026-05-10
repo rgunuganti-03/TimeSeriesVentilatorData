@@ -264,9 +264,15 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     volume_arr = sol.y[0]                        # mL
 
     last_peak = volume_arr[(n_cycles - 1) * (n_insp + n_exp):].max()
-    prev_peak = volume_arr[(n_cycles - 2) * (n_insp + n_exp):
-                            (n_cycles - 1) * (n_insp + n_exp)].max()
-    equilibrium_reached = abs(last_peak - prev_peak) < 5.0
+    if n_cycles >= 2:
+        prev_peak = volume_arr[
+            (n_cycles - 2) * (n_insp + n_exp) :
+            (n_cycles - 1) * (n_insp + n_exp)
+        ].max()
+        equilibrium_reached = abs(last_peak - prev_peak) < 5.0
+    else:
+        # Single cycle — assume equilibrium for validity and metrics purposes
+        equilibrium_reached = True
     
 
     # --- Derive flow and pressure -----------------------------------------
