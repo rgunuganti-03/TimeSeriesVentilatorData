@@ -1004,7 +1004,7 @@ def generate_breath_cycles(params: dict,
             # Track peak flow and check cycling criterion
             if Q_total > Q_peak_insp:
                 Q_peak_insp = Q_total
-            elif Q_total < Q_peak_insp * 0.95 and not past_peak:
+            elif Q_total < Q_peak_insp * 0.95 and not past_peak and Q_peak_insp > 0.01:
                 past_peak = True
 
             if past_peak and _check_cycle(Q_total, Q_peak_insp, fct):
