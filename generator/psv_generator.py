@@ -781,6 +781,7 @@ def generate_breath_cycles(params: dict,
 
     fractions   = np.array([c["fraction"]  for c in profile])
     C_frac_arr  = np.array([c["C_frac"]    for c in profile])
+    C_frac_norm = float(np.dot(C_frac_arr, fractions))
     R_frac_arr  = np.array([c["R_frac"]    for c in profile])
     R_exp_arr   = np.array([c["R_exp_ratio"] for c in profile])
     teth_arr    = np.array([c["tethering"] for c in profile])
@@ -789,7 +790,7 @@ def generate_breath_cycles(params: dict,
     C_lung_rec = _peep_recruited_compliance(C_global, peep_e, peep_ref, rec_slope)
 
     # Per-compartment base compliance and resistance (intrinsic + ETT)
-    C_comps_base = C_lung_rec * C_frac_arr   # mL/cmH2O per compartment
+    C_comps_base = C_lung_rec * C_frac_arr * fractions / max(C_frac_norm, 0.01)   # mL/cmH2O per compartment
     R_comps_base = R_global * R_frac_arr      # cmH2O/L/s per compartment
 
     # Reference volume for non-linear compliance (mid-inspiration target)
@@ -881,12 +882,13 @@ def generate_breath_cycles(params: dict,
 
         # ---- Compute auto-PEEP at effort onset ---------------------------
         V_end_exp  = float(V_comps.sum())
-        C_rs_eff_now = max(C_lung_rec * sum(
+        C_lung_eff_now = max(C_lung_rec * sum(
             fractions[i] * _compliance_nonlinear(
                 V_comps[i], C_comps_base[i],
                 vt_ref_per_comp[i] * 0.5, stress_index
             ) / max(C_comps_base[i], 0.1) for i in range(n_comps)
         ), 0.5)
+        C_rs_eff_now = _C_rs(C_lung_eff_now, C_chest)   # ← add chest wall
         auto_peep_now = V_end_exp / max(C_rs_eff_now, 0.1)
         last_auto_peep_now = auto_peep_now
 
