@@ -532,7 +532,7 @@ def _classify_dyssynchrony(triggered: bool,
                              flow_cycle_threshold: float,
                              ps_level: float,
                              Q_at_trigger: float,
-                             Q_demand: float) -> str:
+                             Q_demand: float, insp_ended_by_reversal=False) -> str:
     """
     Classify each breath into one of seven categories.
 
@@ -568,8 +568,9 @@ def _classify_dyssynchrony(triggered: bool,
     # Delayed cycling: ventilator Ti substantially exceeds patient neural Ti
     # Patient begins active exhalation while ventilator still pressurising
     ti_ratio = t_insp / max(t_effort_dur, 0.1)
-    if flow_cycle_threshold <= 0.15 and ti_ratio > 1.2:
-        return "delayed_cycling"
+    if flow_cycle_threshold <= 0.15: 
+        if ti_ratio > 1.2 or insp_ended_by_reversal:
+            return "delayed_cycling"
 
     # Premature cycling: ventilator stops well before patient neural Ti ends
     if flow_cycle_threshold >= 0.38 and ti_ratio < 0.65:
@@ -937,6 +938,7 @@ def generate_breath_cycles(params: dict,
         t_insp       = 0.0
         Q_at_trigger = 0.0
 
+        insp_ended_by_reversal = False
         while t_insp < MAX_INSP_TIME_S:
             # Ventilator pressure (rise phase → plateau)
             if t_insp < rise_time:
@@ -998,6 +1000,8 @@ def generate_breath_cycles(params: dict,
                 past_peak = True
 
             if past_peak and _check_cycle(Q_total, Q_peak_insp, fct):
+                if Q_total <= 0.0:
+                    insp_ended_by_reversal = True
                 break
 
             t_insp += DT
@@ -1019,6 +1023,7 @@ def generate_breath_cycles(params: dict,
             ps_level=ps_level,
             Q_at_trigger=Q_at_trigger,
             Q_demand=Q_demand,
+            insp_ended_by_reversal=insp_ended_by_reversal,
         )
 
         dyssync_labels.append(label)
