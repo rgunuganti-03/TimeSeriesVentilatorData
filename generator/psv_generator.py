@@ -569,7 +569,7 @@ def _classify_dyssynchrony(triggered: bool,
     # Patient begins active exhalation while ventilator still pressurising
     ti_ratio = t_insp / max(t_effort_dur, 0.1)
     if flow_cycle_threshold <= 0.15: 
-        if ti_ratio > 1.2 or insp_ended_by_reversal:
+        if ti_ratio > 1.05 or insp_ended_by_reversal:
             return "delayed_cycling"
 
     # Premature cycling: ventilator stops well before patient neural Ti ends
@@ -966,7 +966,8 @@ def generate_breath_cycles(params: dict,
                 V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
                 Q_comps[i] = dVdt_i / 1000.0
 
-            Q_total   = max(float(Q_comps.sum()), 0.0)
+            
+            Q_total = float(Q_comps.sum())
             V_total   = float(V_comps.sum())
             C_rs_now  = max(C_lung_rec * sum(
                 fractions[i] * _compliance_nonlinear(
@@ -1492,7 +1493,7 @@ if __name__ == "__main__":
     # ---- Test 3: Delayed cycling ----------------------------------------
     print("\n[3/5] Dyssynchrony — delayed cycling (low FCT=0.10)")
     p_delay = {**p_normal, "flow_cycle_threshold": 0.10,
-               "effort_duration_s": 0.55}
+               "effort_duration_s": 0.40, "resistance_cmH2O_L_s":  18.0, }
     r_delay = generate_breath_cycles(p_delay, n_cycles=8, seed=44)
     labels  = r_delay["breath_dyssynchrony_labels"]
     _check("delayed_cycling detected",
