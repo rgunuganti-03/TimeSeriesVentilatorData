@@ -78,7 +78,7 @@ CONDITION_TIERS = [
         "name":             "Normal",
         "compliance_range": (60, 100),   # healthy lungs: 60–100 mL/cmH2O
         "compliance_step":  10,
-        "resistance_range": (8, 15),     # ETT (5–7) + normal airways (3–5)
+        "resistance_range": (8, 12),     # ETT (5–7) + normal airways (3–5)
         "resistance_step":  1,
     },
     {
