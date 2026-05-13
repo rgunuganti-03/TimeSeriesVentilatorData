@@ -813,6 +813,8 @@ def generate_breath_cycles(params: dict,
     t_prev_breath               = 0.0
     prev_label                  = "synchronous"
     V_baseline_total: float = 0.0
+    t_prev_insp: float = 0.0
+    last_auto_peep_now: float = 0.0
     # ---- Event-driven main loop ------------------------------------------
     while triggered_count < n_cycles:
 
@@ -827,7 +829,7 @@ def generate_breath_cycles(params: dict,
         )
 
         # ---- Passive expiration until effort onset -----------------------
-        t_exp = t_effort_noisy
+        t_exp = max(t_effort_noisy - t_prev_insp, 0.10)
         n_exp_steps = max(1, int(round(t_exp / DT)))
 
         # Compute end-inspiratory volumes for volume-dependent exp R
@@ -886,6 +888,7 @@ def generate_breath_cycles(params: dict,
             ) / max(C_comps_base[i], 0.1) for i in range(n_comps)
         ), 0.5)
         auto_peep_now = V_end_exp / max(C_rs_eff_now, 0.1)
+        last_auto_peep_now = auto_peep_now
 
         # ---- Check reverse triggering ------------------------------------
         pmus_during_exp = _pmus_waveform(t_exp * 0.5, eff_dur, pmus_peak * 0.2)
@@ -896,6 +899,7 @@ def generate_breath_cycles(params: dict,
             rr_list.append(60.0 / max(t_current - t_prev_breath, 0.1))
             t_prev_breath = t_current
             prev_label = "reverse_trigger"
+            t_prev_insp = 0.0
             continue
 
         # ---- Trigger check -----------------------------------------------
@@ -912,6 +916,7 @@ def generate_breath_cycles(params: dict,
             n_eff_steps = max(1, int(round(eff_dur / DT)))
             for step in range(n_eff_steps):
                 te = step * DT
+                t_prev_insp = n_eff_steps * DT
                 pmus_now = _pmus_waveform(te, eff_dur, pmus_peak)
                 # Attenuated flow perturbation (partial opening against auto-PEEP)
                 Q_perturb = min(pmus_now / max(K1_eff + auto_peep_now, 1.0), 0.05)
@@ -1006,7 +1011,7 @@ def generate_breath_cycles(params: dict,
                 break
 
             t_insp += DT
-
+        t_prev_insp = t_insp
         # ---- Compute breath-level metrics --------------------------------
         insp_vt = float(V_comps.sum() - V_start_insp.sum())
         insp_vt = max(insp_vt, 0.0)
@@ -1056,11 +1061,11 @@ def generate_breath_cycles(params: dict,
     CIRCUIT_COMPLIANCE_ML_PER_CMH2O, circ_compensated
 )
     # Fill fraction: ratio of mean delivered Vt to theoretical maximum
-    vt_max    = ps_level * C_lung_rec
+    vt_max = (ps_level + pmus_mean) * C_lung_rec
     fill_frac = float(np.clip(mean_vt / max(vt_max, 1.0), 0.0, 1.0))
 
     # Auto-PEEP from residual volume at final end-expiration
-    final_auto_peep = float(V_comps.sum() / max(C_rs_eff_now, 0.1))
+    final_auto_peep = last_auto_peep_now 
 
     # Circuit-corrected patient Vt
     patient_vt_corrected = _circuit_vt_correction(
