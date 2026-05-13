@@ -845,7 +845,7 @@ def generate_breath_cycles(params: dict,
                 C_i  = _compliance_nonlinear(
                     Vi, C_comps_base[i], vt_ref_per_comp[i] * 0.5, stress_index
                 )
-                C_rs_i = _C_rs(C_i, C_chest * fractions[i])
+                C_rs_i = _C_rs(C_i, C_chest)
                 dVdt_i = -(Vi / max(C_rs_i, 0.1)) / max(Ri_e, 0.1) * 1000.0
                 V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
                 Q_comps[i] = dVdt_i / 1000.0  # L/s
@@ -956,12 +956,12 @@ def generate_breath_cycles(params: dict,
                 C_i  = _compliance_nonlinear(
                     Vi, C_comps_base[i], vt_ref_per_comp[i] * 0.5, stress_index
                 )
-                C_rs_i = _C_rs(C_i, C_chest * fractions[i])
+                C_rs_i = _C_rs(C_i, C_chest)
                 Ri_i   = _R_insp_with_tethering(
                     R_comps_base[i],
                     Vi, vt_ref_per_comp[i], teth_arr[i]
                 )
-                drive_i  = P_vent + pmus_now - (Vi / max(C_rs_i, 0.1)) - peep_e
+                drive_i = P_vent + pmus_now - (Vi / max(C_rs_i, 0.1)) - peep_e
                 dVdt_i   = drive_i / max(Ri_i, 0.1) * 1000.0
                 V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
                 Q_comps[i] = dVdt_i / 1000.0
