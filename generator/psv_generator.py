@@ -818,6 +818,7 @@ def generate_breath_cycles(params: dict,
     last_auto_peep_now: float = 0.0
     # ---- Event-driven main loop ------------------------------------------
     while triggered_count < n_cycles:
+       
 
         # Schedule next effort onset with inter-effort variability (±10%)
         t_effort = 60.0 / eff_rate
@@ -1049,6 +1050,10 @@ def generate_breath_cycles(params: dict,
         t_prev_breath = t_current + t_insp
         t_current    += t_insp
         prev_label    = label
+    
+    t_trail        = 60.0 / eff_rate
+    n_trail        = max(2, int(round(t_trail / DT)))
+    V_end_last_insp = V_comps.copy()
 
     # ---- Aggregate metrics -----------------------------------------------
     for i in range(1, len(T_list)):
