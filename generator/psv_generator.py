@@ -857,11 +857,8 @@ def generate_breath_cycles(params: dict,
                 V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
                 Q_comps[i] = dVdt_i / 1000.0  # L/s
 
-            if step == 0:
-                continue 
 
-
-            Q_total    = float(-sum(V_comps))
+            Q_total    = float(sum(Q_comps))
             V_total    = float(V_comps.sum())
             C_rs_total  = max(C_lung_rec * sum(
             fractions[i] * _compliance_nonlinear(V_comps[i], C_comps_base[i],
@@ -877,10 +874,7 @@ def generate_breath_cycles(params: dict,
 
             T_list.append(t_current + t_in_exp)
             P_list.append(pres + pel + tpeep)
-            Q_list.append(float(sum(
-        -(V_comps[j] / max(C_comps_base[j], 0.1)) / max(R_comps_base[j], 0.1) / 1000.0
-        for j in range(n_comps)
-    )))
+            Q_list.append(float(sum(Q_comps)))
             V_list.append(V_total)
             Pres_list.append(pres)
             Pel_list.append(pel)
