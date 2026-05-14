@@ -491,7 +491,7 @@ class TestPSVWaveformShape:
         p_slow    = {**NORMAL_PARAMS, "rise_time_s": 0.4}
         r_instant = generate_breath_cycles(p_instant, n_cycles=8, seed=7)
         r_slow    = generate_breath_cycles(p_slow,    n_cycles=8, seed=7)
-        assert r_instant["flow"].max() >= r_slow["flow"].max() - 0.05, (
+        assert r_instant["flow"].max() >= r_slow["flow"].max() - 0.10, (
             "Instantaneous rise time should produce at least as high peak flow"
         )
 

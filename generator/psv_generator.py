@@ -668,7 +668,7 @@ def _validate_params(params: dict) -> None:
     R     = params["resistance_cmH2O_L_s"]
     cv    = params["pmus_cv"]
 
-    if not (1 <= ps <= PS_MAX_CMHH2O):
+    if not (1 <= ps <= 80):
         raise ValueError(f"pressure_support_cmH2O {ps} out of range [1, {PS_MAX_CMHH2O}]")
     if not (0 <= peep <= 20):
         raise ValueError(f"peep_cmH2O {peep} out of range [0, 20]")
@@ -836,14 +836,21 @@ def generate_breath_cycles(params: dict,
         # Compute end-inspiratory volumes for volume-dependent exp R
         V_end_insp = V_comps.copy()
 
-        for step in range(n_exp_steps):
+        # ---- Final expiration to complete the last breath cycle ----------------
+        t_exp_final  = max(60.0 / eff_rate - t_prev_insp, 0.10)
+        n_exp_final  = max(1, int(round(t_exp_final / DT)))
+        V_end_insp_f = V_comps.copy()
+
+        for step in range(n_exp_final):
+            if step == 0:
+                continue
             t_in_exp = step * DT
             Q_comps  = np.zeros(n_comps)
 
             for i in range(n_comps):
                 Vi   = max(V_comps[i], 0.0)
-                Ri_e = _R_exp_dynamic(Vi, max(V_end_insp[i], 1.0),
-                                       R_comps_base[i], R_exp_arr[i])
+                Ri_e = _R_exp_dynamic(Vi, max(V_end_insp_f[i], 1.0), R_comps_base[i], R_exp_arr[i])
+                
                 # Passive deflation ODE: dV/dt = -V / (R * C)
                 C_i  = _compliance_nonlinear(
                     Vi, C_comps_base[i], vt_ref_per_comp[i] * 0.5, stress_index
@@ -853,25 +860,27 @@ def generate_breath_cycles(params: dict,
                 V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
                 Q_comps[i] = dVdt_i / 1000.0  # L/s
 
-            Q_total    = float(Q_comps.sum())
+            if step == 0:
+                continue 
+
+
+            Q_total    = float(-sum(V_comps))
             V_total    = float(V_comps.sum())
-            C_rs_total = max(C_lung_rec * sum(
-                f * _compliance_nonlinear(
-                    V_comps[i], C_comps_base[i],
-                    vt_ref_per_comp[i] * 0.5, stress_index
-                ) / max(C_comps_base[i], 0.1)
-                for i, f in enumerate(fractions)
-            ), 0.5)
+            C_rs_total  = max(C_lung_rec * sum(
+            fractions[i] * _compliance_nonlinear(V_comps[i], C_comps_base[i],
+                vt_ref_per_comp[i] * 0.5, stress_index) / max(C_comps_base[i], 0.1)
+            for i in range(n_comps)), 0.5)
+            
 
             
-            pres  = _rohrer_resistance(Q_total, K1_eff, K2_eff)
+            pres  = 0.0
             pel = (V_total - V_baseline_total) / max(C_rs_total, 0.1)
             tpeep   = peep_e + (V_baseline_total / max(C_rs_total, 0.1))
 
 
             T_list.append(t_current + t_in_exp)
             P_list.append(pres + pel + tpeep)
-            Q_list.append(Q_total)
+            Q_list.append(Q_total/1000)
             V_list.append(V_total)
             Pres_list.append(pres)
             Pel_list.append(pel)
@@ -999,7 +1008,7 @@ def generate_breath_cycles(params: dict,
             V_list.append(V_total)
             Pres_list.append(pres_now)
             Pel_list.append(pel_now)
-            Tpeep_list.append(peep_total_now)
+            Tpeep_list.append(tpeep_now)
 
             # Track peak flow and check cycling criterion
             if Q_total > Q_peak_insp:
@@ -1324,8 +1333,11 @@ def _make_scenario_id(condition: str, params: dict) -> str:
     R   = int(params["resistance_cmH2O_L_s"])
     peep = int(params["peep_cmH2O"])
     fct  = int(params["flow_cycle_threshold"] * 100)
+    rt   = int(params.get("rise_time_s",      0.0) * 10)   # e.g. 0/1/2/4
+    ed   = int(params.get("effort_duration_s", 0.8) * 10)  # e.g. 5/8/11
+    cv   = int(params.get("pmus_cv",          0.15) * 100)
     cond = condition.replace(" ", "_").upper()
-    return f"PSV_{cond}_PS{ps:02d}_RR{rr:02d}_PMUS{pm:02d}_C{C:03d}_R{R:02d}_PEEP{peep:02d}_FCT{fct:02d}"
+    return f"PSV_{cond}_PS{ps:02d}_RR{rr:02d}_PMUS{pm:02d}_C{C:03d}_R{R:02d}_PEEP{peep:02d}_FCT{fct:02d}_RT{rt:02d}_ED{ed:02d}_CV{cv:02d}"
 
 
 def _timestamp() -> str:
