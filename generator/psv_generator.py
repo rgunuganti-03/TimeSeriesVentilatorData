@@ -668,7 +668,7 @@ def _validate_params(params: dict) -> None:
     R     = params["resistance_cmH2O_L_s"]
     cv    = params["pmus_cv"]
 
-    if not (1 <= ps <= 80):
+    if not (1 <= ps <= 50):
         raise ValueError(f"pressure_support_cmH2O {ps} out of range [1, {PS_MAX_CMHH2O}]")
     if not (0 <= peep <= 20):
         raise ValueError(f"peep_cmH2O {peep} out of range [0, 20]")
@@ -696,7 +696,7 @@ def _assess_validity(metrics: dict, params: dict) -> Tuple[bool, str]:
     ff   = metrics["fill_fraction"]
 
     if ppk > PPEAK_MAX_CMHH2O:
-        return False, f"PPeak {ppk:.1f} cmH2O exceeds barotrauma threshold {PPEAK_MAX_CMHH2O}"
+        return False, f"Ppeak {ppk:.1f} cmH2O exceeds barotrauma threshold {PPEAK_MAX_CMHH2O}"
     if ps > PS_MAX_CMHH2O:
         return False, f"Pressure support {ps} cmH2O exceeds maximum {PS_MAX_CMHH2O}"
     if vt > VT_MAX_ML:
@@ -837,7 +837,7 @@ def generate_breath_cycles(params: dict,
         V_end_insp = V_comps.copy()
 
         # ---- Final expiration to complete the last breath cycle ----------------
-        t_exp_final  = max(60.0 / eff_rate - t_prev_insp, 0.10)
+        t_exp_final  = 60.0 / eff_rate
         n_exp_final  = max(1, int(round(t_exp_final / DT)))
         V_end_insp_f = V_comps.copy()
 
@@ -878,7 +878,7 @@ def generate_breath_cycles(params: dict,
             tpeep   = peep_e + (V_baseline_total / max(C_rs_total, 0.1))
 
 
-            T_list.append(t_current + t_in_exp)
+            T_list.append(t_current + step * DT)
             P_list.append(pres + pel + tpeep)
             Q_list.append(Q_total/1000)
             V_list.append(V_total)
@@ -931,13 +931,17 @@ def generate_breath_cycles(params: dict,
                 pmus_now = _pmus_waveform(te, eff_dur, pmus_peak)
                 # Attenuated flow perturbation (partial opening against auto-PEEP)
                 Q_perturb = min(pmus_now / max(K1_eff + auto_peep_now, 1.0), 0.05)
+                pres_eff  = -Q_perturb * K1_eff           # resistive: tiny inspiratory → negative
+                pel_eff   = 0.0                            # volume unchanged → no elastic ΔP
+                tpeep_eff = peep_e + auto_peep_now         # baseline = set PEEP + auto-PEEP
+                pao_eff   = pres_eff + pel_eff + tpeep_eff # always satisfies decomposition
                 T_list.append(t_current + te)
-                P_list.append(peep_e + auto_peep_now - pmus_now * 0.3)
-                Q_list.append(-Q_perturb)  # still expiratory phase
+                P_list.append(pao_eff)
+                Q_list.append(Q_perturb)  # still expiratory phase
                 V_list.append(V_end_exp)
-                Pres_list.append(Q_perturb * K1_eff)
-                Pel_list.append(auto_peep_now)
-                Tpeep_list.append(peep_e + auto_peep_now)
+                Pres_list.append(pres_eff)
+                Pel_list.append(pel_eff)
+                Tpeep_list.append(tpeep_eff)
 
             t_current += n_eff_steps * DT
             dyssync_labels.append("ineffective_trigger")
@@ -1336,8 +1340,9 @@ def _make_scenario_id(condition: str, params: dict) -> str:
     rt   = int(params.get("rise_time_s",      0.0) * 10)   # e.g. 0/1/2/4
     ed   = int(params.get("effort_duration_s", 0.8) * 10)  # e.g. 5/8/11
     cv   = int(params.get("pmus_cv",          0.15) * 100)
+    tt   = int(params.get("trigger_threshold_cmH2O", 1.5) * 10)  
     cond = condition.replace(" ", "_").upper()
-    return f"PSV_{cond}_PS{ps:02d}_RR{rr:02d}_PMUS{pm:02d}_C{C:03d}_R{R:02d}_PEEP{peep:02d}_FCT{fct:02d}_RT{rt:02d}_ED{ed:02d}_CV{cv:02d}"
+    return f"PSV_{cond}_PS{ps:02d}_RR{rr:02d}_PMUS{pm:02d}_C{C:03d}_R{R:02d}_PEEP{peep:02d}_FCT{fct:02d}_RT{rt:02d}_ED{ed:02d}_CV{cv:02d}_TT{tt:02d}"
 
 
 def _timestamp() -> str:
