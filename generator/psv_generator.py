@@ -1053,7 +1053,44 @@ def generate_breath_cycles(params: dict,
     
     t_trail        = 60.0 / eff_rate
     n_trail        = max(2, int(round(t_trail / DT)))
-    V_end_last_insp = V_comps.copy()
+    V_end_insp_trail = V_comps.copy()
+
+    for step in range(n_trail):
+        if step == 0:
+            continue
+        t_in_exp = step * DT
+        Q_comps  = np.zeros(n_comps)
+
+        for i in range(n_comps):
+            Vi   = max(V_comps[i], 0.0)
+            Ri_e = _R_exp_dynamic(Vi, max(V_end_insp_trail[i], 1.0), R_comps_base[i], R_exp_arr[i])
+            C_i  = _compliance_nonlinear(
+                Vi, C_comps_base[i], vt_ref_per_comp[i] * 0.5, stress_index
+            )
+            C_rs_i = _C_rs(C_i, C_chest)
+            dVdt_i = -(Vi / max(C_rs_i, 0.1)) / max(Ri_e, 0.1) * 1000.0
+            V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
+            Q_comps[i] = dVdt_i / 1000.0
+
+        Q_total    = float(sum(Q_comps))
+        V_total    = float(V_comps.sum())
+        C_rs_total = max(C_lung_rec * sum(
+            fractions[i] * _compliance_nonlinear(V_comps[i], C_comps_base[i],
+                vt_ref_per_comp[i] * 0.5, stress_index) / max(C_comps_base[i], 0.1)
+            for i in range(n_comps)), 0.5)
+        C_rs_total = _C_rs(C_rs_total, C_chest)
+
+        pres  = 0.0
+        pel   = max((V_total - V_baseline_total) / max(C_rs_total, 0.1), 0.0)
+        tpeep = peep_e + (V_baseline_total / max(C_rs_total, 0.1))
+
+        T_list.append(t_current + t_in_exp)
+        P_list.append(pres + pel + tpeep)
+        Q_list.append(float(sum(Q_comps)))
+        V_list.append(V_total)
+        Pres_list.append(pres)
+        Pel_list.append(pel)
+        Tpeep_list.append(tpeep)
 
     # ---- Aggregate metrics -----------------------------------------------
     for i in range(1, len(T_list)):
