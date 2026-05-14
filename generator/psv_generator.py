@@ -831,14 +831,11 @@ def generate_breath_cycles(params: dict,
 
         # ---- Passive expiration until effort onset -----------------------
         t_exp = max(t_effort_noisy - t_prev_insp, 0.10)
-        n_exp_steps = max(1, int(round(t_exp / DT)))
-
-        # Compute end-inspiratory volumes for volume-dependent exp R
-        V_end_insp = V_comps.copy()
+     
 
         # ---- Final expiration to complete the last breath cycle ----------------
         t_exp_final  = 60.0 / eff_rate
-        n_exp_final  = max(1, int(round(t_exp_final / DT)))
+        n_exp_final  = max(2, int(round(t_exp_final / DT)))
         V_end_insp_f = V_comps.copy()
 
         for step in range(n_exp_final):
@@ -870,23 +867,26 @@ def generate_breath_cycles(params: dict,
             fractions[i] * _compliance_nonlinear(V_comps[i], C_comps_base[i],
                 vt_ref_per_comp[i] * 0.5, stress_index) / max(C_comps_base[i], 0.1)
             for i in range(n_comps)), 0.5)
-            
+            C_rs_total = _C_rs(C_rs_total, C_chest)
 
             
             pres  = 0.0
-            pel = (V_total - V_baseline_total) / max(C_rs_total, 0.1)
+            pel = max((V_total - V_baseline_total) / max(C_rs_total, 0.1),0.0)
             tpeep   = peep_e + (V_baseline_total / max(C_rs_total, 0.1))
 
 
-            T_list.append(t_current + step * DT)
+            T_list.append(t_current + t_in_exp)
             P_list.append(pres + pel + tpeep)
-            Q_list.append(Q_total/1000)
+            Q_list.append(float(sum(
+        -(V_comps[j] / max(C_comps_base[j], 0.1)) / max(R_comps_base[j], 0.1) / 1000.0
+        for j in range(n_comps)
+    )))
             V_list.append(V_total)
             Pres_list.append(pres)
             Pel_list.append(pel)
             Tpeep_list.append(tpeep)
         V_baseline_total = float(V_comps.sum()) 
-        t_current += n_exp_steps * DT
+        t_current += n_exp_final * DT
         total_effort_count += 1
 
         # ---- Compute auto-PEEP at effort onset ---------------------------
@@ -1057,6 +1057,9 @@ def generate_breath_cycles(params: dict,
         prev_label    = label
 
     # ---- Aggregate metrics -----------------------------------------------
+    for i in range(1, len(T_list)):
+        if T_list[i] <= T_list[i - 1]:
+            T_list[i] = T_list[i - 1] + DT
     time_arr  = np.array(T_list, dtype=np.float32)
     pres_arr  = np.array(P_list, dtype=np.float32)
     flow_arr  = np.array(Q_list, dtype=np.float32)
