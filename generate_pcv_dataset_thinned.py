@@ -189,6 +189,7 @@ def _generate_thinned_dataset(
             "ie_ratio":                ie,
             "peep_cmH2O":              peep,
             "rise_time_s":             t_rise,
+            "condition":               condition_name,
         }
 
         scenario_id = _make_scenario_id(condition_name, params)

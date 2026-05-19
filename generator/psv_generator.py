@@ -202,20 +202,20 @@ COMPARTMENT_PROFILES: Dict = {
     ],
     "Mild ARDS": [
         {"fraction": 0.75, "C_frac": 0.90, "R_frac": 1.00,
-         "R_exp_ratio": 1.5,  "tethering": 0.40},  # aerated
-        {"fraction": 0.25, "C_frac": 0.12, "R_frac": 2.00,
+         "R_exp_ratio": 1.4,  "tethering": 0.40},  # aerated
+        {"fraction": 0.25, "C_frac": 0.10, "R_frac": 1.60,
          "R_exp_ratio": 2.0,  "tethering": 0.10},  # recruitable
     ],
     "Moderate ARDS": [
         {"fraction": 0.60, "C_frac": 0.85, "R_frac": 1.00,
-         "R_exp_ratio": 1.8,  "tethering": 0.30},
-        {"fraction": 0.40, "C_frac": 0.10, "R_frac": 2.50,
-         "R_exp_ratio": 2.5,  "tethering": 0.10},
+         "R_exp_ratio": 1.6,  "tethering": 0.25},
+        {"fraction": 0.40, "C_frac": 0.05, "R_frac": 1.80,
+         "R_exp_ratio": 2.5,  "tethering": 0.08},
     ],
     "Severe ARDS": [
         {"fraction": 0.40, "C_frac": 0.80, "R_frac": 1.00,
-         "R_exp_ratio": 2.0,  "tethering": 0.20},
-        {"fraction": 0.60, "C_frac": 0.07, "R_frac": 3.00,
+         "R_exp_ratio": 1.8,  "tethering": 0.20},
+        {"fraction": 0.60, "C_frac": 0.03, "R_frac": 2.00,
          "R_exp_ratio": 3.0,  "tethering": 0.05},
     ],
     # COPD: 3 compartments — fast (less obstructed), medium, slow (emphysema)
@@ -247,13 +247,13 @@ COMPARTMENT_PROFILES: Dict = {
 # PEEP-recruited compliance slopes (mL/cmH2O of C gained per cmH2O of PEEP
 # above reference PEEP of 5 cmH2O)
 RECRUITMENT_SLOPES: Dict = {
-    "Normal":        0.30,
-    "Mild ARDS":     1.50,
-    "Moderate ARDS": 2.50,
-    "Severe ARDS":   3.00,
-    "COPD":          0.20,
-    "Bronchospasm":  0.50,
-    "Pneumonia":     1.20,
+    "Normal":        0.00,
+    "Mild ARDS":     0.50,
+    "Moderate ARDS": 0.90,
+    "Severe ARDS":   0.60,
+    "COPD":          0.00,
+    "Bronchospasm":  0.00,
+    "Pneumonia":     0.10,
 }
 
 # ---------------------------------------------------------------------------
@@ -690,7 +690,7 @@ def _validate_params(params: dict) -> None:
 
 def _assess_validity(metrics: dict, params: dict) -> Tuple[bool, str]:
     """Apply clinical safety filters; return (is_valid, reason)."""
-    vt   = metrics["delivered_vt_mL"]
+    vt   = metrics["delivered_vt_ml"]
     ppk  = metrics["ppeak_cmH2O"]
     ps   = params["pressure_support_cmH2O"]
     ff   = metrics["fill_fraction"]

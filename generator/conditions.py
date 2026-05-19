@@ -43,12 +43,21 @@ CONDITIONS = {
             "Healthy adult lung. Normal compliance and resistance. "
             "Standard tidal volume and respiratory rate."
         ),
+        "condition":   "Normal",
         "respiratory_rate":          15,
+        "stress_index": 1.00, 
         "tidal_volume_mL":          500,
         "compliance_mL_per_cmH2O":   70,
         "resistance_cmH2O_L_s":      10,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                 5,
+        "pressure_support_cmH2O":  10,
+        "flow_cycle_threshold":     0.25,
+        "trigger_threshold_cmH2O":  1.5,
+        "pmus_peak_cmH2O":          8,
+        "effort_rate_per_min":     18,
+        "effort_duration_s":        0.8,
+        "pmus_cv":                  0.20,
     },
 
     "Mild ARDS": {
@@ -58,12 +67,21 @@ CONDITIONS = {
             "Lung-protective tidal volume is still achievable without dangerous "
             "driving pressures in most VCV scenarios. Compliance 45 mL/cmH₂O."
         ),
+        "condition":   "Mild ARDS",
         "respiratory_rate":          20,
+        "stress_index": 0.90, 
         "tidal_volume_mL":          420,
         "compliance_mL_per_cmH2O":   45,
         "resistance_cmH2O_L_s":      12,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                 8,
+        "pressure_support_cmH2O":  14,
+        "flow_cycle_threshold":     0.25,
+        "trigger_threshold_cmH2O":  1.5,
+        "pmus_peak_cmH2O":         12,
+        "effort_rate_per_min":     24,
+        "effort_duration_s":        0.7,
+        "pmus_cv":                  0.22,
     },
 
     "Moderate ARDS": {
@@ -73,12 +91,21 @@ CONDITIONS = {
             "compliance. Strict lung-protective ventilation required. "
             "Compliance 30 mL/cmH₂O."
         ),
+        "condition":   "Moderate ARDS",
         "respiratory_rate":          24,
+        "stress_index": 0.85,
         "tidal_volume_mL":          380,
         "compliance_mL_per_cmH2O":   30,
         "resistance_cmH2O_L_s":      14,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                12,
+        "pressure_support_cmH2O":  16,
+        "flow_cycle_threshold":     0.25,
+        "trigger_threshold_cmH2O":  1.5,
+        "pmus_peak_cmH2O":         15,
+        "effort_rate_per_min":     28,
+        "effort_duration_s":        0.65,
+        "pmus_cv":                  0.25,
     },
 
     "Severe ARDS": {
@@ -88,12 +115,21 @@ CONDITIONS = {
             "compliance — the 'baby lung'. Ultra-protective ventilation and "
             "permissive hypercapnia required. Compliance 18 mL/cmH₂O."
         ),
+        "condition":   "Severe ARDS",
         "respiratory_rate":          28,
+        "stress_index": 0.80,
         "tidal_volume_mL":          300,
         "compliance_mL_per_cmH2O":   18,
         "resistance_cmH2O_L_s":      16,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                16,
+        "pressure_support_cmH2O":  18,
+        "flow_cycle_threshold":     0.25,
+        "trigger_threshold_cmH2O":  1.5,
+        "pmus_peak_cmH2O":          6,
+        "effort_rate_per_min":     20,
+        "effort_duration_s":        0.8,
+        "pmus_cv":                  0.20,
     },
 
     "COPD": {
@@ -104,12 +140,21 @@ CONDITIONS = {
             "from dynamic airway collapse. Slow RR and extended I:E required "
             "to prevent dynamic hyperinflation."
         ),
+        "condition":   "COPD",
         "respiratory_rate":          12,
+        "stress_index": 1.20,
         "tidal_volume_mL":          550,
         "compliance_mL_per_cmH2O":  100,
         "resistance_cmH2O_L_s":      22,
         "ie_ratio":                 0.33,
         "peep_cmH2O":                 5,
+        "pressure_support_cmH2O":  12,
+        "flow_cycle_threshold":     0.25,
+        "trigger_threshold_cmH2O":  1.5,
+        "pmus_peak_cmH2O":         14,
+        "effort_rate_per_min":     26,
+        "effort_duration_s":        0.75,
+        "pmus_cv":                  0.22,
     },
 
     "Bronchospasm": {
@@ -120,12 +165,21 @@ CONDITIONS = {
             "Very low RR and high inspiratory flow required to maximise "
             "expiratory time and prevent air trapping."
         ),
+        "condition":   "Bronchospasm",
         "respiratory_rate":          10,
+        "stress_index": 1.00,
         "tidal_volume_mL":          420,
         "compliance_mL_per_cmH2O":   70,
         "resistance_cmH2O_L_s":      35,
         "ie_ratio":                 0.30,
         "peep_cmH2O":                 3,
+        "pressure_support_cmH2O":  14,
+        "flow_cycle_threshold":     0.25,
+        "trigger_threshold_cmH2O":  1.5,
+        "pmus_peak_cmH2O":         12,
+        "effort_rate_per_min":     22,
+        "effort_duration_s":        0.75,
+        "pmus_cv":                  0.20,
     },
 
     "Pneumonia": {
@@ -135,12 +189,21 @@ CONDITIONS = {
             "reduced compliance from consolidated and oedematous lung units. "
             "Mildly elevated resistance from secretions and airway inflammation."
         ),
+        "condition":   "Pneumonia",
         "respiratory_rate":          22,
+        "stress_index": 0.95,
         "tidal_volume_mL":          450,
         "compliance_mL_per_cmH2O":   50,
         "resistance_cmH2O_L_s":      12,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                 8,
+        "pressure_support_cmH2O":  12,
+        "flow_cycle_threshold":     0.25,
+        "trigger_threshold_cmH2O":  1.5,
+        "pmus_peak_cmH2O":         11,
+        "effort_rate_per_min":     23,
+        "effort_duration_s":        0.75,
+        "pmus_cv":                  0.20,
     },
 }
 

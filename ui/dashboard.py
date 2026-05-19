@@ -42,6 +42,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from generator.conditions    import get_condition, get_condition_meta, list_conditions
 from generator.vcv_generator import generate_breath_cycles as _gen_vcv
 from generator.pcv_generator import generate_breath_cycles as _gen_pcv
+from generator.psv_generator import generate_breath_cycles as _gen_psv
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +62,12 @@ ENGINES = {
         "label": "PCV · Pressure-Controlled",
         "icon":  "◈",
     },
+    "PSV": {
+        "key":   "psv",
+        "fn":    _gen_psv,
+        "label": "PSV · Pressure-Support",
+        "icon":  "*",
+    }
 }
 
 ENGINE_NAMES = list(ENGINES.keys())
@@ -83,9 +90,9 @@ COLOR_BORDER   = "#1e2a38"
 COLOR_TEXT     = "#c9d6e3"
 COLOR_MUTED    = "#4a5a6a"
 
-COLOR_PRESSURE = "#38bdf8"   # sky blue
+COLOR_PRESSURE = "#34d399"   # emerald
 COLOR_FLOW     = "#fbbf24"   # amber
-COLOR_VOLUME   = "#34d399"   # emerald
+COLOR_VOLUME   = "#38bdf8"   # sky blue
 COLOR_ACCENT   = "#a78bfa"   # violet — engine badge, PCV accents
 
 SIGNAL_COLORS = {
@@ -95,8 +102,8 @@ SIGNAL_COLORS = {
 }
 SIGNAL_UNITS = {
     "pressure": "cmH\u2082O",
-    "flow":     "L/s",
-    "volume":   "mL",
+    "flow":     "l/s",
+    "volume":   "ml",
 }
 SIGNAL_LABELS = {
     "pressure": "Pressure",
@@ -265,10 +272,10 @@ def _ie_default_index(ie_value: float) -> int:
 
 def _pcv_default_driving_pressure(preset: dict) -> int:
     rr  = preset["respiratory_rate"]
-    C   = preset["compliance_mL_per_cmH2O"]
+    C   = preset["compliance_ml_per_cmH2O"]
     R   = preset["resistance_cmH2O_L_s"]
     ie  = preset["ie_ratio"]
-    V_T = preset["tidal_volume_mL"]
+    V_T = preset["tidal_volume_ml"]
 
     t_cycle = 60.0 / rr
     t_insp  = t_cycle * ie / (1.0 + ie)
@@ -299,6 +306,7 @@ def render_sidebar():
             help=(
                 "VCV: ventilator prescribes flow — pressure is derived. "
                 "PCV: ventilator prescribes pressure — volume is derived."
+                "PSV: ventilator prescribes pressure support after a patient-initiated breath — volume is derived."
             ),
         )
         engine_key = ENGINES[engine_name]["key"]
@@ -331,12 +339,7 @@ def render_sidebar():
         preset = get_condition(condition_name)
 
         # --- Shared parameters ------------------------------------------
-        rr = st.slider(
-            "Respiratory Rate (bpm)", 5, 40,
-            value=int(preset["respiratory_rate"]),
-            step=1,
-            key=f"rr_{condition_name}_{engine_name}",
-        )
+
         compliance = st.slider(
             "Compliance (mL/cmH\u2082O)", 5, 150,
             value=int(preset["compliance_mL_per_cmH2O"]),
@@ -349,23 +352,29 @@ def render_sidebar():
             step=1,
             key=f"resistance_{condition_name}_{engine_name}",
         )
-
-        # I:E ratio — selectbox with clinical labels, default from preset
-        ie_label = st.selectbox(
-            "I:E Ratio",
-            options=list(IE_OPTIONS.keys()),
-            index=_ie_default_index(preset["ie_ratio"]),
-            help="Inspiratory to expiratory time ratio.",
-            key=f"ie_{condition_name}_{engine_name}",
-        )
-        ie = IE_OPTIONS[ie_label]
-
         peep = st.slider(
             "PEEP (cmH\u2082O)", 0, 20,
             value=int(preset["peep_cmH2O"]),
             step=1,
             key=f"peep_{condition_name}_{engine_name}",
         )
+
+        # --- RR and I:E — VCV and PCV only (PSV uses effort_rate below) -
+        if engine_key in ("vcv", "pcv"):
+            rr = st.slider(
+                "Respiratory Rate (bpm)", 5, 40,
+                value=int(preset["respiratory_rate"]),
+                step=1,
+                key=f"rr_{condition_name}_{engine_name}",
+            )
+            ie_label = st.selectbox(
+                "I:E Ratio",
+                options=list(IE_OPTIONS.keys()),
+                index=_ie_default_index(preset["ie_ratio"]),
+                help="Inspiratory to expiratory time ratio.",
+                key=f"ie_{condition_name}_{engine_name}",
+            )
+            ie = IE_OPTIONS[ie_label]
 
         # --- VCV-specific parameters ------------------------------------
         if engine_key == "vcv":
@@ -425,30 +434,169 @@ def render_sidebar():
                 key=f"rise_{condition_name}_{engine_name}",
             )
 
+        # --- PSV-specific parameters ------------------------------------
+        if engine_key == "psv":
+            st.markdown(
+                '<div class="section-label" style="margin-top:10px;">'
+                'PSV — Ventilator Settings</div>',
+                unsafe_allow_html=True,
+            )
+            ps = st.slider(
+                "Pressure Support (cmH\u2082O above PEEP)",
+                min_value=1, max_value=30,
+                value=int(preset["pressure_support_cmH2O"]),
+                step=1,
+                help=(
+                    "Pressure level the ventilator adds above PEEP during "
+                    "each patient-triggered inspiration."
+                ),
+                key=f"ps_{condition_name}_{engine_name}",
+            )
+            fct = st.select_slider(
+                "Flow Cycle Threshold",
+                options=[0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40],
+                value=float(preset["flow_cycle_threshold"]),
+                help=(
+                    "Inspiration ends when flow decays to this fraction "
+                    "of peak. Low (0.10) → delayed cycling risk. "
+                    "High (0.40) → premature cycling risk."
+                ),
+                key=f"fct_{condition_name}_{engine_name}",
+            )
+            thr = st.slider(
+                "Trigger Threshold (cmH\u2082O)",
+                min_value=0.5, max_value=3.0,
+                value=float(preset["trigger_threshold_cmH2O"]),
+                step=0.5,
+                help=(
+                    "Minimum inspiratory effort required to trigger the "
+                    "ventilator. Higher values require more patient effort."
+                ),
+                key=f"thr_{condition_name}_{engine_name}",
+            )
+            rise_time = st.slider(
+                "Rise Time (s)",
+                min_value=0.0, max_value=0.4,
+                value=0.1, step=0.1,
+                help=(
+                    "Time for airway pressure to ramp from PEEP to PS level. "
+                    "0.0 = instantaneous step."
+                ),
+                key=f"rise_psv_{condition_name}_{engine_name}",
+            )
+
+            st.markdown(
+                '<div class="section-label" style="margin-top:10px;">'
+                'PSV — Patient Effort Model</div>',
+                unsafe_allow_html=True,
+            )
+            effort_rate = st.slider(
+                "Effort Rate (breaths/min)", 8, 40,
+                value=int(preset["effort_rate_per_min"]),
+                step=1,
+                help=(
+                    "Patient's neural respiratory rate — the rate at which "
+                    "the patient attempts to breathe regardless of whether "
+                    "each effort successfully triggers the ventilator."
+                ),
+                key=f"erate_{condition_name}_{engine_name}",
+            )
+            pmus = st.slider(
+                "Peak Effort (Pmus cmH\u2082O)", 2, 25,
+                value=int(preset["pmus_peak_cmH2O"]),
+                step=1,
+                help=(
+                    "Mean peak inspiratory muscle pressure. Higher values "
+                    "reflect stronger patient drive and larger tidal volumes."
+                ),
+                key=f"pmus_{condition_name}_{engine_name}",
+            )
+            effort_dur = st.slider(
+                "Effort Duration (s)", 0.3, 1.4,
+                value=float(preset["effort_duration_s"]),
+                step=0.1,
+                help=(
+                    "Duration of each inspiratory effort (neural Ti). "
+                    "Mismatch with ventilator Ti produces dyssynchrony."
+                ),
+                key=f"edur_{condition_name}_{engine_name}",
+            )
+            pmus_cv = st.select_slider(
+                "Effort Variability (CV)",
+                options=[0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35],
+                value=float(preset["pmus_cv"]),
+                help=(
+                    "Coefficient of variation of breath-to-breath Pmus. "
+                    "Drives the tidal volume variability that distinguishes "
+                    "PSV from mandatory modes."
+                ),
+                key=f"pcv_{condition_name}_{engine_name}",
+            )
+            if st.button(
+                "⟳ Regenerate",
+                help="Draw a new set of stochastic Pmus samples.",
+                key="psv_regen",
+            ):
+                st.session_state["psv_seed"] = (
+                    st.session_state.get("psv_seed", 42) + 1
+                )
+                st.rerun()
         st.markdown("<hr>", unsafe_allow_html=True)
 
-        n_cycles = st.slider("Breath Cycles", 1, 20, 5, step=1)
+       
+        _ncycles_default = 12 if engine_key == "psv" else 5
+        n_cycles = st.slider(
+            "Breath Cycles", 1, 30, _ncycles_default, step=1,
+            help=(
+                "PSV: use ≥ 12 cycles for COPD/Bronchospasm so that "
+                "auto-PEEP reaches steady state."
+            ) if engine_key == "psv" else None,
+        )
 
         # --- Assemble params dict ---------------------------------------
-        params = {
-            "respiratory_rate":        rr,
-            "compliance_mL_per_cmH2O": compliance,
-            "resistance_cmH2O_L_s":    resistance,
-            "ie_ratio":                ie,
-            "peep_cmH2O":              peep,
-        }
-
+        # --- Assemble params dict ---------------------------------------
         if engine_key == "vcv":
-            params["tidal_volume_mL"] = tv
-            params["flow_pattern"]    = flow_pattern
-        else:
-            # tidal_volume_mL required by validator — actual volume
-            # is derived from insp_pressure inside the PCV generator
-            params["tidal_volume_mL"]     = 500
-            params["insp_pressure_cmH2O"] = insp_pressure
-            params["rise_time_s"]         = rise_time
+            params = {
+                "respiratory_rate":        rr,
+                "tidal_volume_mL":         tv,
+                "compliance_mL_per_cmH2O": compliance,
+                "resistance_cmH2O_L_s":    resistance,
+                "ie_ratio":                ie,
+                "peep_cmH2O":              peep,
+                "flow_pattern":            flow_pattern,
+                "condition":               condition_name,
+            }
 
-        return params, condition_name, engine_name, n_cycles
+        elif engine_key == "pcv":
+            params = {
+                "respiratory_rate":        rr,
+                "insp_pressure_cmH2O":     insp_pressure,
+                "compliance_mL_per_cmH2O": compliance,
+                "resistance_cmH2O_L_s":    resistance,
+                "ie_ratio":                ie,
+                "peep_cmH2O":              peep,
+                "rise_time_s":             rise_time,
+                "tidal_volume_mL":         500,   # required by validator, not used
+                "condition":               condition_name,
+            }
+
+        elif engine_key == "psv":  # psv
+            params = {
+                "pressure_support_cmH2O":  ps,
+                "peep_cmH2O":              peep,
+                "rise_time_s":             rise_time,
+                "flow_cycle_threshold":    fct,
+                "trigger_threshold_cmH2O": thr,
+                "pmus_peak_cmH2O":         pmus,
+                "effort_rate_per_min":     effort_rate,
+                "effort_duration_s":       effort_dur,
+                "pmus_cv":                 pmus_cv,
+                "compliance_mL_per_cmH2O": compliance,
+                "resistance_cmH2O_L_s":    resistance,
+                "condition":               condition_name,
+            }
+
+        return params, condition_name, engine_name, n_cycles   # ← keep
 
 
 # ---------------------------------------------------------------------------
@@ -542,18 +690,18 @@ def render_metrics(result, params, engine_key):
         
 
         metrics = [
-            ("Peak Pressure", f"{peak_p:.1f}",    "cmH₂O"),
-            ("Plateau ~P",    f"{pplat:.1f}",     "cmH₂O"),
-            ("Driving P",     f"{driving_p:.1f}", "cmH₂O"),
-            ("Tidal Vol",     f"{result['delivered_vt_mL']:.0f}",    "mL"),
-            ("Mean Paw",      f"{mean_paw:.1f}",  "cmH₂O"),
-            ("Peak Flow ↑", f"{peak_f:.2f}", "L/s"),
-            ("Peak Flow ↓", f"{min_f:.2f}",  "L/s"),
-            ("Minute Vent",   f"{minute_vent:.1f}", "L/min"),
+            ("P Peak", f"{peak_p:.1f}",    "cmH₂O"),
+            ("P Plat",    f"{pplat:.1f}",     "cmH₂O"),
+            ("P Drive",     f"{driving_p:.1f}", "cmH₂O"),
+            ("Tidal Vol",     f"{result['delivered_vt_ml']:.0f}",    "ml"),
+            ("P Mean",      f"{mean_paw:.1f}",  "cmH₂O"),
+            ("Peak Flow Insp", f"{peak_f:.2f}", "l/s"),
+            ("Peak Flow Exp", f"{min_f:.2f}",  "l/s"),
+            ("Minute Vol",   f"{minute_vent:.1f}", "l/min"),
             ("Auto-PEEP",     f"{auto_peep:.2f}", "cmH₂O"),
         ]
 
-    else:
+    elif engine_key == "pcv":
         cols = st.columns(9)
         insp_p    = params.get("insp_pressure_cmH2O", 0)
         driving_p = float(insp_p)
@@ -561,22 +709,67 @@ def render_metrics(result, params, engine_key):
        
 
         metrics = [
-            ("Peak Pressure",  f"{peak_p:.1f}",    "cmH₂O"),
-            ("Delivered VT", f"{result['delivered_vt_mL']:.0f}", "mL"),
-            ("Driving P",      f"{driving_p:.1f}", "cmH₂O"),
-            ("Mean Paw",       f"{mean_paw:.1f}",  "cmH₂O"),
-            ("Peak Flow ↑", f"{peak_f:.2f}",  "L/s"),
-            ("Peak Flow ↓", f"{min_f:.2f}",  "L/s"),
+            ("P Peak",  f"{peak_p:.1f}",    "cmH₂O"),
+            ("Delivered VT", f"{result['delivered_vt_ml']:.0f}", "ml"),
+            ("P Drive",      f"{driving_p:.1f}", "cmH₂O"),
+            ("P Mean",       f"{mean_paw:.1f}",  "cmH₂O"),
+            ("Peak Flow Insp", f"{peak_f:.2f}",  "l/s"),
+            ("Peak Flow Exp", f"{min_f:.2f}",  "l/s"),
             ("Fill Fraction",  f"{fill_frac:.2f}", ""),
-            ("Minute Vent",    f"{minute_vent:.1f}", "L/min"),
+            ("Minute Vol",    f"{minute_vent:.1f}", "l/min"),
             ("Auto-PEEP",      f"{auto_peep:.2f}", "cmH₂O"),
         ]
+
+    elif engine_key == "psv":
+        cols = st.columns(9)
+
+        delivered_vt  = result.get("delivered_vt_mL",              0.0)
+        patient_vt    = result.get("patient_vt_mL",    delivered_vt)
+        auto_peep     = result.get("auto_peep_cmH2O",              0.0)
+        fill_frac     = result.get("fill_fraction",                0.0)
+        pres_pel      = result.get("pres_pel_ratio",               0.0)
+        ineff_frac    = result.get("ineffective_trigger_fraction",  0.0)
+        trig_rr       = result.get("triggered_breath_rate",         0.0)
+        minute_vent   = result.get("minute_vent_L",                 0.0)
+
+        metrics = [
+            ("Peak Pressure",  f"{peak_p:.1f}",       "cmH₂O"),
+            ("Delivered VT",   f"{delivered_vt:.0f}",  "mL"),
+            ("Patient VT",     f"{patient_vt:.0f}",    "mL"),
+            ("Auto-PEEP",      f"{auto_peep:.2f}",    "cmH₂O"),
+            ("Fill Fraction",  f"{fill_frac:.3f}",     ""),
+            ("Pres/Pel",       f"{pres_pel:.2f}",      ""),
+            ("Ineff Frac",     f"{ineff_frac:.2f}",    ""),
+            ("Trig RR",        f"{trig_rr:.1f}",       "bpm"),
+            ("Minute Vent",    f"{minute_vent:.1f}",   "L/min"),
+        ]
+
+        for col, (label, value, unit) in zip(cols, metrics):
+            _metric_card(col, label, value, unit)
+
+        # Dyssynchrony label summary bar
+        labels = result.get("breath_dyssynchrony_labels", [])
+        if labels:
+            from collections import Counter
+            counts = Counter(labels)
+            total  = len(labels)
+            parts  = [
+                f"{lbl.replace('_', ' ')}: {n}/{total}"
+                for lbl, n in sorted(counts.items())
+                if n > 0
+            ]
+            st.markdown(
+                f'<div style="font-family:JetBrains Mono,monospace;'
+                f'font-size:0.65rem;color:{COLOR_MUTED};margin-top:6px;">'
+                f'Dyssynchrony — {" · ".join(parts)}</div>',
+                unsafe_allow_html=True,
+            )
 
     for col, (label, value, unit) in zip(cols, metrics):
         _metric_card(col, label, value, unit)
     
     
-    if not result.get("equilibrium_reached", True):
+    if engine_key != "psv" and not result.get("equilibrium_reached", True):
         st.warning(
             "⚠ Volume has not stabilized after the selected breath cycles. "
             "Increase Breath Cycles for accurate delivered VT and auto-PEEP metrics."
@@ -718,8 +911,21 @@ def render_export(result, params, condition_name, engine_name):
     }
     scenario.update({
         k: v for k, v in params.items()
-        if k != "tidal_volume_mL" or engine_key == "vcv"
+        if k != "tidal_volume_ml" or engine_key == "vcv"
     })
+
+    if engine_key == "psv":
+        scenario["breath_dyssynchrony_labels"] = result.get(
+            "breath_dyssynchrony_labels", []
+        )
+        scenario["auto_peep_cmH2O"]              = result.get("auto_peep_cmH2O", 0.0)
+        scenario["ineffective_trigger_fraction"]  = result.get(
+            "ineffective_trigger_fraction", 0.0
+        )
+        scenario["pres_pel_ratio"]               = result.get("pres_pel_ratio", 0.0)
+        scenario["is_valid"]                     = result.get("is_valid", True)
+        scenario["invalid_reason"]               = result.get("invalid_reason", "")
+
     json_bytes = json.dumps(scenario, indent=2).encode("utf-8")
 
     with col_json:
@@ -745,6 +951,11 @@ def _hex_to_rgb(hex_color):
 
 def _run_engine(engine_name, params, n_cycles):
     """Dispatch to the correct generator with mode-specific param defaults."""
+    if ENGINES[engine_name]["key"] == "psv":
+        # Fixed seed gives reproducible stochastic draws on the same params.
+        # Stored in session state so a Regenerate button can increment it.
+        seed = st.session_state.get("psv_seed", 42)
+        return ENGINES[engine_name]["fn"](params, n_cycles=n_cycles, seed=seed)
     return ENGINES[engine_name]["fn"](params, n_cycles=n_cycles)
 
 

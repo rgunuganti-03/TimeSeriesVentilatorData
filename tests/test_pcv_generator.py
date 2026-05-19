@@ -56,6 +56,7 @@ NORMAL_PARAMS = {
     "ie_ratio":                0.5,
     "peep_cmH2O":               5,
     "rise_time_s":             0.0,
+    "condition":               "Normal",
 }
 
 # Slow RR, high compliance — large VT to test overdistension boundary

@@ -46,6 +46,7 @@ NORMAL_PARAMS_SQR = {
     "ie_ratio":                0.5,
     "peep_cmH2O":                5,
     "flow_pattern":          "square",
+    "condition":               "Normal",
 }
 
 NORMAL_PARAMS_DEC = {**NORMAL_PARAMS_SQR, "flow_pattern": "decelerating"}
