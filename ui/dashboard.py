@@ -341,8 +341,8 @@ def render_sidebar():
         # --- Shared parameters ------------------------------------------
 
         compliance = st.slider(
-            "Compliance (mL/cmH\u2082O)", 5, 150,
-            value=int(preset["compliance_mL_per_cmH2O"]),
+            "Compliance (ml/cmH\u2082O)", 5, 150,
+            value=int(preset["compliance_ml_per_cmH2O"]),
             step=1,
             key=f"compliance_{condition_name}_{engine_name}",
         )
@@ -385,7 +385,7 @@ def render_sidebar():
             )
             tv = st.slider(
                 "Tidal Volume (mL)", 100, 900,
-                value=int(preset["tidal_volume_mL"]),
+                value=int(preset["tidal_volume_ml"]),
                 step=10,
                 help="Target volume delivered per breath.",
                 key=f"tv_{condition_name}_{engine_name}",
@@ -558,8 +558,8 @@ def render_sidebar():
         if engine_key == "vcv":
             params = {
                 "respiratory_rate":        rr,
-                "tidal_volume_mL":         tv,
-                "compliance_mL_per_cmH2O": compliance,
+                "tidal_volume_ml":         tv,
+                "compliance_ml_per_cmH2O": compliance,
                 "resistance_cmH2O_L_s":    resistance,
                 "ie_ratio":                ie,
                 "peep_cmH2O":              peep,
@@ -571,12 +571,12 @@ def render_sidebar():
             params = {
                 "respiratory_rate":        rr,
                 "insp_pressure_cmH2O":     insp_pressure,
-                "compliance_mL_per_cmH2O": compliance,
+                "compliance_ml_per_cmH2O": compliance,
                 "resistance_cmH2O_L_s":    resistance,
                 "ie_ratio":                ie,
                 "peep_cmH2O":              peep,
                 "rise_time_s":             rise_time,
-                "tidal_volume_mL":         500,   # required by validator, not used
+                "tidal_volume_ml":         500,   # required by validator, not used
                 "condition":               condition_name,
             }
 
@@ -591,7 +591,7 @@ def render_sidebar():
                 "effort_rate_per_min":     effort_rate,
                 "effort_duration_s":       effort_dur,
                 "pmus_cv":                 pmus_cv,
-                "compliance_mL_per_cmH2O": compliance,
+                "compliance_ml_per_cmH2O": compliance,
                 "resistance_cmH2O_L_s":    resistance,
                 "condition":               condition_name,
             }
@@ -679,7 +679,7 @@ def render_metrics(result, params, engine_key):
     mean_paw  = float(np.mean(result["pressure"]))
     auto_peep = result["auto_peep_cmH2O"]
     rr        = params["respiratory_rate"]
-    minute_vent = result.get("minute_vent_L", rr * peak_v / 1000.0)
+    minute_vent = result.get("minute_vent_l", rr * peak_v / 1000.0)
     
 
     if engine_key == "vcv":
@@ -723,25 +723,25 @@ def render_metrics(result, params, engine_key):
     elif engine_key == "psv":
         cols = st.columns(9)
 
-        delivered_vt  = result.get("delivered_vt_mL",              0.0)
-        patient_vt    = result.get("patient_vt_mL",    delivered_vt)
+        delivered_vt  = result.get("delivered_vt_ml",              0.0)
+        patient_vt    = result.get("patient_vt_ml",    delivered_vt)
         auto_peep     = result.get("auto_peep_cmH2O",              0.0)
         fill_frac     = result.get("fill_fraction",                0.0)
         pres_pel      = result.get("pres_pel_ratio",               0.0)
         ineff_frac    = result.get("ineffective_trigger_fraction",  0.0)
         trig_rr       = result.get("triggered_breath_rate",         0.0)
-        minute_vent   = result.get("minute_vent_L",                 0.0)
+        minute_vent   = result.get("minute_vent_l",                 0.0)
 
         metrics = [
             ("Peak Pressure",  f"{peak_p:.1f}",       "cmH₂O"),
-            ("Delivered VT",   f"{delivered_vt:.0f}",  "mL"),
-            ("Patient VT",     f"{patient_vt:.0f}",    "mL"),
+            ("Delivered VT",   f"{delivered_vt:.0f}",  "ml"),
+            ("Patient VT",     f"{patient_vt:.0f}",    "ml"),
             ("Auto-PEEP",      f"{auto_peep:.2f}",    "cmH₂O"),
             ("Fill Fraction",  f"{fill_frac:.3f}",     ""),
             ("Pres/Pel",       f"{pres_pel:.2f}",      ""),
             ("Ineff Frac",     f"{ineff_frac:.2f}",    ""),
             ("Trig RR",        f"{trig_rr:.1f}",       "bpm"),
-            ("Minute Vent",    f"{minute_vent:.1f}",   "L/min"),
+            ("Minute Vent",    f"{minute_vent:.1f}",   "l/min"),
         ]
 
         for col, (label, value, unit) in zip(cols, metrics):
@@ -888,8 +888,8 @@ def render_export(result, params, condition_name, engine_name):
     csv_bytes = pd.DataFrame({
         "time_s":         result["time"],
         "pressure_cmH2O": result["pressure"],
-        "flow_Ls":        result["flow"],
-        "volume_mL":      result["volume"],
+        "flow_ls":        result["flow"],
+        "volume_ml":      result["volume"],
     }).to_csv(index=False).encode("utf-8")
 
     with col_csv:

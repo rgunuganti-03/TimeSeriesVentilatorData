@@ -46,8 +46,8 @@ CONDITIONS = {
         "condition":   "Normal",
         "respiratory_rate":          15,
         "stress_index": 1.00, 
-        "tidal_volume_mL":          500,
-        "compliance_mL_per_cmH2O":   70,
+        "tidal_volume_ml":          500,
+        "compliance_ml_per_cmH2O":   70,
         "resistance_cmH2O_L_s":      10,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                 5,
@@ -70,8 +70,8 @@ CONDITIONS = {
         "condition":   "Mild ARDS",
         "respiratory_rate":          20,
         "stress_index": 0.90, 
-        "tidal_volume_mL":          420,
-        "compliance_mL_per_cmH2O":   45,
+        "tidal_volume_ml":          420,
+        "compliance_ml_per_cmH2O":   45,
         "resistance_cmH2O_L_s":      12,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                 8,
@@ -94,8 +94,8 @@ CONDITIONS = {
         "condition":   "Moderate ARDS",
         "respiratory_rate":          24,
         "stress_index": 0.85,
-        "tidal_volume_mL":          380,
-        "compliance_mL_per_cmH2O":   30,
+        "tidal_volume_ml":          380,
+        "compliance_ml_per_cmH2O":   30,
         "resistance_cmH2O_L_s":      14,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                12,
@@ -118,8 +118,8 @@ CONDITIONS = {
         "condition":   "Severe ARDS",
         "respiratory_rate":          28,
         "stress_index": 0.80,
-        "tidal_volume_mL":          300,
-        "compliance_mL_per_cmH2O":   18,
+        "tidal_volume_ml":          300,
+        "compliance_ml_per_cmH2O":   18,
         "resistance_cmH2O_L_s":      16,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                16,
@@ -143,8 +143,8 @@ CONDITIONS = {
         "condition":   "COPD",
         "respiratory_rate":          12,
         "stress_index": 1.20,
-        "tidal_volume_mL":          550,
-        "compliance_mL_per_cmH2O":  100,
+        "tidal_volume_ml":          550,
+        "compliance_ml_per_cmH2O":  100,
         "resistance_cmH2O_L_s":      22,
         "ie_ratio":                 0.33,
         "peep_cmH2O":                 5,
@@ -168,8 +168,8 @@ CONDITIONS = {
         "condition":   "Bronchospasm",
         "respiratory_rate":          10,
         "stress_index": 1.00,
-        "tidal_volume_mL":          420,
-        "compliance_mL_per_cmH2O":   70,
+        "tidal_volume_ml":          420,
+        "compliance_ml_per_cmH2O":   70,
         "resistance_cmH2O_L_s":      35,
         "ie_ratio":                 0.30,
         "peep_cmH2O":                 3,
@@ -192,8 +192,8 @@ CONDITIONS = {
         "condition":   "Pneumonia",
         "respiratory_rate":          22,
         "stress_index": 0.95,
-        "tidal_volume_mL":          450,
-        "compliance_mL_per_cmH2O":   50,
+        "tidal_volume_ml":          450,
+        "compliance_ml_per_cmH2O":   50,
         "resistance_cmH2O_L_s":      12,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                 8,
@@ -313,12 +313,12 @@ if __name__ == "__main__":
         print(f"  {meta['label']}")
         print(f"  {meta['description'][:70]}...")
         print(f"  RR={params['respiratory_rate']} bpm | "
-              f"TV={params['tidal_volume_mL']} mL | "
-              f"C={params['compliance_mL_per_cmH2O']} | "
+              f"TV={params['tidal_volume_l']} ml | "
+              f"C={params['compliance_ml_per_cmH2O']} | "
               f"R={params['resistance_cmH2O_L_s']}")
         print(f"  Peak pressure : {peak_p:.1f} cmH2O")
-        print(f"  Peak flow     : {peak_f:.3f} L/s  |  Min flow: {min_f:.3f} L/s")
-        print(f"  Peak volume   : {peak_v:.1f} mL")
+        print(f"  Peak flow     : {peak_f:.3f} l/s  |  Min flow: {min_f:.3f} l/s")
+        print(f"  Peak volume   : {peak_v:.1f} ml")
         print()
 
     print("Smoke test passed.")
