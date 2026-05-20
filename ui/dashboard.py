@@ -454,7 +454,7 @@ def render_sidebar():
             )
             fct = st.select_slider(
                 "Flow Cycle Threshold",
-                options=[0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40],
+                options=[0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70],
                 value=float(preset["flow_cycle_threshold"]),
                 help=(
                     "Inspiration ends when flow decays to this fraction "
@@ -521,10 +521,10 @@ def render_sidebar():
                 ),
                 key=f"edur_{condition_name}_{engine_name}",
             )
-            pmus_cv = st.select_slider(
-                "Effort Variability (CV)",
-                options=[0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35],
+            pmus_cv = st.slider(
+                "Effort Variability (CV)", 0.0, 0.4,
                 value=float(preset["pmus_cv"]),
+                step=0.1,
                 help=(
                     "Coefficient of variation of breath-to-breath Pmus. "
                     "Drives the tidal volume variability that distinguishes "

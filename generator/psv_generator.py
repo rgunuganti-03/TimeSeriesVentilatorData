@@ -678,7 +678,7 @@ def _validate_params(params: dict) -> None:
         raise ValueError(f"pmus_peak_cmH2O {pmus} out of range [1, 35]")
     if not (0.0 <= rt <= 0.5):
         raise ValueError(f"rise_time_s {rt} out of range [0, 0.5]")
-    if not (0.05 <= fct <= 0.50):
+    if not (0.05 <= fct <= 0.70):
         raise ValueError(f"flow_cycle_threshold {fct} out of range [0.05, 0.50]")
     if not (5 <= C <= 200):
         raise ValueError(f"compliance_ml_per_cmH2O {C} out of range [5, 200]")
@@ -874,7 +874,7 @@ def generate_breath_cycles(params: dict,
 
 
             T_list.append(t_current + t_in_exp)
-            P_list.append(pres + pel + tpeep)
+            P_list.append(peep_e)
             Q_list.append(float(sum(Q_comps)))
             V_list.append(V_total)
             Pres_list.append(pres)
