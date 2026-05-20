@@ -648,7 +648,7 @@ REQUIRED_PARAMS = {
     "flow_cycle_threshold", "trigger_threshold_cmH2O",
     "pmus_peak_cmH2O", "effort_rate_per_min",
     "effort_duration_s", "pmus_cv",
-    "compliance_mL_per_cmH2O", "resistance_cmH2O_L_s",
+    "compliance_ml_per_cmH2O", "resistance_cmH2O_L_s",
 }
 
 
@@ -664,7 +664,7 @@ def _validate_params(params: dict) -> None:
     pmus  = params["pmus_peak_cmH2O"]
     rt    = params["rise_time_s"]
     fct   = params["flow_cycle_threshold"]
-    C     = params["compliance_mL_per_cmH2O"]
+    C     = params["compliance_ml_per_cmH2O"]
     R     = params["resistance_cmH2O_L_s"]
     cv    = params["pmus_cv"]
 
@@ -681,7 +681,7 @@ def _validate_params(params: dict) -> None:
     if not (0.05 <= fct <= 0.50):
         raise ValueError(f"flow_cycle_threshold {fct} out of range [0.05, 0.50]")
     if not (5 <= C <= 200):
-        raise ValueError(f"compliance_mL_per_cmH2O {C} out of range [5, 200]")
+        raise ValueError(f"compliance_ml_per_cmH2O {C} out of range [5, 200]")
     if not (0.5 <= R <= 60):
         raise ValueError(f"resistance_cmH2O_L_s {R} out of range [0.5, 60]")
     if not (0.05 <= cv <= 0.60):
@@ -748,13 +748,13 @@ def generate_breath_cycles(params: dict,
     eff_rate    = float(params["effort_rate_per_min"])
     eff_dur_mn  = float(params["effort_duration_s"])
     pmus_cv     = float(params["pmus_cv"])
-    C_global    = float(params["compliance_mL_per_cmH2O"])
+    C_global    = float(params["compliance_ml_per_cmH2O"])
     R_global    = float(params["resistance_cmH2O_L_s"])
 
     # Optional mechanics refinements
     condition       = params.get("condition", "Normal")
     stress_index    = float(params.get("stress_index", 1.0))
-    C_chest         = float(params.get("chest_wall_compliance_mL_per_cmH2O",
+    C_chest         = float(params.get("chest_wall_compliance_ml_per_cmH2O",
                                         DEFAULT_CHEST_WALL_COMPLIANCE))
     circ_compensated = bool(params.get("circuit_compensated", True))
     peep_ref        = float(params.get("peep_reference_cmH2O", 5.0))
@@ -992,11 +992,12 @@ def generate_breath_cycles(params: dict,
             ), 0.5)
             peep_total_now = peep_e + auto_peep_now
 
+            pao_now = P_vent
             # Rohrer resistive pressure on total flow
             pres_now = _rohrer_resistance(Q_total, K1_eff, K2_eff)
             pel_now  = (V_total - V_baseline_total) / max(C_rs_now, 0.1)
             tpeep_now = peep_e + (V_baseline_total / max(C_rs_now, 0.1))
-            pao_now  = pres_now + pel_now + tpeep_now
+            
 
             if t_insp < DT:
                 Q_at_trigger = Q_total
@@ -1150,14 +1151,14 @@ def generate_breath_cycles(params: dict,
 
     metrics = {
         "ppeak_cmH2O":              ppeak,
-        "delivered_vt_mL":          delivered_vt_mL,
-        "patient_vt_mL":            patient_vt_mL,
+        "delivered_vt_ml":          delivered_vt_mL,
+        "patient_vt_ml":            patient_vt_mL,
         "driving_p_cmH2O":          dp_cmH2O,
         "mean_paw_cmH2O":           mean_paw,
         "auto_peep_cmH2O":          final_auto_peep,
         "total_peep_cmH2O":         peep_e + final_auto_peep,
         "fill_fraction":            fill_frac,
-        "minute_vent_L":            minute_vent,
+        "minute_vent_l":            minute_vent,
         "pres_peak_cmH2O":          pres_peak,
         "pel_end_insp_cmH2O":       pel_end,
         "stress_index":             stress_idx_computed,
@@ -1234,7 +1235,7 @@ def generate_sbt_sequence(params: dict,
     # ---- Phase 1: Baseline at full support --------------------------------
     baseline_result = generate_breath_cycles(params, n_cycles=baseline_cycles,
                                               seed=int(rng.integers(0, 2**31)))
-    baseline_vt   = baseline_result["delivered_vt_mL"]
+    baseline_vt   = baseline_result["delivered_vt_ml"]
     baseline_ape  = baseline_result["auto_peep_cmH2O"]
     baseline_rr   = baseline_result["triggered_breath_rate"]
     baseline_rrsb = baseline_rr / max(baseline_vt / 1000.0, 0.001)
@@ -1289,12 +1290,12 @@ def generate_sbt_sequence(params: dict,
                 seed=int(rng.integers(0, 2**31))
             )
         except Exception as e:
-            window_result = {"delivered_vt_mL": 0.0,
+            window_result = {"delivered_vt_ml": 0.0,
                               "triggered_breath_rate": rate_trial,
                               "auto_peep_cmH2O": 10.0,
                               "is_valid": False}
 
-        window_vt   = window_result.get("delivered_vt_mL", 0.0)
+        window_vt   = window_result.get("delivered_vt_ml", 0.0)
         window_rr   = window_result.get("triggered_breath_rate", rate_trial)
         window_ape  = window_result.get("auto_peep_cmH2O", 0.0)
         window_rrsb = window_rr / max(window_vt / 1000.0, 0.001)
@@ -1319,7 +1320,7 @@ def generate_sbt_sequence(params: dict,
         trial_windows.append({
             "t_minutes":          t_elapsed,
             "window_index":       w,
-            "delivered_vt_mL":    window_vt,
+            "delivered_vt_ml":    window_vt,
             "triggered_rr":       window_rr,
             "rrsb":               window_rrsb,
             "auto_peep_cmH2O":    window_ape,
@@ -1348,7 +1349,7 @@ def generate_sbt_sequence(params: dict,
         "trial_duration_min":  trial_duration_min,
         "trial_ps_cmH2O":      trial_ps_cmH2O,
         "baseline_result":     {
-            "delivered_vt_mL":   baseline_vt,
+            "delivered_vt_ml":   baseline_vt,
             "triggered_rr":      baseline_rr,
             "rrsb":              baseline_rrsb,
             "auto_peep_cmH2O":   baseline_ape,
@@ -1372,7 +1373,7 @@ def _make_scenario_id(condition: str, params: dict) -> str:
     ps  = int(params["pressure_support_cmH2O"])
     rr  = int(params["effort_rate_per_min"])
     pm  = int(params["pmus_peak_cmH2O"])
-    C   = int(params["compliance_mL_per_cmH2O"])
+    C   = int(params["compliance_ml_per_cmH2O"])
     R   = int(params["resistance_cmH2O_L_s"])
     peep = int(params["peep_cmH2O"])
     fct  = int(params["flow_cycle_threshold"] * 100)
@@ -1420,7 +1421,7 @@ def generate_dataset(condition_name: str,
 
     for combo in itertools.product(*grid_vals):
         p = dict(zip(grid_keys, combo))
-        p["compliance_mL_per_cmH2O"] = compliance_mL_per_cmH2O
+        p["compliance_ml_per_cmH2O"] = compliance_mL_per_cmH2O
         p["resistance_cmH2O_L_s"]     = resistance_cmH2O_L_s
         p["condition"]                = condition_name
         p["recruitment_slope"]        = rec_slope
@@ -1446,9 +1447,9 @@ def generate_dataset(condition_name: str,
             continue
 
         metric_keys = [
-            "ppeak_cmH2O", "delivered_vt_mL", "patient_vt_mL",
+            "ppeak_cmH2O", "delivered_vt_ml", "patient_vt_ml",
             "driving_p_cmH2O", "mean_paw_cmH2O", "auto_peep_cmH2O",
-            "total_peep_cmH2O", "fill_fraction", "minute_vent_L",
+            "total_peep_cmH2O", "fill_fraction", "minute_vent_l",
             "pres_peak_cmH2O", "pel_end_insp_cmH2O", "stress_index",
             "pres_pel_ratio", "triggered_breath_rate",
             "ineffective_trigger_fraction",
@@ -1510,7 +1511,7 @@ if __name__ == "__main__":
         "effort_rate_per_min":       18.0,
         "effort_duration_s":         0.8,
         "pmus_cv":                   0.20,
-        "compliance_mL_per_cmH2O":  70.0,
+        "compliance_ml_per_cmH2O":  70.0,
         "resistance_cmH2O_L_s":     10.0,
         "condition":                "Normal",
     }
@@ -1526,7 +1527,7 @@ if __name__ == "__main__":
                             r["pressure_elastic"] +
                             r["pressure_total_peep"], atol=0.5)),
            f"max_err={np.abs(r['pressure'] - r['pressure_resistive'] - r['pressure_elastic'] - r['pressure_total_peep']).max():.3f}")
-    print(f"     Ppeak={r['ppeak_cmH2O']:.1f} Vt={r['delivered_vt_mL']:.0f} "
+    print(f"     Ppeak={r['ppeak_cmH2O']:.1f} Vt={r['delivered_vt_ml']:.0f} "
           f"AutoPEEP={r['auto_peep_cmH2O']:.2f} "
           f"IneffFrac={r['ineffective_trigger_fraction']:.2f}")
 
@@ -1538,7 +1539,7 @@ if __name__ == "__main__":
         "effort_rate_per_min":       26.0,
         "pressure_support_cmH2O":   12.0,
         "peep_cmH2O":                5.0,
-        "compliance_mL_per_cmH2O": 100.0,
+        "compliance_ml_per_cmH2O": 100.0,
         "resistance_cmH2O_L_s":     22.0,
         "condition":                "COPD",
     }
@@ -1569,14 +1570,14 @@ if __name__ == "__main__":
                "cuff_leak_fraction": 0.20}
     r_leak = generate_breath_cycles(p_leak, n_cycles=8, seed=45)
     _check("patient_vt < delivered_vt",
-           r_leak["patient_vt_mL"] < r_leak["delivered_vt_mL"],
-           f"delivered={r_leak['delivered_vt_mL']:.0f} patient={r_leak['patient_vt_mL']:.0f}")
+           r_leak["patient_vt_ml"] < r_leak["delivered_vt_ml"],
+           f"delivered={r_leak['delivered_vt_ml']:.0f} patient={r_leak['patient_vt_ml']:.0f}")
 
     # ---- Test 5: SBT temporal sequence ----------------------------------
     print("\n[5/5] SBT temporal sequence — pass/fail trajectory")
     p_sbt = {
         **p_normal,
-        "compliance_mL_per_cmH2O": 45.0,   # Mild ARDS recovering
+        "compliance_ml_per_cmH2O": 45.0,   # Mild ARDS recovering
         "resistance_cmH2O_L_s":    12.0,
         "condition":               "Mild ARDS",
         "pmus_peak_cmH2O":         10.0,

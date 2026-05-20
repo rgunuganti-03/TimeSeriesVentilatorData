@@ -81,7 +81,7 @@ CONDITIONS = {
         "pmus_peak_cmH2O":         12,
         "effort_rate_per_min":     24,
         "effort_duration_s":        0.7,
-        "pmus_cv":                  0.22,
+        "pmus_cv":                  0.25,
     },
 
     "Moderate ARDS": {
@@ -154,7 +154,7 @@ CONDITIONS = {
         "pmus_peak_cmH2O":         14,
         "effort_rate_per_min":     26,
         "effort_duration_s":        0.75,
-        "pmus_cv":                  0.22,
+        "pmus_cv":                  0.25,
     },
 
     "Bronchospasm": {

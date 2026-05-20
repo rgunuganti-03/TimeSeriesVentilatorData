@@ -151,8 +151,8 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     _validate_params(params)
 
     rr      = params["respiratory_rate"]
-    vt      = params["tidal_volume_mL"]          # mL
-    C       = params["compliance_mL_per_cmH2O"]  # mL/cmH2O
+    vt      = params["tidal_volume_ml"]          # mL
+    C       = params["compliance_ml_per_cmH2O"]  # mL/cmH2O
     R       = params["resistance_cmH2O_L_s"]     # cmH2O/L/s
     ie      = params["ie_ratio"]
     peep    = params["peep_cmH2O"]
@@ -299,14 +299,14 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     elif delivered_vt < VT_MIN_ML:
         is_valid = False
         invalid_reason = (
-            f"Delivered VT {delivered_vt:.0f} mL below minimum "
-            f"({VT_MIN_ML:.0f} mL = 3 mL/kg IBW)"
+            f"Delivered VT {delivered_vt:.0f} ml below minimum "
+            f"({VT_MIN_ML:.0f} mL = 3 ml/kg IBW)"
         )
     elif delivered_vt > VT_MAX_ML:
         is_valid = False
         invalid_reason = (
-            f"Delivered VT {delivered_vt:.0f} mL exceeds maximum "
-            f"({VT_MAX_ML:.0f} mL = 12 mL/kg IBW)"
+            f"Delivered VT {delivered_vt:.0f} ml exceeds maximum "
+            f"({VT_MAX_ML:.0f} ml = 12 ml/kg IBW)"
         )
 
     return {
@@ -321,8 +321,8 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         "driving_p_cmH2O":  round(driving_p,    2),
         "mean_paw_cmH2O":   round(mean_paw,     2),
         "auto_peep_cmH2O":  round(auto_peep,    2),
-        "delivered_vt_mL":  round(delivered_vt, 2),
-        "minute_vent_L":    round(minute_vent,   3),
+        "delivered_vt_ml":  round(delivered_vt, 2),
+        "minute_vent_l":    round(minute_vent,   3),
         # Validity
         "is_valid":         is_valid,
         "invalid_reason":   invalid_reason,
@@ -365,7 +365,7 @@ def generate_dataset(
     scenarios = []
 
     # Build all combinations from the grid
-    keys   = ["tidal_volume_mL_per_kg", "respiratory_rate",
+    keys   = ["tidal_volume_ml_per_kg", "respiratory_rate",
                "peep_cmH2O", "ie_ratio", "flow_pattern"]
     values = [PARAMETER_GRID[k] for k in keys]
 
@@ -377,8 +377,8 @@ def generate_dataset(
 
         params = {
             "respiratory_rate":        rr,
-            "tidal_volume_mL":         vt_mL,
-            "compliance_mL_per_cmH2O": compliance_mL_per_cmH2O,
+            "tidal_volume_ml":         vt_mL,
+            "compliance_ml_per_cmH2O": compliance_mL_per_cmH2O,
             "resistance_cmH2O_L_s":    resistance_cmH2O_L_s,
             "ie_ratio":                ie,
             "peep_cmH2O":              peep,
@@ -407,8 +407,8 @@ def generate_dataset(
             "driving_p_cmH2O": result["driving_p_cmH2O"],
             "mean_paw_cmH2O":  result["mean_paw_cmH2O"],
             "auto_peep_cmH2O": result["auto_peep_cmH2O"],
-            "delivered_vt_mL": result["delivered_vt_mL"],
-            "minute_vent_L":   result["minute_vent_L"],
+            "delivered_vt_ml": result["delivered_vt_ml"],
+            "minute_vent_l":   result["minute_vent_l"],
         }
 
         scenarios.append({
@@ -446,9 +446,9 @@ def _make_scenario_id(condition: str, params: dict) -> str:
     Example: VCV_ModerateARDS_C025_R008_VT06_RR016_PEEP10_DEC
     """
     cond_slug = condition.replace(" ", "").replace("_", "")
-    C     = int(params["compliance_mL_per_cmH2O"])
+    C     = int(params["compliance_ml_per_cmH2O"])
     R     = int(params["resistance_cmH2O_L_s"])
-    vt_kg = int(params["tidal_volume_mL"] / IBW_KG)
+    vt_kg = int(params["tidal_volume_ml"] / IBW_KG)
     rr    = int(params["respiratory_rate"])
     peep  = int(params["peep_cmH2O"])
     # Encode I:E ratio as a string: 1.0 → IE100, 0.5 → IE050, 0.33 → IE033
@@ -470,8 +470,8 @@ def _validate_params(params: dict) -> None:
     """Raise ValueError for missing or out-of-range parameters."""
     required = [
         "respiratory_rate",
-        "tidal_volume_mL",
-        "compliance_mL_per_cmH2O",
+        "tidal_volume_ml",
+        "compliance_ml_per_cmH2O",
         "resistance_cmH2O_L_s",
         "ie_ratio",
         "peep_cmH2O",
@@ -482,10 +482,10 @@ def _validate_params(params: dict) -> None:
 
     if not (5   <= params["respiratory_rate"]        <= 35):
         raise ValueError("respiratory_rate must be 5–35 bpm")
-    if not (100 <= params["tidal_volume_mL"]          <= 1000):
-        raise ValueError("tidal_volume_mL must be 100–1000 mL")
-    if not (5   <= params["compliance_mL_per_cmH2O"] <= 150):
-        raise ValueError("compliance must be 5–150 mL/cmH2O")
+    if not (100 <= params["tidal_volume_ml"]          <= 1000):
+        raise ValueError("tidal_volume_ml must be 100–1000 ml")
+    if not (5   <= params["compliance_ml_per_cmH2O"] <= 150):
+        raise ValueError("compliance must be 5–150 ml/cmH2O")
     if not (0.5 <= params["resistance_cmH2O_L_s"]    <= 50):
         raise ValueError("resistance must be 0.5–50 cmH2O/L/s")
     if not (0.2 <= params["ie_ratio"]                <= 1.0):
@@ -512,8 +512,8 @@ if __name__ == "__main__":
 
     base = {
         "respiratory_rate":        15,
-        "tidal_volume_mL":         500,
-        "compliance_mL_per_cmH2O": 60,
+        "tidal_volume_ml":         500,
+        "compliance_ml_per_cmH2O": 60,
         "resistance_cmH2O_L_s":    2,
         "ie_ratio":                0.5,
         "peep_cmH2O":              5,
@@ -528,8 +528,8 @@ if __name__ == "__main__":
         print(f"  Pplat         : {r['pplat_cmH2O']:.1f} cmH2O")
         print(f"  Driving P     : {r['driving_p_cmH2O']:.1f} cmH2O")
         print(f"  Mean Paw      : {r['mean_paw_cmH2O']:.1f} cmH2O")
-        print(f"  Delivered VT  : {r['delivered_vt_mL']:.0f} mL")
-        print(f"  Minute vent   : {r['minute_vent_L']:.2f} L/min")
+        print(f"  Delivered VT  : {r['delivered_vt_ml']:.0f} ml")
+        print(f"  Minute vent   : {r['minute_vent_l']:.2f} l/min")
         print(f"  Auto-PEEP     : {r['auto_peep_cmH2O']:.2f} cmH2O")
         print(f"  Valid         : {r['is_valid']}")
         print()
@@ -538,9 +538,9 @@ if __name__ == "__main__":
     print("[ Test 2 ] Physiological direction checks\n")
 
     # Lower compliance → higher PPeak (elastic term rises)
-    r_hc = generate_breath_cycles({**base, "compliance_mL_per_cmH2O": 60,
+    r_hc = generate_breath_cycles({**base, "compliance_ml_per_cmH2O": 60,
                                     "flow_pattern": "square"})
-    r_lc = generate_breath_cycles({**base, "compliance_mL_per_cmH2O": 15,
+    r_lc = generate_breath_cycles({**base, "compliance_ml_per_cmH2O": 15,
                                     "flow_pattern": "square"})
     assert r_lc["ppeak_cmH2O"] > r_hc["ppeak_cmH2O"], \
         "FAIL: lower compliance should raise PPeak"
@@ -577,7 +577,7 @@ if __name__ == "__main__":
     print("\n[ Test 3 ] Validity filter\n")
 
     # Should be invalid — very low compliance, high VT → driving P > 20
-    bad = {**base, "compliance_mL_per_cmH2O": 10, "tidal_volume_mL": 500,
+    bad = {**base, "compliance_ml_per_cmH2O": 10, "tidal_volume_ml": 500,
            "flow_pattern": "square"}
     r_bad = generate_breath_cycles(bad)
     assert not r_bad["is_valid"], "FAIL: should be invalid"

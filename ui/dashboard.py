@@ -384,7 +384,7 @@ def render_sidebar():
                 unsafe_allow_html=True,
             )
             tv = st.slider(
-                "Tidal Volume (mL)", 100, 900,
+                "Tidal Volume (ml)", 100, 900,
                 value=int(preset["tidal_volume_ml"]),
                 step=10,
                 help="Target volume delivered per breath.",
@@ -678,8 +678,7 @@ def render_metrics(result, params, engine_key):
     peak_v    = float(result["volume"].max())
     mean_paw  = float(np.mean(result["pressure"]))
     auto_peep = result["auto_peep_cmH2O"]
-    rr        = params["respiratory_rate"]
-    minute_vent = result.get("minute_vent_l", rr * peak_v / 1000.0)
+    
     
 
     if engine_key == "vcv":
@@ -687,7 +686,8 @@ def render_metrics(result, params, engine_key):
         
         pplat     = result["pplat_cmH2O"]
         driving_p = result["driving_p_cmH2O"]
-        
+        rr        = params["respiratory_rate"]
+        minute_vent = result.get("minute_vent_l", rr * peak_v / 1000.0)
 
         metrics = [
             ("P Peak", f"{peak_p:.1f}",    "cmH₂O"),
@@ -706,7 +706,8 @@ def render_metrics(result, params, engine_key):
         insp_p    = params.get("insp_pressure_cmH2O", 0)
         driving_p = float(insp_p)
         fill_frac = result["fill_fraction"]
-       
+        rr        = params["respiratory_rate"]
+        minute_vent = result.get("minute_vent_l", rr * peak_v / 1000.0)
 
         metrics = [
             ("P Peak",  f"{peak_p:.1f}",    "cmH₂O"),
@@ -744,8 +745,7 @@ def render_metrics(result, params, engine_key):
             ("Minute Vent",    f"{minute_vent:.1f}",   "l/min"),
         ]
 
-        for col, (label, value, unit) in zip(cols, metrics):
-            _metric_card(col, label, value, unit)
+        
 
         # Dyssynchrony label summary bar
         labels = result.get("breath_dyssynchrony_labels", [])

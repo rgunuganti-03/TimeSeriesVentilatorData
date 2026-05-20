@@ -147,7 +147,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     params : dict
         respiratory_rate         : float — breaths per minute (8–30)
         insp_pressure_cmH2O      : float — inspiratory pressure above PEEP (5–35)
-        compliance_mL_per_cmH2O  : float — lung compliance
+        compliance_ml_per_cmH2O  : float — lung compliance
         resistance_cmH2O_L_s     : float — airway resistance
         ie_ratio                 : float — insp fraction (0.33=1:3, 0.5=1:2, 1.0=1:1)
         peep_cmH2O               : float — PEEP
@@ -169,7 +169,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
 
     rr      = params["respiratory_rate"]
     p_insp  = params["insp_pressure_cmH2O"]   # driving pressure above PEEP
-    C       = params["compliance_mL_per_cmH2O"]
+    C       = params["compliance_ml_per_cmH2O"]
     R       = params["resistance_cmH2O_L_s"]
     ie      = params["ie_ratio"]
     peep    = params["peep_cmH2O"]
@@ -324,13 +324,13 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         is_valid = False
         invalid_reason = (
             f"Delivered VT {delivered_vt:.0f} mL below minimum "
-            f"({VT_MIN_ML:.0f} mL = 3 mL/kg IBW)"
+            f"({VT_MIN_ML:.0f} mL = 3 ml/kg IBW)"
         )
     elif delivered_vt > VT_MAX_ML:
         is_valid = False
         invalid_reason = (
             f"Delivered VT {delivered_vt:.0f} mL exceeds maximum "
-            f"({VT_MAX_ML:.0f} mL = 12 mL/kg IBW)"
+            f"({VT_MAX_ML:.0f} mL = 12 ml/kg IBW)"
         )
 
     return {
@@ -341,12 +341,12 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         "volume":               volume_arr,
         # Derived metrics
         "ppeak_cmH2O":          round(ppeak,            2),
-        "delivered_vt_mL":      round(delivered_vt,     2),
+        "delivered_vt_ml":      round(delivered_vt,     2),
         "driving_p_cmH2O":      round(float(p_insp),    2),
         "mean_paw_cmH2O":       round(mean_paw,         2),
         "auto_peep_cmH2O":      round(auto_peep,        2),
         "fill_fraction":        round(fill_fraction,     4),
-        "minute_vent_L":        round(minute_vent,       3),
+        "minute_vent_l":        round(minute_vent,       3),
         "time_to_peak_flow_s":  round(time_to_peak_flow, 4),
         "equilibrium_reached": equilibrium_reached,
         # Validity
@@ -399,7 +399,7 @@ def generate_dataset(
         params = {
             "respiratory_rate":        rr,
             "insp_pressure_cmH2O":     p_insp,
-            "compliance_mL_per_cmH2O": compliance_mL_per_cmH2O,
+            "compliance_ml_per_cmH2O": compliance_mL_per_cmH2O,
             "resistance_cmH2O_L_s":    resistance_cmH2O_L_s,
             "ie_ratio":                ie,
             "peep_cmH2O":              peep,
@@ -423,12 +423,12 @@ def generate_dataset(
 
         metrics = {
             "ppeak_cmH2O":         result["ppeak_cmH2O"],
-            "delivered_vt_mL":     result["delivered_vt_mL"],
+            "delivered_vt_ml":     result["delivered_vt_ml"],
             "driving_p_cmH2O":     result["driving_p_cmH2O"],
             "mean_paw_cmH2O":      result["mean_paw_cmH2O"],
             "auto_peep_cmH2O":     result["auto_peep_cmH2O"],
             "fill_fraction":       result["fill_fraction"],
-            "minute_vent_L":       result["minute_vent_L"],
+            "minute_vent_l":       result["minute_vent_l"],
             "time_to_peak_flow_s": result["time_to_peak_flow_s"],
         }
 
@@ -470,7 +470,7 @@ def _make_scenario_id(condition: str, params: dict) -> str:
         PCV_ModerateARDS_C025_R008_P015_RR016_PEEP10_IE050_RT010
     """
     cond_slug = condition.replace(" ", "").replace("_", "")
-    C      = int(params["compliance_mL_per_cmH2O"])
+    C      = int(params["compliance_ml_per_cmH2O"])
     R      = int(params["resistance_cmH2O_L_s"])
     p      = int(params["insp_pressure_cmH2O"])
     rr     = int(params["respiratory_rate"])
@@ -495,7 +495,7 @@ def _validate_params(params: dict) -> None:
     required = [
         "respiratory_rate",
         "insp_pressure_cmH2O",
-        "compliance_mL_per_cmH2O",
+        "compliance_ml_per_cmH2O",
         "resistance_cmH2O_L_s",
         "ie_ratio",
         "peep_cmH2O",
@@ -509,8 +509,8 @@ def _validate_params(params: dict) -> None:
         raise ValueError("respiratory_rate must be 5–35 bpm")
     if not (1    <= params["insp_pressure_cmH2O"]      <= 50):
         raise ValueError("insp_pressure_cmH2O must be 1–50 cmH2O")
-    if not (5    <= params["compliance_mL_per_cmH2O"]  <= 150):
-        raise ValueError("compliance must be 5–150 mL/cmH2O")
+    if not (5    <= params["compliance_ml_per_cmH2O"]  <= 150):
+        raise ValueError("compliance must be 5–150 ml/cmH2O")
     if not (0.5  <= params["resistance_cmH2O_L_s"]     <= 50):
         raise ValueError("resistance must be 0.5–50 cmH2O/L/s")
     if not (0.2  <= params["ie_ratio"]                 <= 1.0):
@@ -533,7 +533,7 @@ if __name__ == "__main__":
     base = {
         "respiratory_rate":        15,
         "insp_pressure_cmH2O":     10,   # 10 cmH2O above PEEP → ~600 mL at C=60
-        "compliance_mL_per_cmH2O": 60,
+        "compliance_ml_per_cmH2O": 60,
         "resistance_cmH2O_L_s":     2,
         "ie_ratio":                0.5,
         "peep_cmH2O":               5,
@@ -547,7 +547,7 @@ if __name__ == "__main__":
         r = generate_breath_cycles(p, n_cycles=5)
         print(f"  Rise={rt:.1f}s | "
               f"PPeak={r['ppeak_cmH2O']:5.1f} cmH2O | "
-              f"VT={r['delivered_vt_mL']:5.0f} mL | "
+              f"VT={r['delivered_vt_ml']:5.0f} ml | "
               f"FF={r['fill_fraction']:.3f} | "
               f"t_peak_flow={r['time_to_peak_flow_s']:.3f}s | "
               f"Valid={r['is_valid']}")
@@ -556,28 +556,28 @@ if __name__ == "__main__":
     print("\n[ Test 2 ] Physiological direction checks\n")
 
     # Lower compliance → lower delivered VT at same pressure
-    r_hc = generate_breath_cycles({**base, "compliance_mL_per_cmH2O": 60})
-    r_lc = generate_breath_cycles({**base, "compliance_mL_per_cmH2O": 20})
-    assert r_lc["delivered_vt_mL"] < r_hc["delivered_vt_mL"], \
+    r_hc = generate_breath_cycles({**base, "compliance_ml_per_cmH2O": 60})
+    r_lc = generate_breath_cycles({**base, "compliance_ml_per_cmH2O": 20})
+    assert r_lc["delivered_vt_ml"] < r_hc["delivered_vt_ml"], \
         "FAIL: lower compliance should reduce delivered VT"
-    print(f"  Compliance check  PASS — C=60: {r_hc['delivered_vt_mL']:.0f} mL | "
-          f"C=20: {r_lc['delivered_vt_mL']:.0f} mL")
+    print(f"  Compliance check  PASS — C=60: {r_hc['delivered_vt_ml']:.0f} ml | "
+          f"C=20: {r_lc['delivered_vt_ml']:.0f} ml")
 
     # Higher resistance → lower fill fraction → lower VT
     r_lr = generate_breath_cycles({**base, "resistance_cmH2O_L_s": 2})
     r_hr = generate_breath_cycles({**base, "resistance_cmH2O_L_s": 20})
-    assert r_hr["delivered_vt_mL"] < r_lr["delivered_vt_mL"], \
+    assert r_hr["delivered_vt_ml"] < r_lr["delivered_vt_ml"], \
         "FAIL: higher resistance should reduce delivered VT"
-    print(f"  Resistance check  PASS — R=2: {r_lr['delivered_vt_mL']:.0f} mL | "
-          f"R=20: {r_hr['delivered_vt_mL']:.0f} mL")
+    print(f"  Resistance check  PASS — R=2: {r_lr['delivered_vt_ml']:.0f} ml | "
+          f"R=20: {r_hr['delivered_vt_ml']:.0f} ml")
 
     # Higher insp pressure → higher VT
     r_lp = generate_breath_cycles({**base, "insp_pressure_cmH2O": 10})
     r_hp = generate_breath_cycles({**base, "insp_pressure_cmH2O": 25})
-    assert r_hp["delivered_vt_mL"] > r_lp["delivered_vt_mL"], \
+    assert r_hp["delivered_vt_ml"] > r_lp["delivered_vt_ml"], \
         "FAIL: higher insp pressure should increase VT"
-    print(f"  Pressure check    PASS — P=10: {r_lp['delivered_vt_mL']:.0f} mL | "
-          f"P=25: {r_hp['delivered_vt_mL']:.0f} mL")
+    print(f"  Pressure check    PASS — P=10: {r_lp['delivered_vt_ml']:.0f} ml | "
+          f"P=25: {r_hp['delivered_vt_ml']:.0f} ml")
 
     # Longer rise time → lower peak flow, higher time_to_peak_flow
     r_rt0 = generate_breath_cycles({**base, "rise_time_s": 0.0})
@@ -620,7 +620,7 @@ if __name__ == "__main__":
     r_good = generate_breath_cycles(base)
     assert r_good["is_valid"], "FAIL: should be valid"
     print(f"  Valid scenario    PASS — PPeak {r_good['ppeak_cmH2O']:.1f} cmH2O | "
-          f"VT {r_good['delivered_vt_mL']:.0f} mL")
+          f"VT {r_good['delivered_vt_ml']:.0f} ml")
 
     # --- Test 4: dataset sweep -------------------------------------------
     print("\n[ Test 4 ] Dataset sweep — Normal, C=60, R=2\n")
