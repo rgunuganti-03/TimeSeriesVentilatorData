@@ -13,7 +13,7 @@ Five test classes:
 Key differences from test_vcv_generator.py:
     - No flow_pattern parameter (PCV has one pressure profile shape)
     - rise_time_s is a required parameter with its own tests
-    - delivered_vt_mL is the DEPENDENT variable (not guaranteed)
+    - delivered_vt_ml is the DEPENDENT variable (not guaranteed)
     - fill_fraction is a unique PCV metric with its own test class section
     - VT tolerance is wider (15%) because ODE convergence at 1 cycle is
       less precise than VCV's analytical integration
@@ -51,7 +51,7 @@ from generator.pcv_generator import (
 NORMAL_PARAMS = {
     "respiratory_rate":        15,
     "insp_pressure_cmH2O":     10,
-    "compliance_mL_per_cmH2O": 60,
+    "compliance_ml_per_cmH2O": 60,
     "resistance_cmH2O_L_s":     10,
     "ie_ratio":                0.5,
     "peep_cmH2O":               5,
@@ -68,9 +68,9 @@ HIGH_VT_PARAMS = {
 
 CORE_KEYS   = {"time", "pressure", "flow", "volume"}
 METRIC_KEYS = {
-    "ppeak_cmH2O", "delivered_vt_mL", "driving_p_cmH2O",
+    "ppeak_cmH2O", "delivered_vt_ml", "driving_p_cmH2O",
     "mean_paw_cmH2O", "auto_peep_cmH2O", "fill_fraction",
-    "minute_vent_L", "time_to_peak_flow_s",
+    "minute_vent_l", "time_to_peak_flow_s",
 }
 VALIDITY_KEYS = {"is_valid", "invalid_reason"}
 ALL_KEYS      = CORE_KEYS | METRIC_KEYS | VALIDITY_KEYS
@@ -190,7 +190,7 @@ class TestInterfaceContract:
             generate_breath_cycles(bad)
 
     def test_out_of_range_compliance_raises(self):
-        bad = {**NORMAL_PARAMS, "compliance_mL_per_cmH2O": 200}
+        bad = {**NORMAL_PARAMS, "compliance_ml_per_cmH2O": 200}
         with pytest.raises(ValueError):
             generate_breath_cycles(bad)
 
@@ -278,10 +278,10 @@ class TestPhysiologicalPlausibility:
         result = generate_breath_cycles(NORMAL_PARAMS)
         expected = (
             NORMAL_PARAMS["respiratory_rate"]
-            * result["delivered_vt_mL"]
+            * result["delivered_vt_ml"]
             / 1000.0
         )
-        assert result["minute_vent_L"] == pytest.approx(expected, rel=0.02)
+        assert result["minute_vent_l"] == pytest.approx(expected, rel=0.02)
 
     def test_volume_rises_during_inspiration(self):
         result = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1)
@@ -317,10 +317,10 @@ class TestPCVWaveformShape:
 
     def test_lower_compliance_reduces_delivered_vt(self):
         r_hc = generate_breath_cycles({**NORMAL_PARAMS,
-                                        "compliance_mL_per_cmH2O": 60})
+                                        "compliance_ml_per_cmH2O": 60})
         r_lc = generate_breath_cycles({**NORMAL_PARAMS,
-                                        "compliance_mL_per_cmH2O": 20})
-        assert r_lc["delivered_vt_mL"] < r_hc["delivered_vt_mL"], (
+                                        "compliance_ml_per_cmH2O": 20})
+        assert r_lc["delivered_vt_ml"] < r_hc["delivered_vt_ml"], (
             "Lower compliance must reduce delivered VT at same pressure"
         )
 
@@ -329,7 +329,7 @@ class TestPCVWaveformShape:
                                         "resistance_cmH2O_L_s": 2})
         r_hr = generate_breath_cycles({**NORMAL_PARAMS,
                                         "resistance_cmH2O_L_s": 20})
-        assert r_hr["delivered_vt_mL"] < r_lr["delivered_vt_mL"], (
+        assert r_hr["delivered_vt_ml"] < r_lr["delivered_vt_ml"], (
             "Higher resistance reduces fill fraction → lower delivered VT"
         )
 
@@ -338,7 +338,7 @@ class TestPCVWaveformShape:
                                         "insp_pressure_cmH2O": 5})
         r_hp = generate_breath_cycles({**NORMAL_PARAMS,
                                         "insp_pressure_cmH2O": 12})
-        assert r_hp["delivered_vt_mL"] > r_lp["delivered_vt_mL"], (
+        assert r_hp["delivered_vt_ml"] > r_lp["delivered_vt_ml"], (
             "Higher inspiratory pressure must increase delivered VT"
         )
 
@@ -490,7 +490,7 @@ class TestValidityFilter:
         params = {
             **NORMAL_PARAMS,
             "insp_pressure_cmH2O":     15,
-            "compliance_mL_per_cmH2O": 60,
+            "compliance_ml_per_cmH2O": 60,
             "respiratory_rate":         8,
             "ie_ratio":                1.0,   # maximum t_insp → full fill
             "rise_time_s":             0.0,
@@ -512,7 +512,7 @@ class TestValidityFilter:
         params = {
             **NORMAL_PARAMS,
             "insp_pressure_cmH2O":     5,
-            "compliance_mL_per_cmH2O": 5,
+            "compliance_ml_per_cmH2O": 5,
             "respiratory_rate":        30,
             "ie_ratio":                0.33,
         }
@@ -571,7 +571,7 @@ class TestDatasetGeneration:
     def normal_dataset(self):
         return generate_dataset(
             condition_name="Normal",
-            compliance_mL_per_cmH2O=60,
+            compliance_ml_per_cmH2O=60,
             resistance_cmH2O_L_s=2,
             n_cycles=1,
         )
@@ -581,7 +581,7 @@ class TestDatasetGeneration:
         # High resistance — high invalidity rate expected from fill fraction
         return generate_dataset(
             condition_name="Bronchospasm",
-            compliance_mL_per_cmH2O=50,
+            compliance_ml_per_cmH2O=50,
             resistance_cmH2O_L_s=30,
             n_cycles=1,
         )
@@ -631,7 +631,7 @@ class TestDatasetGeneration:
     def test_params_contain_required_keys(self, normal_dataset):
         required = {
             "respiratory_rate", "insp_pressure_cmH2O",
-            "compliance_mL_per_cmH2O", "resistance_cmH2O_L_s",
+            "compliance_ml_per_cmH2O", "resistance_cmH2O_L_s",
             "ie_ratio", "peep_cmH2O", "rise_time_s",
         }
         for scenario in normal_dataset:
@@ -700,7 +700,7 @@ class TestDatasetGeneration:
 
     def test_compliance_consistent_across_scenarios(self, normal_dataset):
         compliances = {
-            s["params"]["compliance_mL_per_cmH2O"]
+            s["params"]["compliance_ml_per_cmH2O"]
             for s in normal_dataset
         }
         assert compliances == {60.0}, (

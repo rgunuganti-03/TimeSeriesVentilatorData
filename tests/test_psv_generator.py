@@ -70,7 +70,7 @@ NORMAL_PARAMS = {
     "effort_rate_per_min":       18.0,
     "effort_duration_s":         0.8,
     "pmus_cv":                   0.20,
-    "compliance_mL_per_cmH2O":  70.0,
+    "compliance_ml_per_cmH2O":  70.0,
     "resistance_cmH2O_L_s":     10.0,
     "condition":                "Normal",
 }
@@ -81,7 +81,7 @@ COPD_PARAMS = {
     "pmus_peak_cmH2O":          10.0,
     "effort_rate_per_min":       26.0,
     "pressure_support_cmH2O":   12.0,
-    "compliance_mL_per_cmH2O": 100.0,
+    "compliance_ml_per_cmH2O": 100.0,
     "resistance_cmH2O_L_s":     22.0,
     "condition":                "COPD",
 }
@@ -92,7 +92,7 @@ ARDS_PARAMS = {
     "pmus_peak_cmH2O":          14.0,
     "effort_rate_per_min":       24.0,
     "pressure_support_cmH2O":   14.0,
-    "compliance_mL_per_cmH2O":  30.0,
+    "compliance_ml_per_cmH2O":  30.0,
     "resistance_cmH2O_L_s":     14.0,
     "condition":                "Moderate ARDS",
 }
@@ -131,9 +131,9 @@ FLOW_STARVATION_PARAMS = {
 CORE_KEYS = {"time", "pressure", "flow", "volume"}
 DECOMP_KEYS = {"pressure_resistive", "pressure_elastic", "pressure_total_peep"}
 METRIC_KEYS = {
-    "ppeak_cmH2O", "delivered_vt_mL", "patient_vt_mL",
+    "ppeak_cmH2O", "delivered_vt_ml", "patient_vt_ml",
     "driving_p_cmH2O", "mean_paw_cmH2O", "auto_peep_cmH2O",
-    "total_peep_cmH2O", "fill_fraction", "minute_vent_L",
+    "total_peep_cmH2O", "fill_fraction", "minute_vent_l",
     "pres_peak_cmH2O", "pel_end_insp_cmH2O", "stress_index",
     "pres_pel_ratio", "triggered_breath_rate",
     "ineffective_trigger_fraction",
@@ -327,13 +327,13 @@ class TestPhysiologicalPlausibility:
         assert 0.0 <= ff <= 1.0, f"fill_fraction={ff:.4f} out of [0, 1]"
 
     def test_minute_ventilation_positive(self, result):
-        assert result["minute_vent_L"] > 0.0
+        assert result["minute_vent_l"] > 0.0
 
     def test_pres_pel_ratio_positive(self, result):
         assert result["pres_pel_ratio"] > 0.0
 
     def test_patient_vt_leq_delivered_vt(self, result):
-        assert result["patient_vt_mL"] <= result["delivered_vt_mL"] + 0.5, (
+        assert result["patient_vt_ml"] <= result["delivered_vt_ml"] + 0.5, (
             "Patient Vt should not exceed delivered Vt "
             "(circuit and cuff losses only reduce it)"
         )
@@ -466,10 +466,10 @@ class TestPSVWaveformShape:
         p_high = {**NORMAL_PARAMS, "pressure_support_cmH2O": 16.0}
         r_low  = generate_breath_cycles(p_low,  n_cycles=10, seed=5)
         r_high = generate_breath_cycles(p_high, n_cycles=10, seed=5)
-        assert r_high["delivered_vt_mL"] > r_low["delivered_vt_mL"], (
+        assert r_high["delivered_vt_ml"] > r_low["delivered_vt_ml"], (
             f"Vt did not increase with PS: "
-            f"low={r_low['delivered_vt_mL']:.0f}, "
-            f"high={r_high['delivered_vt_mL']:.0f}"
+            f"low={r_low['delivered_vt_ml']:.0f}, "
+            f"high={r_high['delivered_vt_ml']:.0f}"
         )
 
     def test_higher_pmus_increases_delivered_vt(self):
@@ -478,7 +478,7 @@ class TestPSVWaveformShape:
         p_strong = {**NORMAL_PARAMS, "pmus_peak_cmH2O": 15.0, "pmus_cv": 0.05}
         r_weak   = generate_breath_cycles(p_weak,   n_cycles=10, seed=6)
         r_strong = generate_breath_cycles(p_strong, n_cycles=10, seed=6)
-        assert r_strong["delivered_vt_mL"] > r_weak["delivered_vt_mL"], (
+        assert r_strong["delivered_vt_ml"] > r_weak["delivered_vt_ml"], (
             "Stronger Pmus should produce larger Vt"
         )
 
@@ -617,10 +617,10 @@ class TestETTComplications:
 
     def test_cuff_leak_reduces_patient_vt_vs_delivered(self):
         result = generate_breath_cycles(CUFF_LEAK_PARAMS, n_cycles=8, seed=20)
-        assert result["patient_vt_mL"] < result["delivered_vt_mL"], (
+        assert result["patient_vt_ml"] < result["delivered_vt_ml"], (
             f"Cuff leak should reduce patient Vt below delivered Vt: "
-            f"patient={result['patient_vt_mL']:.0f}, "
-            f"delivered={result['delivered_vt_mL']:.0f}"
+            f"patient={result['patient_vt_ml']:.0f}, "
+            f"delivered={result['delivered_vt_ml']:.0f}"
         )
 
     def test_cuff_leak_magnitude_proportional_to_fraction(self):
@@ -631,8 +631,8 @@ class TestETTComplications:
                    "cuff_leak_fraction": 0.35}
         r_small = generate_breath_cycles(p_small, n_cycles=8, seed=21)
         r_large = generate_breath_cycles(p_large, n_cycles=8, seed=21)
-        gap_small = r_small["delivered_vt_mL"] - r_small["patient_vt_mL"]
-        gap_large = r_large["delivered_vt_mL"] - r_large["patient_vt_mL"]
+        gap_small = r_small["delivered_vt_ml"] - r_small["patient_vt_ml"]
+        gap_large = r_large["delivered_vt_ml"] - r_large["patient_vt_ml"]
         assert gap_large > gap_small, (
             "Larger cuff leak fraction should produce larger Vt loss"
         )
@@ -641,7 +641,7 @@ class TestETTComplications:
         """Without ETT complication, patient Vt ≈ delivered Vt."""
         result = generate_breath_cycles(NORMAL_PARAMS, n_cycles=8, seed=22)
         # With circuit compensation and no leak, patient_vt ≈ delivered_vt
-        ratio = result["patient_vt_mL"] / max(result["delivered_vt_mL"], 1.0)
+        ratio = result["patient_vt_ml"] / max(result["delivered_vt_ml"], 1.0)
         assert 0.85 <= ratio <= 1.01, (
             f"patient_vt/delivered_vt = {ratio:.2f}; expected ~1.0 without ETT"
         )
@@ -689,7 +689,7 @@ class TestSBTTemporalSequence:
     def sbt_params(self):
         return {
             **NORMAL_PARAMS,
-            "compliance_mL_per_cmH2O": 50.0,
+            "compliance_ml_per_cmH2O": 50.0,
             "condition":               "Pneumonia",
             "pmus_peak_cmH2O":          10.0,
         }
@@ -759,7 +759,7 @@ class TestSBTTemporalSequence:
             n_windows=4, seed=30
         )
         baseline_keys = {
-            "delivered_vt_mL", "triggered_rr", "rrsb", "auto_peep_cmH2O"
+            "delivered_vt_ml", "triggered_rr", "rrsb", "auto_peep_cmH2O"
         }
         missing = baseline_keys - result["baseline_result"].keys()
         assert not missing
@@ -781,7 +781,7 @@ class TestSBTTemporalSequence:
             "pmus_peak_cmH2O":          3.0,
             "pmus_cv":                  0.05,
             "effort_rate_per_min":      32.0,
-            "compliance_mL_per_cmH2O": 25.0,
+            "compliance_ml_per_cmH2O": 25.0,
             "resistance_cmH2O_L_s":     16.0,
             "condition":               "Moderate ARDS",
         }
@@ -801,7 +801,7 @@ class TestSBTTemporalSequence:
             n_windows=4, seed=30
         )
         window_keys = {
-            "t_minutes", "window_index", "delivered_vt_mL",
+            "t_minutes", "window_index", "delivered_vt_ml",
             "triggered_rr", "rrsb", "auto_peep_cmH2O",
             "is_valid", "failure_reason", "waveforms",
         }
@@ -934,9 +934,9 @@ class TestMultiCompartmentMechanics:
         p_ards_ps   = {**ARDS_PARAMS,   "pressure_support_cmH2O": p_ps}
         r_normal = generate_breath_cycles(p_normal_ps, n_cycles=10, seed=52)
         r_ards   = generate_breath_cycles(p_ards_ps,   n_cycles=10, seed=52)
-        assert r_ards["delivered_vt_mL"] < r_normal["delivered_vt_mL"], (
-            f"ARDS Vt {r_ards['delivered_vt_mL']:.0f} should be less than "
-            f"Normal Vt {r_normal['delivered_vt_mL']:.0f}"
+        assert r_ards["delivered_vt_ml"] < r_normal["delivered_vt_ml"], (
+            f"ARDS Vt {r_ards['delivered_vt_ml']:.0f} should be less than "
+            f"Normal Vt {r_normal['delivered_vt_ml']:.0f}"
         )
 
     def test_copd_has_lower_fill_fraction_than_normal(self):
@@ -954,7 +954,7 @@ class TestMultiCompartmentMechanics:
         """Pneumonia (3-compartment) should generate valid output without errors."""
         p_pneumonia = {
             **NORMAL_PARAMS,
-            "compliance_mL_per_cmH2O": 50.0,
+            "compliance_ml_per_cmH2O": 50.0,
             "resistance_cmH2O_L_s":    12.0,
             "condition":               "Pneumonia",
             "pmus_peak_cmH2O":          10.0,
@@ -995,9 +995,9 @@ class TestPhysiologicalDirections:
     def test_higher_resistance_more_auto_peep(self):
         """Higher R → longer expiratory time constant → more gas trapping."""
         p_low_r  = {**NORMAL_PARAMS, "resistance_cmH2O_L_s": 10.0,
-                    "condition": "COPD", "compliance_mL_per_cmH2O": 100.0}
+                    "condition": "COPD", "compliance_ml_per_cmH2O": 100.0}
         p_high_r = {**NORMAL_PARAMS, "resistance_cmH2O_L_s": 30.0,
-                    "condition": "COPD", "compliance_mL_per_cmH2O": 100.0}
+                    "condition": "COPD", "compliance_ml_per_cmH2O": 100.0}
         r_low  = generate_breath_cycles(p_low_r,  n_cycles=20, seed=60)
         r_high = generate_breath_cycles(p_high_r, n_cycles=20, seed=60)
         assert r_high["auto_peep_cmH2O"] >= r_low["auto_peep_cmH2O"] - 0.1, (
@@ -1018,11 +1018,11 @@ class TestPhysiologicalDirections:
 
     def test_lower_compliance_reduces_vt_same_ps(self):
         """Lower compliance → stiffer lung → less tidal volume at same PS."""
-        p_high_c = {**NORMAL_PARAMS, "compliance_mL_per_cmH2O": 80.0}
-        p_low_c  = {**NORMAL_PARAMS, "compliance_mL_per_cmH2O": 25.0}
+        p_high_c = {**NORMAL_PARAMS, "compliance_ml_per_cmH2O": 80.0}
+        p_low_c  = {**NORMAL_PARAMS, "compliance_ml_per_cmH2O": 25.0}
         r_high = generate_breath_cycles(p_high_c, n_cycles=8, seed=62)
         r_low  = generate_breath_cycles(p_low_c,  n_cycles=8, seed=62)
-        assert r_low["delivered_vt_mL"] < r_high["delivered_vt_mL"], (
+        assert r_low["delivered_vt_ml"] < r_high["delivered_vt_ml"], (
             "Lower compliance should produce less Vt at same PS"
         )
 
@@ -1062,7 +1062,7 @@ class TestPhysiologicalDirections:
         p_uncomp = {**NORMAL_PARAMS, "circuit_compensated": False}
         r_comp   = generate_breath_cycles(p_comp,   n_cycles=8, seed=66)
         r_uncomp = generate_breath_cycles(p_uncomp, n_cycles=8, seed=66)
-        assert r_uncomp["patient_vt_mL"] <= r_comp["patient_vt_mL"] + 0.5, (
+        assert r_uncomp["patient_vt_ml"] <= r_comp["patient_vt_ml"] + 0.5, (
             "Uncompensated circuit should reduce patient Vt"
         )
 
@@ -1100,7 +1100,7 @@ class TestValidityFilter:
         """Very high compliance + high PS + strong Pmus → Vt > 840 mL → invalid."""
         p_over = {
             **NORMAL_PARAMS,
-            "compliance_mL_per_cmH2O": 120.0,
+            "compliance_ml_per_cmH2O": 120.0,
             "pressure_support_cmH2O":   25.0,
             "pmus_peak_cmH2O":          20.0,
             "pmus_cv":                   0.05,
@@ -1117,7 +1117,7 @@ class TestValidityFilter:
             "pmus_peak_cmH2O":         2.0,
             "pmus_cv":                  0.05,
             "resistance_cmH2O_L_s":    35.0,
-            "compliance_mL_per_cmH2O": 20.0,
+            "compliance_ml_per_cmH2O": 20.0,
         }
         result = generate_breath_cycles(p_low, n_cycles=5, seed=74)
         if not result["is_valid"]:
@@ -1172,7 +1172,7 @@ class TestDatasetGeneration:
         """Small Normal dataset for structural tests — reused across methods."""
         return generate_dataset(
             "Normal",
-            compliance_mL_per_cmH2O=70.0,
+            compliance_ml_per_cmH2O=70.0,
             resistance_cmH2O_L_s=10.0,
             n_cycles=3,
             seed=80,
@@ -1224,7 +1224,7 @@ class TestDatasetGeneration:
 
     def test_compliance_and_resistance_in_params(self, small_dataset):
         for s in small_dataset[:5]:
-            assert "compliance_mL_per_cmH2O" in s["params"]
+            assert "compliance_ml_per_cmH2O" in s["params"]
             assert "resistance_cmH2O_L_s" in s["params"]
 
     def test_condition_field_present(self, small_dataset):
@@ -1244,11 +1244,11 @@ class TestDatasetGeneration:
     def test_copd_dataset_has_higher_ineff_fraction_than_normal(self):
         """COPD dataset scenarios should show higher ineffective trigger rates."""
         ds_normal = generate_dataset(
-            "Normal", compliance_mL_per_cmH2O=70.0,
+            "Normal", compliance_ml_per_cmH2O=70.0,
             resistance_cmH2O_L_s=10.0, n_cycles=5, seed=81
         )
         ds_copd = generate_dataset(
-            "COPD", compliance_mL_per_cmH2O=100.0,
+            "COPD", compliance_ml_per_cmH2O=100.0,
             resistance_cmH2O_L_s=22.0, n_cycles=5, seed=81
         )
         valid_normal = [s for s in ds_normal if s["is_valid"]]

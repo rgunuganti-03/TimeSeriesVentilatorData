@@ -62,7 +62,7 @@ from generator.vcv_generator import _validate_params, _make_scenario_id
 # ---------------------------------------------------------------------------
 
 THINNED_PARAMETER_GRID = {
-    "tidal_volume_mL_per_kg": [4, 6, 10],
+    "tidal_volume_ml_per_kg": [4, 6, 10],
     "respiratory_rate":       [8, 16, 24, 30],
     "peep_cmH2O":             [0, 8, 16, 20],
     "ie_ratio":               [1.0, 0.5, 0.33],
@@ -147,7 +147,7 @@ def _mechanics_grid(tier: dict) -> list:
 
 def _generate_thinned_dataset(
     condition_name:          str,
-    compliance_mL_per_cmH2O: float,
+    compliance_ml_per_cmH2O: float,
     resistance_cmH2O_L_s:    float,
     n_cycles:                int = 10,
 ) -> list:
@@ -158,7 +158,7 @@ def _generate_thinned_dataset(
     """
     scenarios = []
 
-    keys   = ["tidal_volume_mL_per_kg", "respiratory_rate",
+    keys   = ["tidal_volume_ml_per_kg", "respiratory_rate",
                "peep_cmH2O", "ie_ratio", "flow_pattern"]
     values = [THINNED_PARAMETER_GRID[k] for k in keys]
 
@@ -169,8 +169,8 @@ def _generate_thinned_dataset(
 
         params = {
             "respiratory_rate":        rr,
-            "tidal_volume_mL":         vt_mL,
-            "compliance_mL_per_cmH2O": compliance_mL_per_cmH2O,
+            "tidal_volume_ml":         vt_mL,
+            "compliance_ml_per_cmH2O": compliance_ml_per_cmH2O,
             "resistance_cmH2O_L_s":    resistance_cmH2O_L_s,
             "ie_ratio":                ie,
             "peep_cmH2O":              peep,
@@ -200,8 +200,8 @@ def _generate_thinned_dataset(
             "driving_p_cmH2O": result["driving_p_cmH2O"],
             "mean_paw_cmH2O":  result["mean_paw_cmH2O"],
             "auto_peep_cmH2O": result["auto_peep_cmH2O"],
-            "delivered_vt_mL": result["delivered_vt_mL"],
-            "minute_vent_L":   result["minute_vent_L"],
+            "delivered_vt_ml": result["delivered_vt_ml"],
+            "minute_vent_l":   result["minute_vent_l"],
         }
 
         scenarios.append({
@@ -235,7 +235,7 @@ def run():
     grand_invalid = 0
 
     combos_per_point = (
-        len(THINNED_PARAMETER_GRID["tidal_volume_mL_per_kg"])
+        len(THINNED_PARAMETER_GRID["tidal_volume_ml_per_kg"])
         * len(THINNED_PARAMETER_GRID["respiratory_rate"])
         * len(THINNED_PARAMETER_GRID["peep_cmH2O"])
         * len(THINNED_PARAMETER_GRID["ie_ratio"])
@@ -265,7 +265,7 @@ def run():
         for C, R in mechanics:
             scenarios = _generate_thinned_dataset(
                 condition_name           = tier_name,
-                compliance_mL_per_cmH2O = C,
+                compliance_ml_per_cmH2O = C,
                 resistance_cmH2O_L_s    = R,
                 n_cycles                 = N_CYCLES,
             )
@@ -286,11 +286,11 @@ def run():
                     "generated_at":            s["generated_at"],
                     "is_valid":                s["is_valid"],
                     "invalid_reason":          s["invalid_reason"],
-                    "compliance_mL_per_cmH2O": p["compliance_mL_per_cmH2O"],
+                    "compliance_ml_per_cmH2O": p["compliance_ml_per_cmH2O"],
                     "resistance_cmH2O_L_s":    p["resistance_cmH2O_L_s"],
                     "respiratory_rate":        p["respiratory_rate"],
-                    "tidal_volume_mL":         p["tidal_volume_mL"],
-                    "tidal_volume_mL_per_kg":  p["tidal_volume_mL"] / IBW_KG,
+                    "tidal_volume_ml":         p["tidal_volume_ml"],
+                    "tidal_volume_ml_per_kg":  p["tidal_volume_ml"] / IBW_KG,
                     "ie_ratio":                p["ie_ratio"],
                     "peep_cmH2O":              p["peep_cmH2O"],
                     "flow_pattern":            p["flow_pattern"],
@@ -299,8 +299,8 @@ def run():
                     "driving_p_cmH2O":         m.get("driving_p_cmH2O", ""),
                     "mean_paw_cmH2O":          m.get("mean_paw_cmH2O",  ""),
                     "auto_peep_cmH2O":         m.get("auto_peep_cmH2O", ""),
-                    "delivered_vt_mL":         m.get("delivered_vt_mL", ""),
-                    "minute_vent_L":           m.get("minute_vent_L",   ""),
+                    "delivered_vt_ml":         m.get("delivered_vt_ml", ""),
+                    "minute_vent_l":           m.get("minute_vent_l",   ""),
                 })
 
         tier_elapsed = time.perf_counter() - tier_start

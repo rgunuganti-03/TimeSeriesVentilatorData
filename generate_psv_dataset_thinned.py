@@ -342,7 +342,7 @@ def _dyssynchrony_counts(labels: list) -> dict:
 
 
 def _generate_psv_thinned(condition_name: str,
-                            compliance_mL_per_cmH2O: float,
+                            compliance_ml_per_cmH2O: float,
                             resistance_cmH2O_L_s: float,
                             n_cycles: int) -> list:
     """
@@ -356,7 +356,7 @@ def _generate_psv_thinned(condition_name: str,
     Parameters
     ----------
     condition_name           : str
-    compliance_mL_per_cmH2O : float
+    compliance_ml_per_cmH2O : float
     resistance_cmH2O_L_s    : float
     n_cycles                 : int — more for COPD/Bronchospasm auto-PEEP
 
@@ -372,7 +372,7 @@ def _generate_psv_thinned(condition_name: str,
 
         params = {
             # Mechanics
-            "compliance_mL_per_cmH2O": compliance_mL_per_cmH2O,
+            "compliance_ml_per_cmH2O": compliance_ml_per_cmH2O,
             "resistance_cmH2O_L_s":     resistance_cmH2O_L_s,
             "condition":                condition_name,
             # Ventilator-side
@@ -382,7 +382,7 @@ def _generate_psv_thinned(condition_name: str,
         }
 
         seed = _make_deterministic_seed(
-            condition_name, compliance_mL_per_cmH2O, resistance_cmH2O_L_s,
+            condition_name, compliance_ml_per_cmH2O, resistance_cmH2O_L_s,
             vent, patient
         )
 
@@ -408,14 +408,14 @@ def _generate_psv_thinned(condition_name: str,
         scenario_id = _make_scenario_id(condition_name, params)
         metrics = {
             "ppeak_cmH2O":                  result.get("ppeak_cmH2O",                  ""),
-            "delivered_vt_mL":              result.get("delivered_vt_mL",              ""),
-            "patient_vt_mL":                result.get("patient_vt_mL",                ""),
+            "delivered_vt_ml":              result.get("delivered_vt_ml",              ""),
+            "patient_vt_ml":                result.get("patient_vt_ml",                ""),
             "driving_p_cmH2O":              result.get("driving_p_cmH2O",              ""),
             "mean_paw_cmH2O":               result.get("mean_paw_cmH2O",               ""),
             "auto_peep_cmH2O":              result.get("auto_peep_cmH2O",              ""),
             "total_peep_cmH2O":             result.get("total_peep_cmH2O",             ""),
             "fill_fraction":                result.get("fill_fraction",                ""),
-            "minute_vent_L":                result.get("minute_vent_L",                ""),
+            "minute_vent_l":                result.get("minute_vent_l",                ""),
             "pres_peak_cmH2O":              result.get("pres_peak_cmH2O",              ""),
             "pel_end_insp_cmH2O":           result.get("pel_end_insp_cmH2O",           ""),
             "stress_index":                 result.get("stress_index",                 ""),
@@ -495,7 +495,7 @@ def run():
         for C, R in mechanics:
             scenarios = _generate_psv_thinned(
                 condition_name           = tier_name,
-                compliance_mL_per_cmH2O = C,
+                compliance_ml_per_cmH2O = C,
                 resistance_cmH2O_L_s    = R,
                 n_cycles                 = n_cycles,
             )
@@ -523,7 +523,7 @@ def run():
                     "is_valid":                     s["is_valid"],
                     "invalid_reason":               s["invalid_reason"],
                     # ---- Mechanics ---------------------------------------
-                    "compliance_mL_per_cmH2O":      p["compliance_mL_per_cmH2O"],
+                    "compliance_ml_per_cmH2O":      p["compliance_ml_per_cmH2O"],
                     "resistance_cmH2O_L_s":          p["resistance_cmH2O_L_s"],
                     # ---- Ventilator-side parameters ----------------------
                     "pressure_support_cmH2O":        p["pressure_support_cmH2O"],
@@ -538,14 +538,14 @@ def run():
                     "pmus_cv":                        p["pmus_cv"],
                     # ---- Scalar metrics (blank if invalid) ---------------
                     "ppeak_cmH2O":                   m.get("ppeak_cmH2O",                  ""),
-                    "delivered_vt_mL":               m.get("delivered_vt_mL",              ""),
-                    "patient_vt_mL":                 m.get("patient_vt_mL",                ""),
+                    "delivered_vt_ml":               m.get("delivered_vt_ml",              ""),
+                    "patient_vt_ml":                 m.get("patient_vt_ml",                ""),
                     "driving_p_cmH2O":               m.get("driving_p_cmH2O",              ""),
                     "mean_paw_cmH2O":                m.get("mean_paw_cmH2O",               ""),
                     "auto_peep_cmH2O":               m.get("auto_peep_cmH2O",              ""),
                     "total_peep_cmH2O":              m.get("total_peep_cmH2O",             ""),
                     "fill_fraction":                  m.get("fill_fraction",                ""),
-                    "minute_vent_L":                  m.get("minute_vent_L",                ""),
+                    "minute_vent_l":                  m.get("minute_vent_l",                ""),
                     "pres_peak_cmH2O":               m.get("pres_peak_cmH2O",              ""),
                     "pel_end_insp_cmH2O":            m.get("pel_end_insp_cmH2O",           ""),
                     "stress_index":                   m.get("stress_index",                 ""),

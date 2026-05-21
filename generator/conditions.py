@@ -44,18 +44,19 @@ CONDITIONS = {
             "Standard tidal volume and respiratory rate."
         ),
         "condition":   "Normal",
-        "respiratory_rate":          15,
-        "stress_index": 1.00, 
+        "respiratory_rate":         15,
+        "stress_index":             1.00, 
         "tidal_volume_ml":          500,
-        "compliance_ml_per_cmH2O":   70,
-        "resistance_cmH2O_L_s":      10,
+        "compliance_ml_per_cmH2O":  70,
+        "resistance_cmH2O_L_s":     10,
         "ie_ratio":                 0.5,
-        "peep_cmH2O":                 5,
-        "pressure_support_cmH2O":  10,
+        "rise_time_s":              0.10,
+        "peep_cmH2O":               5,
+        "pressure_support_cmH2O":   10,
         "flow_cycle_threshold":     0.25,
         "trigger_threshold_cmH2O":  1.5,
         "pmus_peak_cmH2O":          8,
-        "effort_rate_per_min":     15,
+        "effort_rate_per_min":      15,
         "effort_duration_s":        0.8,
         "pmus_cv":                  0.20,
     },
@@ -74,6 +75,7 @@ CONDITIONS = {
         "compliance_ml_per_cmH2O":   45,
         "resistance_cmH2O_L_s":      12,
         "ie_ratio":                 0.5,
+        "rise_time_s":              0.10,
         "peep_cmH2O":                 8,
         "pressure_support_cmH2O":  12,
         "flow_cycle_threshold":     0.20,
@@ -97,6 +99,7 @@ CONDITIONS = {
         "tidal_volume_ml":          380,
         "compliance_ml_per_cmH2O":   30,
         "resistance_cmH2O_L_s":      14,
+        "rise_time_s":              0.10,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                12,
         "pressure_support_cmH2O":  12,
@@ -121,6 +124,7 @@ CONDITIONS = {
         "tidal_volume_ml":          300,
         "compliance_ml_per_cmH2O":   18,
         "resistance_cmH2O_L_s":      16,
+        "rise_time_s":              0.10,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                16,
         "pressure_support_cmH2O":  8,
@@ -147,6 +151,7 @@ CONDITIONS = {
         "compliance_ml_per_cmH2O":  100,
         "resistance_cmH2O_L_s":      22,
         "ie_ratio":                 0.33,
+        "rise_time_s":              0.10,
         "peep_cmH2O":                 5,
         "pressure_support_cmH2O":  10,
         "flow_cycle_threshold":     0.55,
@@ -171,6 +176,7 @@ CONDITIONS = {
         "tidal_volume_ml":          420,
         "compliance_ml_per_cmH2O":   70,
         "resistance_cmH2O_L_s":      35,
+        "rise_time_s":              0.10,
         "ie_ratio":                 0.30,
         "peep_cmH2O":                 3,
         "pressure_support_cmH2O":  14,
@@ -196,6 +202,7 @@ CONDITIONS = {
         "compliance_ml_per_cmH2O":   50,
         "resistance_cmH2O_L_s":      12,
         "ie_ratio":                 0.5,
+        "rise_time_s":              0.10,
         "peep_cmH2O":                 8,
         "pressure_support_cmH2O":  12,
         "flow_cycle_threshold":     0.25,
@@ -294,7 +301,9 @@ def _resolve_key(name: str) -> str:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    from waveforms import generate_breath_cycles
+    from vcv_generator import generate_breath_cycles
+    from pcv_generator import generate_breath_cycles
+    from psv_generator import generate_breath_cycles
 
     print("Available conditions:", list_conditions())
     print()
@@ -313,7 +322,7 @@ if __name__ == "__main__":
         print(f"  {meta['label']}")
         print(f"  {meta['description'][:70]}...")
         print(f"  RR={params['respiratory_rate']} bpm | "
-              f"TV={params['tidal_volume_l']} ml | "
+              f"TV={params['tidal_volume_ml']} ml | "
               f"C={params['compliance_ml_per_cmH2O']} | "
               f"R={params['resistance_cmH2O_L_s']}")
         print(f"  Peak pressure : {peak_p:.1f} cmH2O")

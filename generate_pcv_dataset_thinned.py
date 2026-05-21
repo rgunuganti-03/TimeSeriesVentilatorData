@@ -164,7 +164,7 @@ def _mechanics_grid(tier: dict) -> list:
 
 def _generate_thinned_dataset(
     condition_name:          str,
-    compliance_mL_per_cmH2O: float,
+    compliance_ml_per_cmH2O: float,
     resistance_cmH2O_L_s:    float,
     n_cycles:                int = 10,
 ) -> list:
@@ -184,7 +184,7 @@ def _generate_thinned_dataset(
         params = {
             "respiratory_rate":        rr,
             "insp_pressure_cmH2O":     p_insp,
-            "compliance_mL_per_cmH2O": compliance_mL_per_cmH2O,
+            "compliance_ml_per_cmH2O": compliance_ml_per_cmH2O,
             "resistance_cmH2O_L_s":    resistance_cmH2O_L_s,
             "ie_ratio":                ie,
             "peep_cmH2O":              peep,
@@ -210,12 +210,12 @@ def _generate_thinned_dataset(
 
         metrics = {
             "ppeak_cmH2O":         result["ppeak_cmH2O"],
-            "delivered_vt_mL":     result["delivered_vt_mL"],
+            "delivered_vt_ml":     result["delivered_vt_ml"],
             "driving_p_cmH2O":     result["driving_p_cmH2O"],
             "mean_paw_cmH2O":      result["mean_paw_cmH2O"],
             "auto_peep_cmH2O":     result["auto_peep_cmH2O"],
             "fill_fraction":       result["fill_fraction"],
-            "minute_vent_L":       result["minute_vent_L"],
+            "minute_vent_l":       result["minute_vent_l"],
             "time_to_peak_flow_s": result["time_to_peak_flow_s"],
         }
 
@@ -284,7 +284,7 @@ def run():
         for C, R in mechanics:
             scenarios = _generate_thinned_dataset(
                 condition_name           = tier_name,
-                compliance_mL_per_cmH2O = C,
+                compliance_ml_per_cmH2O = C,
                 resistance_cmH2O_L_s    = R,
                 n_cycles                 = N_CYCLES,
             )
@@ -305,7 +305,7 @@ def run():
                     "generated_at":            s["generated_at"],
                     "is_valid":                s["is_valid"],
                     "invalid_reason":          s["invalid_reason"],
-                    "compliance_mL_per_cmH2O": p["compliance_mL_per_cmH2O"],
+                    "compliance_ml_per_cmH2O": p["compliance_ml_per_cmH2O"],
                     "resistance_cmH2O_L_s":    p["resistance_cmH2O_L_s"],
                     "respiratory_rate":        p["respiratory_rate"],
                     "insp_pressure_cmH2O":     p["insp_pressure_cmH2O"],
@@ -313,12 +313,12 @@ def run():
                     "peep_cmH2O":              p["peep_cmH2O"],
                     "rise_time_s":             p["rise_time_s"],
                     "ppeak_cmH2O":             m.get("ppeak_cmH2O",         ""),
-                    "delivered_vt_mL":         m.get("delivered_vt_mL",     ""),
+                    "delivered_vt_ml":         m.get("delivered_vt_ml",     ""),
                     "driving_p_cmH2O":         m.get("driving_p_cmH2O",     ""),
                     "mean_paw_cmH2O":          m.get("mean_paw_cmH2O",      ""),
                     "auto_peep_cmH2O":         m.get("auto_peep_cmH2O",     ""),
                     "fill_fraction":           m.get("fill_fraction",        ""),
-                    "minute_vent_L":           m.get("minute_vent_L",        ""),
+                    "minute_vent_l":           m.get("minute_vent_l",        ""),
                     "time_to_peak_flow_s":     m.get("time_to_peak_flow_s",  ""),
                 })
 

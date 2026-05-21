@@ -53,12 +53,12 @@ Key distinction from ode_single.py:
 
 Derived metrics returned per scenario:
     ppeak_cmH2O      : peak airway pressure (= PIP during plateau phase)
-    delivered_vt_mL  : actual tidal volume delivered (integral of insp flow)
+    delivered_vt_ml  : actual tidal volume delivered (integral of insp flow)
     driving_p_cmH2O  : insp_pressure (PIP - PEEP = net driving pressure)
     mean_paw_cmH2O   : mean airway pressure across full cycle
     auto_peep_cmH2O  : residual pressure above PEEP at end of expiration
     fill_fraction    : fraction of steady-state volume reached (0–1)
-    minute_vent_L    : respiratory_rate * delivered_vt / 1000
+    minute_vent_l    : respiratory_rate * delivered_vt / 1000
     time_to_peak_flow_s : time from breath start to peak inspiratory flow
 
 Validity filter:
@@ -162,7 +162,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         Core keys  : "time", "pressure", "flow", "volume"
         Metrics    : "ppeak_cmH2O", "delivered_vt_mL", "driving_p_cmH2O",
                      "mean_paw_cmH2O", "auto_peep_cmH2O", "fill_fraction",
-                     "minute_vent_L", "time_to_peak_flow_s"
+                     "minute_vent_l", "time_to_peak_flow_s"
         Validity   : "is_valid", "invalid_reason"
     """
     _validate_params(params)

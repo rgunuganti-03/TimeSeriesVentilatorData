@@ -48,8 +48,8 @@ Derived metrics returned per scenario:
     driving_p_cmH2O : Pplat - PEEP (pure elastic load)
     mean_paw_cmH2O  : mean airway pressure across full cycle
     auto_peep_cmH2O : residual pressure at end of expiration above PEEP
-    delivered_vt_mL : actual peak volume delivered (should match target)
-    minute_vent_L   : respiratory_rate * delivered_vt / 1000
+    delivered_vt_ml : actual peak volume delivered (should match target)
+    minute_vent_l   : respiratory_rate * delivered_vt / 1000
 
 Validity filter:
     is_valid        : bool — False if any safety threshold is breached
@@ -100,7 +100,7 @@ from generator.conditions import get_condition_meta, list_conditions
 #                          0.5 = 1:2, 0.33 = 1:3, 1.0 = 1:1
 
 PARAMETER_GRID = {
-    "tidal_volume_mL_per_kg": [4, 6, 8, 10],          # mL/kg IBW
+    "tidal_volume_ml_per_kg": [4, 6, 8, 10],          # mL/kg IBW
     "respiratory_rate":       [8, 12, 16, 20, 24, 28, 30],  # bpm
     "peep_cmH2O":             [0, 4, 8, 12, 16, 20],   # cmH2O
     "ie_ratio":               [1.0, 0.5, 0.33],        # 1:1, 1:2, 1:3
@@ -129,7 +129,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     ----------
     params : dict
         respiratory_rate        : float  — breaths per minute (8–30)
-        tidal_volume_mL         : float  — target tidal volume in mL
+        tidal_volume_ml         : float  — target tidal volume in mL
         compliance_mL_per_cmH2O : float  — lung compliance
         resistance_cmH2O_L_s    : float  — airway resistance
         ie_ratio                : float  — insp fraction (0.33=1:3, 0.5=1:2, 1.0=1:1)
@@ -145,7 +145,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         Core waveform keys: "time", "pressure", "flow", "volume"
         Derived metric keys: "ppeak_cmH2O", "pplat_cmH2O",
             "driving_p_cmH2O", "mean_paw_cmH2O", "auto_peep_cmH2O",
-            "delivered_vt_mL", "minute_vent_L"
+            "delivered_vt_ml", "minute_vent_l"
         Validity keys: "is_valid", "invalid_reason"
     """
     _validate_params(params)

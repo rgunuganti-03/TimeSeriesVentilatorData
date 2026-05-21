@@ -40,8 +40,8 @@ from generator.vcv_generator import (
 
 NORMAL_PARAMS_SQR = {
     "respiratory_rate":        15,
-    "tidal_volume_mL":        500,
-    "compliance_mL_per_cmH2O": 60,
+    "tidal_volume_ml":        500,
+    "compliance_ml_per_cmH2O": 60,
     "resistance_cmH2O_L_s":     10,
     "ie_ratio":                0.5,
     "peep_cmH2O":                5,
@@ -54,7 +54,7 @@ NORMAL_PARAMS_DEC = {**NORMAL_PARAMS_SQR, "flow_pattern": "decelerating"}
 CORE_KEYS    = {"time", "pressure", "flow", "volume"}
 METRIC_KEYS  = {
     "ppeak_cmH2O", "pplat_cmH2O", "driving_p_cmH2O",
-    "mean_paw_cmH2O", "auto_peep_cmH2O", "delivered_vt_mL", "minute_vent_L",
+    "mean_paw_cmH2O", "auto_peep_cmH2O", "delivered_vt_ml", "minute_vent_l",
 }
 VALIDITY_KEYS = {"is_valid", "invalid_reason"}
 ALL_KEYS      = CORE_KEYS | METRIC_KEYS | VALIDITY_KEYS
@@ -149,8 +149,8 @@ class TestInterfaceContract:
 
     def test_missing_required_param_raises(self):
         for key in [
-            "respiratory_rate", "tidal_volume_mL",
-            "compliance_mL_per_cmH2O", "resistance_cmH2O_L_s",
+            "respiratory_rate", "tidal_volume_ml",
+            "compliance_ml_per_cmH2O", "resistance_cmH2O_L_s",
             "ie_ratio", "peep_cmH2O",
         ]:
             bad = {k: v for k, v in NORMAL_PARAMS_SQR.items() if k != key}
@@ -163,7 +163,7 @@ class TestInterfaceContract:
             generate_breath_cycles(bad)
 
     def test_out_of_range_tidal_volume_raises(self):
-        bad = {**NORMAL_PARAMS_SQR, "tidal_volume_mL": 50}
+        bad = {**NORMAL_PARAMS_SQR, "tidal_volume_ml": 50}
         with pytest.raises(ValueError):
             generate_breath_cycles(bad)
 
@@ -173,7 +173,7 @@ class TestInterfaceContract:
             generate_breath_cycles(bad)
 
     def test_out_of_range_compliance_raises(self):
-        bad = {**NORMAL_PARAMS_SQR, "compliance_mL_per_cmH2O": 200}
+        bad = {**NORMAL_PARAMS_SQR, "compliance_ml_per_cmH2O": 200}
         with pytest.raises(ValueError):
             generate_breath_cycles(bad)
 
@@ -228,7 +228,7 @@ class TestPhysiologicalPlausibility:
     @pytest.mark.parametrize("params", [NORMAL_PARAMS_SQR, NORMAL_PARAMS_DEC])
     def test_delivered_vt_within_5_percent(self, params):
         result = generate_breath_cycles(params, n_cycles=3)
-        target = params["tidal_volume_mL"]
+        target = params["tidal_volume_ml"]
         delivered = result["volume"].max()
         assert abs(delivered - target) / target < 0.05, (
             f"Delivered VT {delivered:.0f} mL deviates >5% from target {target} mL"
@@ -275,10 +275,10 @@ class TestPhysiologicalPlausibility:
         result = generate_breath_cycles(NORMAL_PARAMS_SQR)
         expected = (
             NORMAL_PARAMS_SQR["respiratory_rate"]
-            * result["delivered_vt_mL"]
+            * result["delivered_vt_ml"]
             / 1000.0
         )
-        assert result["minute_vent_L"] == pytest.approx(expected, rel=0.02)
+        assert result["minute_vent_l"] == pytest.approx(expected, rel=0.02)
 
     def test_auto_peep_non_negative(self):
         result = generate_breath_cycles(NORMAL_PARAMS_SQR)
@@ -344,7 +344,7 @@ class TestFlowPatternShape:
     def test_both_patterns_deliver_same_tidal_volume(self):
         r_sq  = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=3)
         r_dec = generate_breath_cycles(NORMAL_PARAMS_DEC, n_cycles=3)
-        assert abs(r_sq["delivered_vt_mL"] - r_dec["delivered_vt_mL"]) < 10, (
+        assert abs(r_sq["delivered_vt_ml"] - r_dec["delivered_vt_ml"]) < 10, (
             "Both flow patterns must deliver the same tidal volume"
         )
 
@@ -394,8 +394,8 @@ class TestFlowPatternShape:
         )
 
     def test_lower_compliance_raises_ppeak(self):
-        high_c = {**NORMAL_PARAMS_SQR, "compliance_mL_per_cmH2O": 60}
-        low_c  = {**NORMAL_PARAMS_SQR, "compliance_mL_per_cmH2O": 15}
+        high_c = {**NORMAL_PARAMS_SQR, "compliance_ml_per_cmH2O": 60}
+        low_c  = {**NORMAL_PARAMS_SQR, "compliance_ml_per_cmH2O": 15}
         r_high = generate_breath_cycles(high_c)
         r_low  = generate_breath_cycles(low_c)
         assert r_low["ppeak_cmH2O"] > r_high["ppeak_cmH2O"], (
@@ -454,7 +454,7 @@ class TestValidityFilter:
         params = {
             **NORMAL_PARAMS_SQR,
             "resistance_cmH2O_L_s":    48,
-            "tidal_volume_mL":        800,
+            "tidal_volume_ml":        800,
             "respiratory_rate":        30,
             "ie_ratio":               1.0,   # 1:1 → short t_insp → high flow
         }
@@ -470,8 +470,8 @@ class TestValidityFilter:
         # Very low compliance + high VT → driving P > 20
         params = {
             **NORMAL_PARAMS_DEC,
-            "compliance_mL_per_cmH2O": 10,
-            "tidal_volume_mL":        500,
+            "compliance_ml_per_cmH2O": 10,
+            "tidal_volume_ml":        500,
         }
         result = generate_breath_cycles(params)
         assert result["is_valid"] is False
@@ -500,8 +500,8 @@ class TestValidityFilter:
     def test_invalid_scenario_has_non_empty_reason(self):
         params = {
             **NORMAL_PARAMS_DEC,
-            "compliance_mL_per_cmH2O": 10,
-            "tidal_volume_mL":        500,
+            "compliance_ml_per_cmH2O": 10,
+            "tidal_volume_ml":        500,
         }
         result = generate_breath_cycles(params)
         assert not result["is_valid"]
@@ -513,8 +513,8 @@ class TestValidityFilter:
         # Standard clinical settings — must always be valid
         params = {
             **NORMAL_PARAMS_SQR,
-            "tidal_volume_mL":        420,   # 6 mL/kg IBW
-            "compliance_mL_per_cmH2O": 60,
+            "tidal_volume_ml":        420,   # 6 mL/kg IBW
+            "compliance_ml_per_cmH2O": 60,
             "resistance_cmH2O_L_s":     2,
             "peep_cmH2O":               5,
         }
@@ -537,7 +537,7 @@ class TestDatasetGeneration:
         """Run once for the class — Normal lung, small mechanics slice."""
         return generate_dataset(
             condition_name="Normal",
-            compliance_mL_per_cmH2O=60,
+            compliance_ml_per_cmH2O=60,
             resistance_cmH2O_L_s=2,
             n_cycles=3,
         )
@@ -547,7 +547,7 @@ class TestDatasetGeneration:
         """Severe ARDS — high invalidity rate expected."""
         return generate_dataset(
             condition_name="Severe ARDS",
-            compliance_mL_per_cmH2O=10,
+            compliance_ml_per_cmH2O=10,
             resistance_cmH2O_L_s=8,
             n_cycles=3,
         )
@@ -558,7 +558,7 @@ class TestDatasetGeneration:
     def test_total_count_matches_grid(self, normal_dataset):
         # Grid: 4 VT × 7 RR × 6 PEEP × 3 I:E × 2 patterns = 1,008
         expected = (
-            len(PARAMETER_GRID["tidal_volume_mL_per_kg"])
+            len(PARAMETER_GRID["tidal_volume_ml_per_kg"])
             * len(PARAMETER_GRID["respiratory_rate"])
             * len(PARAMETER_GRID["peep_cmH2O"])
             * len(PARAMETER_GRID["ie_ratio"])
@@ -596,8 +596,8 @@ class TestDatasetGeneration:
 
     def test_params_contain_required_keys(self, normal_dataset):
         required = {
-            "respiratory_rate", "tidal_volume_mL",
-            "compliance_mL_per_cmH2O", "resistance_cmH2O_L_s",
+            "respiratory_rate", "tidal_volume_ml",
+            "compliance_ml_per_cmH2O", "resistance_cmH2O_L_s",
             "ie_ratio", "peep_cmH2O", "flow_pattern",
         }
         for scenario in normal_dataset:
@@ -662,7 +662,7 @@ class TestDatasetGeneration:
     def test_compliance_consistent_across_scenarios(self, normal_dataset):
         # All scenarios in this dataset use the same compliance
         compliances = {
-            s["params"]["compliance_mL_per_cmH2O"]
+            s["params"]["compliance_ml_per_cmH2O"]
             for s in normal_dataset
         }
         assert compliances == {60.0}, (

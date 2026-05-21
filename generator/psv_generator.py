@@ -85,11 +85,11 @@ Output dict keys
         pressure_resistive, pressure_elastic, pressure_total_peep
 
     Scalar metrics:
-        ppeak_cmH2O, delivered_vt_mL, driving_p_cmH2O, mean_paw_cmH2O,
+        ppeak_cmH2O, delivered_vt_ml, driving_p_cmH2O, mean_paw_cmH2O,
         auto_peep_cmH2O, total_peep_cmH2O, fill_fraction,
-        minute_vent_L, pres_peak_cmH2O, pel_end_insp_cmH2O,
+        minute_vent_l, pres_peak_cmH2O, pel_end_insp_cmH2O,
         stress_index, pres_pel_ratio, triggered_breath_rate,
-        ineffective_trigger_fraction, patient_vt_mL
+        ineffective_trigger_fraction, patient_vt_ml
 
     Per-breath labels (list, length = n_cycles):
         breath_dyssynchrony_labels
@@ -992,13 +992,13 @@ def generate_breath_cycles(params: dict,
             ), 0.5)
             peep_total_now = peep_e + auto_peep_now
 
-            pao_now = P_vent
+            
             # Rohrer resistive pressure on total flow
             pres_now = _rohrer_resistance(Q_total, K1_eff, K2_eff)
             pel_now  = (V_total - V_baseline_total) / max(C_rs_now, 0.1)
             tpeep_now = peep_e + (V_baseline_total / max(C_rs_now, 0.1))
-            
-
+            pao_now = P_vent 
+           
             if t_insp < DT:
                 Q_at_trigger = Q_total
 
@@ -1107,11 +1107,11 @@ def generate_breath_cycles(params: dict,
 
     valid_vts = [v for v in insp_vt_list if v > 1.0]
     mean_vt   = float(np.mean(valid_vts)) if valid_vts else 0.0
-    delivered_vt_mL = mean_vt
+    delivered_vt_ml = mean_vt
     ppeak     = float(pres_arr.max()) if len(pres_arr) else peep_e
     mean_paw  = float(pres_arr.mean()) if len(pres_arr) else peep_e
-    patient_vt_mL = _circuit_vt_correction(
-    delivered_vt_mL * (1.0 - leak_frac),   # ← apply leak first
+    patient_vt_ml = _circuit_vt_correction(
+    delivered_vt_ml * (1.0 - leak_frac),   # ← apply leak first
     ppeak, peep_e,
     CIRCUIT_COMPLIANCE_ML_PER_CMH2O, circ_compensated
 )
@@ -1151,8 +1151,8 @@ def generate_breath_cycles(params: dict,
 
     metrics = {
         "ppeak_cmH2O":              ppeak,
-        "delivered_vt_ml":          delivered_vt_mL,
-        "patient_vt_ml":            patient_vt_mL,
+        "delivered_vt_ml":          delivered_vt_ml,
+        "patient_vt_ml":            patient_vt_ml,
         "driving_p_cmH2O":          dp_cmH2O,
         "mean_paw_cmH2O":           mean_paw,
         "auto_peep_cmH2O":          final_auto_peep,
