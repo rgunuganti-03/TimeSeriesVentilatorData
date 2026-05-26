@@ -130,7 +130,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     params : dict
         respiratory_rate        : float  — breaths per minute (8–30)
         tidal_volume_ml         : float  — target tidal volume in mL
-        compliance_mL_per_cmH2O : float  — lung compliance
+        compliance_ml_per_cmH2O : float  — lung compliance
         resistance_cmH2O_L_s    : float  — airway resistance
         ie_ratio                : float  — insp fraction (0.33=1:3, 0.5=1:2, 1.0=1:1)
         peep_cmH2O              : float  — PEEP
@@ -335,7 +335,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
 
 def generate_dataset(
     condition_name: str,
-    compliance_mL_per_cmH2O: float,
+    compliance_ml_per_cmH2O: float,
     resistance_cmH2O_L_s:    float,
     n_cycles:                 int = 10,
 ) -> list:
@@ -345,7 +345,7 @@ def generate_dataset(
     Parameters
     ----------
     condition_name           : str   — e.g. "Moderate ARDS"
-    compliance_mL_per_cmH2O : float — single compliance value for this run
+    compliance_ml_per_cmH2O : float — single compliance value for this run
     resistance_cmH2O_L_s    : float — single resistance value for this run
     n_cycles                 : int   — breath cycles per scenario (min 10)
 
@@ -378,7 +378,7 @@ def generate_dataset(
         params = {
             "respiratory_rate":        rr,
             "tidal_volume_ml":         vt_mL,
-            "compliance_ml_per_cmH2O": compliance_mL_per_cmH2O,
+            "compliance_ml_per_cmH2O": compliance_ml_per_cmH2O,
             "resistance_cmH2O_L_s":    resistance_cmH2O_L_s,
             "ie_ratio":                ie,
             "peep_cmH2O":              peep,
@@ -593,7 +593,7 @@ if __name__ == "__main__":
 
     scenarios = generate_dataset(
         condition_name="Normal",
-        compliance_mL_per_cmH2O=60,
+        compliance_ml_per_cmH2O=60,
         resistance_cmH2O_L_s=2,
         n_cycles=5,
     )

@@ -1086,7 +1086,7 @@ def generate_breath_cycles(params: dict,
         tpeep = peep_e + (V_baseline_total / max(C_rs_total, 0.1))
 
         T_list.append(t_current + t_in_exp)
-        P_list.append(pres + pel + tpeep)
+        P_list.append(peep_e)
         Q_list.append(float(sum(Q_comps)))
         V_list.append(V_total)
         Pres_list.append(pres)
@@ -1390,7 +1390,7 @@ def _timestamp() -> str:
 
 
 def generate_dataset(condition_name: str,
-                      compliance_mL_per_cmH2O: float,
+                      compliance_ml_per_cmH2O: float,
                       resistance_cmH2O_L_s: float,
                       n_cycles: int = 5,
                       seed: Optional[int] = None) -> List[dict]:
@@ -1400,7 +1400,7 @@ def generate_dataset(condition_name: str,
     Parameters
     ----------
     condition_name           : str   — one of the seven condition names
-    compliance_mL_per_cmH2O : float — global lung compliance preset
+    compliance_ml_per_cmH2O : float — global lung compliance preset
     resistance_cmH2O_L_s    : float — total system resistance preset
     n_cycles                 : int   — triggered breaths per scenario
     seed                     : int   — base random seed (incremented per scenario)
@@ -1421,7 +1421,7 @@ def generate_dataset(condition_name: str,
 
     for combo in itertools.product(*grid_vals):
         p = dict(zip(grid_keys, combo))
-        p["compliance_ml_per_cmH2O"] = compliance_mL_per_cmH2O
+        p["compliance_ml_per_cmH2O"] = compliance_ml_per_cmH2O
         p["resistance_cmH2O_L_s"]     = resistance_cmH2O_L_s
         p["condition"]                = condition_name
         p["recruitment_slope"]        = rec_slope
