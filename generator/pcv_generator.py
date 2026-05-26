@@ -361,7 +361,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
 
 def generate_dataset(
     condition_name:           str,
-    compliance_mL_per_cmH2O: float,
+    compliance_ml_per_cmH2O: float,
     resistance_cmH2O_L_s:    float,
     n_cycles:                 int = 10,
 ) -> list:
@@ -371,7 +371,7 @@ def generate_dataset(
     Parameters
     ----------
     condition_name           : str   — e.g. "Moderate ARDS"
-    compliance_mL_per_cmH2O : float — single compliance value for this run
+    compliance_ml_per_cmH2O : float — single compliance value for this run
     resistance_cmH2O_L_s    : float — single resistance value for this run
     n_cycles                 : int   — breath cycles per scenario (min 10)
 
@@ -399,7 +399,7 @@ def generate_dataset(
         params = {
             "respiratory_rate":        rr,
             "insp_pressure_cmH2O":     p_insp,
-            "compliance_ml_per_cmH2O": compliance_mL_per_cmH2O,
+            "compliance_ml_per_cmH2O": compliance_ml_per_cmH2O,
             "resistance_cmH2O_L_s":    resistance_cmH2O_L_s,
             "ie_ratio":                ie,
             "peep_cmH2O":              peep,
@@ -627,7 +627,7 @@ if __name__ == "__main__":
 
     scenarios = generate_dataset(
         condition_name="Normal",
-        compliance_mL_per_cmH2O=60,
+        compliance_ml_per_cmH2O=60,
         resistance_cmH2O_L_s=2,
         n_cycles=1,   # 1 cycle in smoke test — enough to verify structure
     )
