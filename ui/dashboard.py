@@ -366,8 +366,8 @@ def render_sidebar():
             key=f"peep_{condition_name}_{engine_name}",
         )
 
-        # --- RR and I:E — VCV and PCV only (PSV uses effort_rate below) -
-        if engine_key in ("vcv", "pcv"):
+        # --- RR and I:E — VCV, PCV and PRVC only (PSV uses effort_rate below) -
+        if engine_key in ("vcv", "pcv", "prvc"):
             rr = st.slider(
                 "Respiratory Rate (bpm)", 5, 40,
                 value=int(preset["respiratory_rate"]),
@@ -556,17 +556,33 @@ def render_sidebar():
             value=preset.get("pressure_ceiling_cmH2O", 30), step=1,
             help="Safety limit on the adaptive pressure staircase. If the algorithm "
                 "needs more than this to hit the volume target, it stops climbing "
-                "and the scenario becomes ceiling-limited (unable to guarantee VT).",
-)
+                "and the scenario becomes ceiling-limited (unable to guarantee VT).",)
        
-        _ncycles_default = 12 if engine_key == "psv" else 5
-        n_cycles = st.slider(
-            "Breath Cycles", 1, 30, _ncycles_default, step=1,
-            help=(
-                "PSV: use ≥ 12 cycles for COPD/Bronchospasm so that "
-                "auto-PEEP reaches steady state."
-            ) if engine_key == "psv" else None,
-        )
+            _ncycles_default = 12 if engine_key in ("psv", "prvc") else 5
+            n_cycles = st.slider(
+                "Breath Cycles", 1, 30, _ncycles_default, step=1,
+                help=(
+                    "PSV: use ≥ 12 cycles for COPD/Bronchospasm so that "
+                    "auto-PEEP reaches steady state."
+                ) if engine_key == "psv" else None,
+            )
+        
+        if engine_key in ("vcv", "prvc"):
+            tv = st.slider(
+                "Tidal Volume (ml)", 100, 900,
+                value=int(preset["tidal_volume_ml"]),
+                step=10,
+                help="Target volume delivered per breath.",
+                key=f"tv_{condition_name}_{engine_name}",
+            )
+        
+        if engine_key in ("pcv", "prvc"):
+            rise_time = st.slider(
+                "Rise Time (s)", min_value=0.0, max_value=0.4,
+                value=0.0, step=0.1,
+                help=(...),
+                key=f"rise_{condition_name}_{engine_name}",
+            )
 
         # --- Assemble params dict ---------------------------------------
         # --- Assemble params dict ---------------------------------------
@@ -612,7 +628,7 @@ def render_sidebar():
             }
         elif engine_key == "prvc":
             params = {
-                "vt_target_ml":            vt,          # reuse the existing VT slider value
+                "vt_target_ml":            tv,          # reuse the existing VT slider value
                 "respiratory_rate":        rr,
                 "peep_cmH2O":              peep,
                 "ie_ratio":                ie,
