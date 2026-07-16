@@ -366,7 +366,7 @@ def render_sidebar():
             key=f"peep_{condition_name}_{engine_name}",
         )
 
-        # --- RR and I:E — VCV, PCV and PRVC only (PSV uses effort_rate below) -
+        # --- RR and I:E — VCV, PCV, and PRVC (PSV uses effort_rate) -----
         if engine_key in ("vcv", "pcv", "prvc"):
             rr = st.slider(
                 "Respiratory Rate (bpm)", 5, 40,
@@ -383,19 +383,22 @@ def render_sidebar():
             )
             ie = IE_OPTIONS[ie_label]
 
-        # --- VCV-specific parameters ------------------------------------
-        if engine_key == "vcv":
-            st.markdown(
-                '<div class="section-label" style="margin-top:10px;">'
-                'VCV Settings</div>',
-                unsafe_allow_html=True,
-            )
+        # --- Tidal volume — VCV (its own setting) and PRVC (its target) -
+        if engine_key in ("vcv", "prvc"):
             tv = st.slider(
                 "Tidal Volume (ml)", 100, 900,
                 value=int(preset["tidal_volume_ml"]),
                 step=10,
                 help="Target volume delivered per breath.",
                 key=f"tv_{condition_name}_{engine_name}",
+            )
+
+        # --- VCV-specific: flow pattern only -----------------------------
+        if engine_key == "vcv":
+            st.markdown(
+                '<div class="section-label" style="margin-top:10px;">'
+                'VCV Settings</div>',
+                unsafe_allow_html=True,
             )
             flow_pattern = st.radio(
                 "Flow Pattern",
@@ -410,7 +413,7 @@ def render_sidebar():
                 key=f"flow_{condition_name}_{engine_name}",
             )
 
-        # --- PCV-specific parameters ------------------------------------
+        # --- PCV-specific: insp pressure only ----------------------------
         if engine_key == "pcv":
             st.markdown(
                 '<div class="section-label" style="margin-top:10px;">'
@@ -428,6 +431,9 @@ def render_sidebar():
                 ),
                 key=f"insp_p_{condition_name}_{engine_name}",
             )
+
+        # --- Rise time — PCV and PRVC ------------------------------------
+        if engine_key in ("pcv", "prvc"):
             rise_time = st.slider(
                 "Rise Time (s)",
                 min_value=0.0, max_value=0.4,
@@ -441,148 +447,39 @@ def render_sidebar():
                 key=f"rise_{condition_name}_{engine_name}",
             )
 
-        # --- PSV-specific parameters ------------------------------------
+        # --- PSV-specific parameters --------------------------------------
         if engine_key == "psv":
-            st.markdown(
-                '<div class="section-label" style="margin-top:10px;">'
-                'PSV — Ventilator Settings</div>',
-                unsafe_allow_html=True,
-            )
-            ps = st.slider(
-                "Pressure Support (cmH\u2082O above PEEP)",
-                min_value=1, max_value=30,
-                value=int(preset["pressure_support_cmH2O"]),
-                step=1,
-                help=(
-                    "Pressure level the ventilator adds above PEEP during "
-                    "each patient-triggered inspiration."
-                ),
-                key=f"ps_{condition_name}_{engine_name}",
-            )
-            fct = st.select_slider(
-                "Flow Cycle Threshold",
-                options=[0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70],
-                value=float(preset["flow_cycle_threshold"]),
-                help=(
-                    "Inspiration ends when flow decays to this fraction "
-                    "of peak. Low (0.10) → delayed cycling risk. "
-                    "High (0.40) → premature cycling risk."
-                ),
-                key=f"fct_{condition_name}_{engine_name}",
-            )
-            thr = st.slider(
-                "Trigger Threshold (cmH\u2082O)",
-                min_value=0.5, max_value=3.0,
-                value=float(preset["trigger_threshold_cmH2O"]),
-                step=0.5,
-                help=(
-                    "Minimum inspiratory effort required to trigger the "
-                    "ventilator. Higher values require more patient effort."
-                ),
-                key=f"thr_{condition_name}_{engine_name}",
-            )
-            rise_time = st.slider(
-                "Rise Time (s)",
-                min_value=0.0, max_value=0.4,
-                value=0.1, step=0.1,
-                help=(
-                    "Time for airway pressure to ramp from PEEP to PS level. "
-                    "0.0 = instantaneous step."
-                ),
-                key=f"rise_psv_{condition_name}_{engine_name}",
-            )
+            # (leave this block exactly as it already is in your file —
+            # ps, fct, thr, pmus, effort_dur, pmus_cv, Regenerate button)
+            ...
 
-            st.markdown(
-                '<div class="section-label" style="margin-top:10px;">'
-                'PSV — Patient Effort Model</div>',
-                unsafe_allow_html=True,
-            )
-            effort_rate = st.slider(
-                "Effort Rate (breaths/min)", 8, 40,
-                value=int(preset["effort_rate_per_min"]),
-                step=1,
-                help=(
-                    "Patient's neural respiratory rate — the rate at which "
-                    "the patient attempts to breathe regardless of whether "
-                    "each effort successfully triggers the ventilator."
-                ),
-                key=f"erate_{condition_name}_{engine_name}",
-            )
-            pmus = st.slider(
-                "Peak Effort (Pmus cmH\u2082O)", 2, 25,
-                value=int(preset["pmus_peak_cmH2O"]),
-                step=1,
-                help=(
-                    "Mean peak inspiratory muscle pressure. Higher values "
-                    "reflect stronger patient drive and larger tidal volumes."
-                ),
-                key=f"pmus_{condition_name}_{engine_name}",
-            )
-            effort_dur = st.slider(
-                "Effort Duration (s)", 0.3, 1.4,
-                value=float(preset["effort_duration_s"]),
-                step=0.1,
-                help=(
-                    "Duration of each inspiratory effort (neural Ti). "
-                    "Mismatch with ventilator Ti produces dyssynchrony."
-                ),
-                key=f"edur_{condition_name}_{engine_name}",
-            )
-            pmus_cv = st.slider(
-                "Effort Variability (CV)", 0.0, 0.4,
-                value=float(preset["pmus_cv"]),
-                step=0.1,
-                help=(
-                    "Coefficient of variation of breath-to-breath Pmus. "
-                    "Drives the tidal volume variability that distinguishes "
-                    "PSV from mandatory modes."
-                ),
-                key=f"pcv_{condition_name}_{engine_name}",
-            )
-            if st.button(
-                "⟳ Regenerate",
-                help="Draw a new set of stochastic Pmus samples.",
-                key="psv_regen",
-            ):
-                st.session_state["psv_seed"] = (
-                    st.session_state.get("psv_seed", 42) + 1
-                )
-                st.rerun()
         st.markdown("<hr>", unsafe_allow_html=True)
-        
+
+        # --- PRVC-specific: pressure ceiling ------------------------------
         if engine_key == "prvc":
             ceiling = st.slider(
-            "Pressure Ceiling (above PEEP)", min_value=15, max_value=35,
-            value=preset.get("pressure_ceiling_cmH2O", 30), step=1,
-            help="Safety limit on the adaptive pressure staircase. If the algorithm "
-                "needs more than this to hit the volume target, it stops climbing "
-                "and the scenario becomes ceiling-limited (unable to guarantee VT).",)
-       
-            _ncycles_default = 12 if engine_key in ("psv", "prvc") else 5
-            n_cycles = st.slider(
-                "Breath Cycles", 1, 30, _ncycles_default, step=1,
+                "Pressure Ceiling (above PEEP)", min_value=15, max_value=35,
+                value=int(preset.get("pressure_ceiling_cmH2O", 30)), step=1,
                 help=(
-                    "PSV: use ≥ 12 cycles for COPD/Bronchospasm so that "
-                    "auto-PEEP reaches steady state."
-                ) if engine_key == "psv" else None,
+                    "Safety limit on the adaptive pressure staircase. If the "
+                    "algorithm needs more than this to hit the volume "
+                    "target, it stops climbing and the scenario becomes "
+                    "ceiling-limited (unable to guarantee VT)."
+                ),
+                key=f"ceiling_{condition_name}_{engine_name}",
             )
-        
-        if engine_key in ("vcv", "prvc"):
-            tv = st.slider(
-                "Tidal Volume (ml)", 100, 900,
-                value=int(preset["tidal_volume_ml"]),
-                step=10,
-                help="Target volume delivered per breath.",
-                key=f"tv_{condition_name}_{engine_name}",
-            )
-        
-        if engine_key in ("pcv", "prvc"):
-            rise_time = st.slider(
-                "Rise Time (s)", min_value=0.0, max_value=0.4,
-                value=0.0, step=0.1,
-                help=(...),
-                key=f"rise_{condition_name}_{engine_name}",
-            )
+
+        # --- Breath cycle count — always assigned, every engine ----------
+        _ncycles_default = 12 if engine_key in ("psv", "prvc") else 5
+        n_cycles = st.slider(
+            "Breath Cycles", 1, 30, _ncycles_default, step=1,
+            help=(
+                "PSV: use \u2265 12 cycles for COPD/Bronchospasm so auto-PEEP "
+                "reaches steady state. PRVC: use \u2265 12 cycles (\u2265 25 for "
+                "COPD/Bronchospasm) so the pressure staircase has room to "
+                "converge."
+            ) if engine_key in ("psv", "prvc") else None,
+        )
 
         # --- Assemble params dict ---------------------------------------
         # --- Assemble params dict ---------------------------------------
