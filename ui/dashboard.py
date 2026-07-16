@@ -43,6 +43,7 @@ from generator.conditions    import get_condition, get_condition_meta, list_cond
 from generator.vcv_generator import generate_breath_cycles as _gen_vcv
 from generator.pcv_generator import generate_breath_cycles as _gen_pcv
 from generator.psv_generator import generate_breath_cycles as _gen_psv
+from generator.prvc_generator import generate_breath_cycles as _gen_prvc
 
 
 # ---------------------------------------------------------------------------
@@ -67,6 +68,12 @@ ENGINES = {
         "fn":    _gen_psv,
         "label": "PSV · Pressure-Support",
         "icon":  "*",
+    },
+    "PRVC": {
+        "key":   "prvc",
+        "fn":    _gen_prvc,
+        "label": "PRVC · Pressure-Regulated Volume Control",
+        "icon":  "◆",   # pick anything distinct from ▣ ◈ *
     }
 }
 
@@ -542,7 +549,15 @@ def render_sidebar():
                 )
                 st.rerun()
         st.markdown("<hr>", unsafe_allow_html=True)
-
+        
+        if engine_key == "prvc":
+            ceiling = st.slider(
+            "Pressure Ceiling (above PEEP)", min_value=15, max_value=35,
+            value=preset.get("pressure_ceiling_cmH2O", 30), step=1,
+            help="Safety limit on the adaptive pressure staircase. If the algorithm "
+                "needs more than this to hit the volume target, it stops climbing "
+                "and the scenario becomes ceiling-limited (unable to guarantee VT).",
+)
        
         _ncycles_default = 12 if engine_key == "psv" else 5
         n_cycles = st.slider(
@@ -591,6 +606,18 @@ def render_sidebar():
                 "effort_rate_per_min":     effort_rate,
                 "effort_duration_s":       effort_dur,
                 "pmus_cv":                 pmus_cv,
+                "compliance_ml_per_cmH2O": compliance,
+                "resistance_cmH2O_L_s":    resistance,
+                "condition":               condition_name,
+            }
+        elif engine_key == "prvc":
+            params = {
+                "vt_target_ml":            vt,          # reuse the existing VT slider value
+                "respiratory_rate":        rr,
+                "peep_cmH2O":              peep,
+                "ie_ratio":                ie,
+                "pressure_ceiling_cmH2O":  ceiling,      # new slider, see below
+                "rise_time_s":             rise_time,    # reuse existing PCV rise-time slider
                 "compliance_ml_per_cmH2O": compliance,
                 "resistance_cmH2O_L_s":    resistance,
                 "condition":               condition_name,
@@ -744,7 +771,6 @@ def render_metrics(result, params, engine_key):
             ("Trig RR",        f"{trig_rr:.1f}",       "bpm"),
             ("Minute Vent",    f"{minute_vent:.1f}",   "l/min"),
         ]
-
         
 
         # Dyssynchrony label summary bar
@@ -764,6 +790,20 @@ def render_metrics(result, params, engine_key):
                 f'Dyssynchrony — {" · ".join(parts)}</div>',
                 unsafe_allow_html=True,
             )
+    elif engine_key == "prvc":
+        metrics = [
+        ("PPeak", result["ppeak_cmH2O"], "cmH2O"),
+        ("Delivered VT", result["delivered_vt_ml"], "mL"),
+        ("Driving P (converged)", result["driving_p_cmH2O"], "cmH2O"),
+        ("Mean Paw", result["mean_paw_cmH2O"], "cmH2O"),
+        ("Auto-PEEP", result["auto_peep_cmH2O"], "cmH2O"),
+        ("Minute Vent", result["minute_vent_l"], "L/min"),
+        ("Breaths to Converge",
+         result["breaths_to_converge"] if result["breaths_to_converge"] else "—", ""),
+    ]
+        # ... render metrics as usual, then a separate status badge:
+        status = "Ceiling-limited" if result["ceiling_limited"] else (
+            "Converged" if result["converged"] else "Not yet converged")
 
     for col, (label, value, unit) in zip(cols, metrics):
         _metric_card(col, label, value, unit)

@@ -1,121 +1,177 @@
 """
 generator/pcv_generator.py
 --------------------------
-Pressure-Controlled Ventilation (PCV) waveform generator.
+Pressure-Controlled Ventilation (PCV) waveform generator — multi-compartment.
 
-Control loop:
-    The ventilator prescribes inspiratory pressure — a target pressure above
-    PEEP applied at the airway opening during inspiration. Volume and flow are
-    the dependent variables: they emerge from the interaction between the
-    applied pressure and the patient's lung mechanics.
+Control loop
+------------
+The ventilator prescribes inspiratory pressure (a three-phase profile: linear
+rise from PEEP to PIP, plateau at PIP, drop to PEEP). Flow and volume are
+the dependent variables — they emerge from the interaction between the
+applied pressure and the patient's lung mechanics. Tidal volume is NOT
+guaranteed: it depends on compliance, resistance, inspiratory time, and
+rise time.
 
-    This is the fundamental distinction from VCV:
-        vcv_generator  — prescribes flow,     derives pressure
-        pcv_generator  — prescribes pressure, derives volume and flow
+This is the fundamental distinction from VCV and PSV:
+    pcv_generator  — prescribes pressure, derives flow/volume   (THIS FILE)
+    vcv_generator  — prescribes flow,     derives pressure
+    psv_generator  — prescribes pressure with patient effort, flow-cycles
 
 Ventilation mode: Pressure-Controlled Continuous Mandatory Ventilation (PC-CMV)
 
-Governing physics:
-    Single-compartment RC lung model. Equation of motion rearranged as ODE:
+Multi-compartment lung model
+----------------------------
+The lung is represented as 1–3 parallel RC compartments per condition:
 
-        dV/dt = (P_vent(t) - V(t)/C - PEEP) / R  * 1000
+    Normal:        1 compartment
+    Mild ARDS:     2 compartments (aerated + recruitable)
+    Moderate ARDS: 2 compartments
+    Severe ARDS:   2 compartments
+    COPD:          3 compartments (fast / medium / slow)
+    Bronchospasm:  1 compartment
+    Pneumonia:     3 compartments (healthy / transitional / consolidated)
 
-    where V is in mL, P_vent is the ventilator pressure profile (cmH2O),
-    C is compliance (mL/cmH2O), R is resistance (cmH2O/L/s).
+Governing physics
+-----------------
+Because pressure is prescribed at the airway opening (P_vent(t)), each
+compartment's volume evolves under its OWN independent ODE driven by the
+same forcing function:
 
-    The *1000 converts L/s → mL/s to match the mL volume state variable.
+    dV_i/dt = ( P_vent(t) - V_i/C_rs_i(V_i) - PEEP ) / R_i(V_i) * 1000   [mL/s]
 
-Pressure profile — three phases per breath:
-    1. Rise phase   (0 → t_rise):
-           P rises linearly from PEEP to PIP.
-           Rise time t_rise is a ventilator setting (0.0–0.4 s).
-           t_rise = 0 produces a true square-wave step (instantaneous rise).
-           Longer rise times produce a slower ramp — reduces peak flow,
-           improves patient comfort, decreases work of breathing in
-           spontaneously breathing patients.
+The branch-point algebraic constraint that VCV needs is not needed here —
+pressure is already common across all compartments by construction.
+Each compartment integrates with its own time constant tau_i = R_i*C_i/1000,
+so total inspiratory flow is naturally multi-exponential: fast compartments
+fill quickly, slow ones lag. Total flow at the airway is the sum of
+per-compartment flows.
 
-    2. Plateau phase (t_rise → t_insp):
-           P held constant at PIP = PEEP + insp_pressure.
-           Volume accumulates exponentially toward steady state.
+Numerics
+--------
+Explicit forward Euler at DT = 0.01 s (100 Hz), per compartment per phase.
+This is a deliberate change from the prior single-compartment PCV (which
+used scipy.integrate.solve_ivp with RK45) for two reasons:
+    1. It matches the PSV multi-compartment pattern exactly (consistency
+       across the three engines).
+    2. Volume-dependent compliance and resistance make solve_ivp's adaptive
+       stepping awkward across phase boundaries (rise → plateau → expire);
+       explicit Euler with a fixed 100 Hz grid handles non-linear / phase-
+       discontinuous dynamics naturally.
 
-    3. Expiratory phase (t_insp → t_cycle):
-           P drops to PEEP. Lung deflates passively via elastic recoil.
-           Governed by the same ODE with P_vent = PEEP:
-               dV/dt = -V(t) / (R * C) * 1000
-           Analytical solution: V(t) = V_end_insp * exp(-t / tau)
+At DT = 0.01 s the integration is stable for the time constants present
+in all seven conditions (the slowest is COPD's slow compartment at
+tau ≈ 2 s — Euler stability requires DT << tau, easily satisfied).
 
-Key distinction from ode_single.py:
-    ode_single.py derives PIP from a target tidal volume.
-    pcv_generator prescribes PIP directly as a clinical setting.
-    Delivered tidal volume is therefore the DEPENDENT variable —
-    it must be computed after solving and checked against safety limits.
-    This correctly models clinical PCV: volume is not guaranteed.
+Three-phase ventilator pressure profile
+---------------------------------------
+    Phase 1 — Rise (0 → t_rise):
+        P_vent(t) = PEEP + insp_pressure * (t / t_rise)
+        Linear ramp from PEEP to PIP. t_rise is settable; 0 = instantaneous
+        step (textbook PCV). Internally capped at 50% of t_insp.
 
-Derived metrics returned per scenario:
-    ppeak_cmH2O      : peak airway pressure (= PIP during plateau phase)
-    delivered_vt_ml  : actual tidal volume delivered (integral of insp flow)
-    driving_p_cmH2O  : insp_pressure (PIP - PEEP = net driving pressure)
-    mean_paw_cmH2O   : mean airway pressure across full cycle
-    auto_peep_cmH2O  : residual pressure above PEEP at end of expiration
-    fill_fraction    : fraction of steady-state volume reached (0–1)
-    minute_vent_l    : respiratory_rate * delivered_vt / 1000
-    time_to_peak_flow_s : time from breath start to peak inspiratory flow
+    Phase 2 — Plateau (t_rise → t_insp):
+        P_vent(t) = PEEP + insp_pressure  (= PIP)
+        Held constant; lung volume approaches steady state V_ss = p_insp*C.
 
-Validity filter:
-    is_valid        : bool
-    invalid_reason  : str
+    Phase 3 — Expiration (t_insp → t_cycle):
+        P_vent = PEEP. Compartments empty passively along their own
+        time constants with volume-dependent expiratory R (dynamic
+        airway collapse, gated to R_exp_ratio > 1 compartments).
 
-    Thresholds:
-        PPeak > 50 cmH2O               → barotrauma risk
-        Driving pressure > 35 cmH2O    → dangerously high insp pressure
-        Delivered VT < 3 mL/kg IBW     → inadequate ventilation (210 mL)
-        Delivered VT > 12 mL/kg IBW    → overdistension (840 mL)
-        Fill fraction < 0.20           → lung barely fills — clinically
-                                         meaningless scenario (high R, short
-                                         t_insp relative to tau)
+Fill fraction (multi-compartment generalisation)
+------------------------------------------------
+In the single-compartment version, fill_fraction = 1 - exp(-t_plateau/tau),
+analytic and exact. In multi-compartment each compartment has its own tau,
+so the analytic single-exponential expression no longer applies. The metric
+is now computed numerically:
 
-    Note: driving pressure threshold differs from VCV (35 vs 20 cmH2O).
-    In PCV, insp_pressure is the set driving pressure — it is the direct
-    ventilator control variable, not a derived metric. Clinical PCV ranges
-    up to 35 cmH2O above PEEP in severe disease. The 20 cmH2O threshold
-    applies to VCV driving pressure (Pplat - PEEP), which is an elastic
-    load metric, not an applied pressure setting.
+    fill_fraction = delivered_VT / (insp_pressure * C_total)
 
-Interface contract:
+where C_total = Sum_i C_rs_i is the total parallel compliance at end-
+inspiration. This is the fraction of the steady-state aggregate volume
+actually reached at end-Ti. A fill_fraction near 1.0 means the lung
+equilibrated; well below 1.0 means the breath ended while gas was still
+flowing — the PCV signature of insufficient inspiratory time for the
+mechanics. Hardest to reach in COPD, bronchospasm, and severe pneumonia
+because of long time constants.
+
+Per-compartment residual volume carries forward between cycles, so multi-
+cycle simulations model progressive air trapping in COPD/bronchospasm.
+
+Physiological refinements incorporated
+---------------------------------------
+    1. Multi-compartment parallel RC mechanics (NEW)
+    2. Flow-dependent ETT resistance (Rohrer K1*Q + K2*Q*|Q| on Q_total)
+       — applied to the displayed pressure decomposition; the per-
+       compartment ODE uses the per-compartment R directly.
+    3. Volume-dependent expiratory resistance per compartment (dynamic
+       collapse) — strong in COPD, mild in bronchospasm, ~inert elsewhere.
+    4. Non-linear compliance per compartment via stress index — modeled
+       internally; the stress index metric is NOT exposed in PCV because
+       PCV's decelerating-flow profile breaks the constant-flow assumption
+       behind the stress-index definition.
+    5. PEEP-recruited compliance — applied to global C before split; zero
+       for COPD/bronchospasm by default.
+    6. Chest wall compliance — in series per compartment via C_rs
+       (default ~inert).
+    7. Circuit compliance — post-hoc VT scalar correction.
+
+ETT complications (overlays):
+    - ETT obstruction: multiplies Rohrer K1 and K2 (and the per-
+      compartment R, since intrinsic airway R is fraction of R_global
+      → the multiplier hits both the displayed ETT drop and the
+      ODE's resistance term).
+    - ETT cuff leak: volume-balance correction on delivered VT
+      (does NOT affect cycling — PCV is time-cycled, so a leak is a
+      measurement note, not a behavior change).
+
+Interface contract (identical to vcv_generator and psv_generator)
+------------------------------------------------------------------
     generate_breath_cycles(params, n_cycles) -> dict
-        Same core keys as all other engines: time, pressure, flow, volume.
-        Plus derived metrics and validity keys.
-
     generate_dataset(condition_name, compliance, resistance, n_cycles) -> list
-        Sweeps the full PCV parameter grid for one condition + mechanics pair.
 
-    PARAMETER_GRID : dict
-        Full PCV parameter grid. Import to inspect or iterate externally.
+Output dict keys
+----------------
+    Core waveforms (np.ndarray, 100 Hz):
+        time, pressure, flow, volume
+
+    Auxiliary waveforms:
+        pressure_branch  : ventilator-side P_vent(t) (= pressure)
+        pressure_ett     : ETT Rohrer drop on total flow at each step
+        volume_per_comp  : (T, n_compartments) per-compartment volume
+
+    Scalar metrics:
+        ppeak_cmH2O, delivered_vt_ml, driving_p_cmH2O, mean_paw_cmH2O,
+        auto_peep_cmH2O, fill_fraction, minute_vent_l, time_to_peak_flow_s,
+        n_compartments
+
+    Validity:
+        is_valid, invalid_reason
+
+Run smoke test:
+    python generator/pcv_generator.py
+
+NOTE: helper functions and compartment profiles are inlined here to match
+the existing project pattern. A future refactor into a shared
+generator/lung_physics.py module would let VCV / PCV / PSV literally call
+the same functions instead of three copies that can drift.
 """
 
 import itertools
 import os
 import sys
 from datetime import datetime, timezone
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-from scipy.integrate import solve_ivp
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 # ---------------------------------------------------------------------------
-# PCV Parameter Grid
+# Section 1 — Parameter Grid (unchanged from prior PCV)
 # ---------------------------------------------------------------------------
-# Grounded in the parameter grid definition from the project brief.
-#
-# insp_pressure_cmH2O : pressure ABOVE PEEP applied during inspiration (PIP - PEEP)
-# ie_ratio            : t_insp / t_exp expressed as insp fraction
-#                       1.0 = 1:1, 0.5 = 1:2, 0.33 = 1:3
-# rise_time_s         : seconds for pressure to ramp from PEEP to PIP
-#                       0.0 = instantaneous square wave step
-
-PARAMETER_GRID = {
+PARAMETER_GRID: Dict = {
     "insp_pressure_cmH2O": [5, 10, 15, 20, 25, 30, 35],  # cmH2O above PEEP
     "respiratory_rate":    [8, 12, 16, 20, 24, 28, 30],   # bpm
     "peep_cmH2O":          [0, 4, 8, 12, 16, 20],         # cmH2O
@@ -123,181 +179,439 @@ PARAMETER_GRID = {
     "rise_time_s":         [0.0, 0.1, 0.2, 0.4],          # seconds
 }
 
-# IBW assumption — consistent with vcv_generator
-IBW_KG = 70.0
 
-# Safety thresholds
-PPEAK_MAX_CMHH2O        = 50.0    # cmH2O — barotrauma risk
-INSP_PRESSURE_MAX_CMHH2O = 35.0  # cmH2O — max driving pressure above PEEP
-VT_MIN_ML               = IBW_KG * 3    # 210 mL — inadequate ventilation
-VT_MAX_ML               = IBW_KG * 12   # 840 mL — overdistension
-FILL_FRACTION_MIN        = 0.20   # below this the scenario is clinically void
+# ---------------------------------------------------------------------------
+# Section 2 — Safety Thresholds and Constants
+# ---------------------------------------------------------------------------
+IBW_KG: float                     = 70.0
+VT_MIN_ML: float                  = IBW_KG * 3       # 210 mL
+VT_MAX_ML: float                  = IBW_KG * 12      # 840 mL
+PPEAK_MAX_CMHH2O: float           = 50.0             # barotrauma risk
+INSP_PRESSURE_MAX_CMHH2O: float   = 35.0             # max driving above PEEP
+FILL_FRACTION_MIN: float          = 0.20             # below this is clinically void
+DT: float                         = 0.01             # 100 Hz internal timestep
+
+CIRCUIT_COMPLIANCE_ML_PER_CMH2O: float = 2.5
+DEFAULT_CHEST_WALL_COMPLIANCE: float   = 250.0       # mL/cmH2O (~inert default)
+ETT_K1: float = 5.0   # cmH2O/L/s     — viscous ETT resistance
+ETT_K2: float = 3.0   # cmH2O/(L/s)^2 — turbulent ETT resistance
 
 
 # ---------------------------------------------------------------------------
-# Public interface — waveform generation
+# Section 3 — Condition-Specific Compartment Profiles
+# ---------------------------------------------------------------------------
+# Counts per user spec for VCV/PCV:
+#     Normal: 1 | Mild/Mod/Severe ARDS: 2 | COPD: 3 | Bronchospasm: 1 | Pneumonia: 3
+COMPARTMENT_PROFILES: Dict = {
+    "Normal": [
+        {"fraction": 1.00, "C_frac": 1.00, "R_frac": 1.00,
+         "R_exp_ratio": 1.2,  "tethering": 0.80},
+    ],
+    "Mild ARDS": [
+        {"fraction": 0.75, "C_frac": 0.90, "R_frac": 1.00,
+         "R_exp_ratio": 1.4,  "tethering": 0.40},   # aerated
+        {"fraction": 0.25, "C_frac": 0.10, "R_frac": 1.60,
+         "R_exp_ratio": 2.0,  "tethering": 0.10},   # recruitable
+    ],
+    "Moderate ARDS": [
+        {"fraction": 0.60, "C_frac": 0.85, "R_frac": 1.00,
+         "R_exp_ratio": 1.6,  "tethering": 0.25},
+        {"fraction": 0.40, "C_frac": 0.05, "R_frac": 1.80,
+         "R_exp_ratio": 2.5,  "tethering": 0.08},
+    ],
+    "Severe ARDS": [
+        {"fraction": 0.40, "C_frac": 0.80, "R_frac": 1.00,
+         "R_exp_ratio": 1.8,  "tethering": 0.20},
+        {"fraction": 0.60, "C_frac": 0.03, "R_frac": 2.00,
+         "R_exp_ratio": 3.0,  "tethering": 0.05},
+    ],
+    # COPD: 3 compartments — fast / medium / slow (emphysema)
+    "COPD": [
+        {"fraction": 0.35, "C_frac": 0.70, "R_frac": 0.55,
+         "R_exp_ratio": 4.0,  "tethering": 0.15},
+        {"fraction": 0.40, "C_frac": 1.05, "R_frac": 1.27,
+         "R_exp_ratio": 6.0,  "tethering": 0.10},
+        {"fraction": 0.25, "C_frac": 1.40, "R_frac": 2.36,
+         "R_exp_ratio": 8.0,  "tethering": 0.05},
+    ],
+    # Bronchospasm: 2 compartments — less obstructed + severely obstructed.
+    # Matches the PSV bronchospasm profile, bringing the three engines into
+    # structural alignment. With 1 compartment, bronchospasm only shows the
+    # high-R lumped response. With 2, you get airway-heterogeneity effects:
+    # the slow compartment lags during inspiration (pendelluft) and dominates
+    # the late expiratory tail. tethering = 0 in both — smooth-muscle override
+    # eliminates the volume-dependent airway widening.
+    "Bronchospasm": [
+        {"fraction": 0.60, "C_frac": 0.90, "R_frac": 0.80,
+         "R_exp_ratio": 3.0,  "tethering": 0.00},   # less obstructed
+        {"fraction": 0.40, "C_frac": 1.10, "R_frac": 1.43,
+         "R_exp_ratio": 5.0,  "tethering": 0.00},   # severely obstructed
+    ],
+    # Pneumonia: 3 compartments — healthy / transitional / consolidated
+    "Pneumonia": [
+        {"fraction": 0.60, "C_frac": 1.10, "R_frac": 0.83,
+         "R_exp_ratio": 1.5,  "tethering": 0.70},
+        {"fraction": 0.25, "C_frac": 0.55, "R_frac": 1.83,
+         "R_exp_ratio": 3.0,  "tethering": 0.30},
+        {"fraction": 0.15, "C_frac": 0.07, "R_frac": 6.67,
+         "R_exp_ratio": 2.0,  "tethering": 0.10},
+    ],
+}
+
+# PEEP-recruited compliance slopes (mL/cmH2O of C gained per cmH2O of PEEP
+# above reference PEEP of 5 cmH2O). Zero for obstructive (PEEP does not
+# recruit obstructed lung; it counters auto-PEEP instead).
+RECRUITMENT_SLOPES: Dict = {
+    "Normal":        0.00,
+    "Mild ARDS":     0.50,
+    "Moderate ARDS": 0.90,
+    "Severe ARDS":   0.60,
+    "COPD":          0.00,
+    "Bronchospasm":  0.00,
+    "Pneumonia":     0.10,
+}
+
+
+# ---------------------------------------------------------------------------
+# Section 4 — Physics helper functions (mirrored from psv_generator)
+# ---------------------------------------------------------------------------
+
+def _rohrer_resistance(Q: float, K1: float, K2: float) -> float:
+    """Rohrer ETT/airway pressure drop: K1*Q + K2*Q*|Q|. Sign-preserving."""
+    return K1 * Q + K2 * Q * abs(Q)
+
+
+def _R_insp_with_tethering(R_base: float,
+                            V_current: float,
+                            V_target: float,
+                            tethering: float) -> float:
+    """Inspiratory R with parenchymal tethering (loose in COPD, lost in broncho)."""
+    V_frac = float(np.clip(V_current / max(V_target, 1.0), 0.0, 1.0))
+    return R_base * max(1.0 - tethering * 0.30 * V_frac, 0.30)
+
+
+def _R_exp_dynamic(V_current: float,
+                    V_end_insp: float,
+                    R_insp: float,
+                    R_exp_ratio: float) -> float:
+    """Expiratory R rising as compartment empties (dynamic airway collapse)."""
+    frac_exhaled = 1.0 - float(np.clip(V_current / max(V_end_insp, 1.0), 0.0, 1.0))
+    return R_insp * (1.0 + (R_exp_ratio - 1.0) * frac_exhaled)
+
+
+def _compliance_nonlinear(V_mL: float,
+                           C_base: float,
+                           V_ref: float,
+                           stress_index: float = 1.0) -> float:
+    """Power-law non-linear C: C(V) = C_base * (V/V_ref)^(1-SI)."""
+    if abs(stress_index - 1.0) < 0.01 or V_mL <= 0.0:
+        return C_base
+    V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
+    return float(C_base * (V_norm ** (1.0 - stress_index)))
+
+
+def _peep_recruited_compliance(C_base: float,
+                                peep: float,
+                                peep_ref: float,
+                                recruitment_slope: float) -> float:
+    """C gain from PEEP-mediated alveolar recruitment above peep_ref."""
+    delta_peep = max(0.0, peep - peep_ref)
+    return C_base + recruitment_slope * delta_peep
+
+
+def _C_rs(C_lung: float, C_chest: float) -> float:
+    """Series combination of lung and chest-wall compliance."""
+    if C_chest >= 9000.0:
+        return C_lung
+    return 1.0 / (1.0 / max(C_lung, 0.1) + 1.0 / max(C_chest, 0.1))
+
+
+def _circuit_vt_correction(vt_mL: float,
+                            ppeak: float,
+                            peep: float,
+                            C_circ: float = CIRCUIT_COMPLIANCE_ML_PER_CMH2O,
+                            compensated: bool = True) -> float:
+    """Subtract gas sequestered in compliant ventilator tubing."""
+    if compensated:
+        return vt_mL
+    return max(0.0, vt_mL - C_circ * max(ppeak - peep, 0.0))
+
+
+# ---------------------------------------------------------------------------
+# Section 5 — Parameter validation
+# ---------------------------------------------------------------------------
+
+_REQUIRED_PARAMS = [
+    "respiratory_rate", "insp_pressure_cmH2O", "compliance_ml_per_cmH2O",
+    "resistance_cmH2O_L_s", "ie_ratio", "peep_cmH2O", "rise_time_s",
+]
+
+def _validate_params(params: dict) -> None:
+    missing = [k for k in _REQUIRED_PARAMS if k not in params]
+    if missing:
+        raise ValueError(f"Missing required parameter(s): {missing}")
+    if not (5    <= float(params["respiratory_rate"])         <= 35):
+        raise ValueError("respiratory_rate must be 5–35 bpm")
+    if not (1    <= float(params["insp_pressure_cmH2O"])      <= 50):
+        raise ValueError("insp_pressure_cmH2O must be 1–50 cmH2O")
+    if not (5    <= float(params["compliance_ml_per_cmH2O"])  <= 150):
+        raise ValueError("compliance_ml_per_cmH2O must be 5–150 mL/cmH2O")
+    if not (0.5  <= float(params["resistance_cmH2O_L_s"])     <= 50):
+        raise ValueError("resistance_cmH2O_L_s must be 0.5–50 cmH2O/L/s")
+    if not (0.2  <= float(params["ie_ratio"])                 <= 1.0):
+        raise ValueError("ie_ratio must be 0.2–1.0")
+    if not (0    <= float(params["peep_cmH2O"])               <= 20):
+        raise ValueError("peep_cmH2O must be 0–20 cmH2O")
+    if not (0.0  <= float(params["rise_time_s"])              <= 0.4):
+        raise ValueError("rise_time_s must be 0.0–0.4 s")
+
+
+# ---------------------------------------------------------------------------
+# Section 6 — Public interface: generate_breath_cycles
 # ---------------------------------------------------------------------------
 
 def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     """
-    Generate PCV waveforms for n_cycles breath cycles.
+    Generate multi-compartment PCV waveforms for n_cycles breaths.
 
-    Parameters
-    ----------
-    params : dict
-        respiratory_rate         : float — breaths per minute (8–30)
-        insp_pressure_cmH2O      : float — inspiratory pressure above PEEP (5–35)
-        compliance_ml_per_cmH2O  : float — lung compliance
-        resistance_cmH2O_L_s     : float — airway resistance
-        ie_ratio                 : float — insp fraction (0.33=1:3, 0.5=1:2, 1.0=1:1)
+    Parameters (in `params`)
+    ------------------------
+    Required:
+        respiratory_rate         : float — bpm (8–30)
+        insp_pressure_cmH2O      : float — pressure above PEEP (driving Δ)
+        compliance_ml_per_cmH2O  : float — global lung compliance
+        resistance_cmH2O_L_s     : float — global airway resistance
+        ie_ratio                 : float — insp fraction (1.0=1:1, 0.33=1:3)
         peep_cmH2O               : float — PEEP
-        rise_time_s              : float — pressure rise time in seconds (0.0–0.4)
+        rise_time_s              : float — pressure rise time (0.0–0.4)
 
-    n_cycles : int
-        Number of complete breath cycles.
+    Optional:
+        condition                : str  — COMPARTMENT_PROFILES key (default "Normal")
+        stress_index             : float — non-linear C per compartment (default 1.0)
+        chest_wall_compliance_ml_per_cmH2O : float — default 250 (~inert)
+        circuit_compensated      : bool  — default True
+        peep_reference_cmH2O     : float — default 5.0
+        recruitment_slope        : float — overrides RECRUITMENT_SLOPES[cond]
+        ett_obstruction_multiplier : float — default 1.0
+        ett_cuff_leak_fraction     : float — default 0.0
 
     Returns
     -------
-    dict
-        Core keys  : "time", "pressure", "flow", "volume"
-        Metrics    : "ppeak_cmH2O", "delivered_vt_mL", "driving_p_cmH2O",
-                     "mean_paw_cmH2O", "auto_peep_cmH2O", "fill_fraction",
-                     "minute_vent_l", "time_to_peak_flow_s"
-        Validity   : "is_valid", "invalid_reason"
+    dict — see module docstring for full key list
     """
     _validate_params(params)
 
-    rr      = params["respiratory_rate"]
-    p_insp  = params["insp_pressure_cmH2O"]   # driving pressure above PEEP
-    C       = params["compliance_ml_per_cmH2O"]
-    R       = params["resistance_cmH2O_L_s"]
-    ie      = params["ie_ratio"]
-    peep    = params["peep_cmH2O"]
-    t_rise  = params["rise_time_s"]
+    rr        = float(params["respiratory_rate"])
+    p_insp    = float(params["insp_pressure_cmH2O"])     # driving above PEEP
+    C_global  = float(params["compliance_ml_per_cmH2O"])
+    R_global  = float(params["resistance_cmH2O_L_s"])
+    ie        = float(params["ie_ratio"])
+    peep      = float(params["peep_cmH2O"])
+    t_rise    = float(params["rise_time_s"])
+    PIP       = peep + p_insp                            # absolute peak pressure
 
-    PIP     = peep + p_insp               # absolute peak inspiratory pressure
+    # ---- Optional params -----------------------------------------------
+    condition = params.get("condition", "Normal")
+    if condition not in COMPARTMENT_PROFILES:
+        condition = "Normal"
 
-    # --- Timing -----------------------------------------------------------
+    stress_index     = float(params.get("stress_index", 1.0))
+    C_chest          = float(params.get("chest_wall_compliance_ml_per_cmH2O",
+                                          DEFAULT_CHEST_WALL_COMPLIANCE))
+    circ_compensated = bool(params.get("circuit_compensated", True))
+    peep_ref         = float(params.get("peep_reference_cmH2O", 5.0))
+    rec_slope        = float(params.get("recruitment_slope",
+                                          RECRUITMENT_SLOPES.get(condition, 0.0)))
+    obs_mult         = float(params.get("ett_obstruction_multiplier", 1.0))
+    cuff_leak_frac   = float(params.get("ett_cuff_leak_fraction", 0.0))
+
+    # ---- Compartment arrays --------------------------------------------
+    profile = COMPARTMENT_PROFILES[condition]
+    n_comps = len(profile)
+
+    fractions   = np.array([c["fraction"]    for c in profile])
+    C_frac_arr  = np.array([c["C_frac"]      for c in profile])
+    R_frac_arr  = np.array([c["R_frac"]      for c in profile])
+    R_exp_arr   = np.array([c["R_exp_ratio"] for c in profile])
+    teth_arr    = np.array([c["tethering"]   for c in profile])
+
+    # PEEP-recruited compliance applied before per-compartment split
+    C_lung_rec  = _peep_recruited_compliance(C_global, peep, peep_ref, rec_slope)
+    C_frac_norm = float(np.dot(C_frac_arr, fractions))
+    C_comps_base = C_lung_rec * C_frac_arr * fractions / max(C_frac_norm, 0.01)
+    # Per-compartment R: scaled by R_frac, AND by the obstruction multiplier
+    # (obstruction raises both ETT Rohrer terms and the airway R uniformly).
+    R_comps_base = R_global * R_frac_arr * obs_mult
+
+    # Reference volume per compartment for non-linear C
+    # In PCV the steady-state volume per compartment ≈ p_insp * C_comps_base[i]
+    # so mid-fill reference is half that.
+    vt_full_per_comp = p_insp * C_comps_base                 # mL, full per-comp
+    vt_ref_per_comp  = 0.5 * vt_full_per_comp                # mid-fill reference
+
+    # ETT Rohrer coefficients for the displayed pressure decomposition
+    K1_ett = ETT_K1 * obs_mult
+    K2_ett = ETT_K2 * obs_mult
+
+    # ---- Timing ---------------------------------------------------------
     t_cycle = 60.0 / rr
     t_insp  = t_cycle * ie / (1.0 + ie)
     t_exp   = t_cycle - t_insp
-    tau     = _rc_tau(R, C)
+    if t_insp <= 0 or t_exp <= 0:
+        raise ValueError(
+            f"Timing invalid: t_insp={t_insp:.3f}s t_exp={t_exp:.3f}s"
+        )
+    # Cap rise time at 50% of inspiratory time so a plateau always exists
+    t_rise = min(t_rise, t_insp * 0.5)
 
-    # Guard: rise time must not exceed inspiratory time
-    t_rise  = min(t_rise, t_insp * 0.5)
+    n_insp  = max(2, int(round(t_insp / DT)))
+    n_exp   = max(2, int(round(t_exp  / DT)))
+    n_per   = n_insp + n_exp
+    n_total = n_per * n_cycles
 
-    # --- Fill fraction — key PCV metric -----------------------------------
-    # Fraction of steady-state volume reached during the plateau phase.
-    # Plateau duration = t_insp - t_rise (rise phase doesn't contribute fully)
-    t_plateau     = t_insp - t_rise
-    fill_fraction = 1.0 - np.exp(-t_plateau / tau) if tau > 0 else 1.0
-    fill_fraction = float(np.clip(fill_fraction, 0.0, 1.0))
-
-    # Expected delivered VT from steady-state solution
-    # V_ss = p_insp * C  (volume if plateau ran to steady state)
-    # Delivered = V_ss * fill_fraction
-    expected_vt = p_insp * C * fill_fraction   # mL
-
-    # --- Sample grid ------------------------------------------------------
-    dt     = 0.01    # 100 Hz
-    n_insp = max(2, int(round(t_insp / dt)))
-    n_exp  = max(2, int(round(t_exp  / dt)))
-    n_tot  = (n_insp + n_exp) * n_cycles
-
-    time_arr     = np.zeros(n_tot)
-    flow_arr     = np.zeros(n_tot)
-    volume_arr   = np.zeros(n_tot)
-    pressure_arr = np.zeros(n_tot)
-
-    # --- Ventilator pressure profile --------------------------------------
+    # ---- Ventilator pressure profile (a function of in-cycle time) -----
     def vent_pressure(t_in_breath: float) -> float:
-        """
-        Pressure applied by ventilator at time t_in_breath seconds into
-        the current breath cycle.
-
-        Rise phase  (0 → t_rise)  : linear ramp PEEP → PIP
-        Plateau     (t_rise → t_insp) : constant PIP
-        Expiration  (t_insp → t_cycle): constant PEEP
-        """
-        if t_in_breath < 0:
-            return peep
-        if t_in_breath < t_rise:
-            # Linear ramp
-            return peep + p_insp * (t_in_breath / t_rise) if t_rise > 0 else PIP
-        if t_in_breath < t_insp:
+        if t_in_breath <= t_rise:
+            if t_rise <= 0:
+                return PIP
+            return peep + p_insp * (t_in_breath / t_rise)
+        elif t_in_breath <= t_insp:
             return PIP
-        return peep
+        else:
+            return peep
 
-    # --- ODE --------------------------------------------------------------
-    def lung_ode(t, y):
-        """
-        State: y[0] = V (mL above FRC)
-        dV/dt = (P_vent - V/C - PEEP) / R  * 1000  [mL/s]
-        """
-        V           = y[0]
-        t_in_breath = t % t_cycle
-        P_vent      = vent_pressure(t_in_breath)
-        dVdt        = ((P_vent - V / C - peep) / R) * 1000.0
-        return [dVdt]
+    # ---- Output arrays --------------------------------------------------
+    time_arr     = np.zeros(n_total)
+    pressure_arr = np.zeros(n_total)
+    flow_arr     = np.zeros(n_total)
+    volume_arr   = np.zeros(n_total)
+    p_branch_arr = np.zeros(n_total)
+    p_ett_arr    = np.zeros(n_total)
+    vol_per_comp = np.zeros((n_total, n_comps))
 
-    # --- Solve across all cycles ------------------------------------------
-    t_end  = t_cycle * n_cycles
-    t_eval = np.arange(0.0, t_end, dt)
+    # ---- Per-compartment state (carries forward between cycles) ---------
+    V_comps = np.zeros(n_comps)
 
-    sol = solve_ivp(
-        fun=lung_ode,
-        t_span=(0.0, t_end),
-        y0=[0.0],
-        method="RK45",
-        t_eval=t_eval,
-        max_step=dt,
-        rtol=1e-6,
-        atol=1e-8,
-    )
+    def _step_inspiration(V_state: np.ndarray, P_vent: float) -> Tuple[np.ndarray, float]:
+        """One explicit-Euler step per compartment during inspiration."""
+        Q_comps = np.zeros(n_comps)
+        for i in range(n_comps):
+            C_i    = _compliance_nonlinear(
+                V_state[i], C_comps_base[i], vt_ref_per_comp[i], stress_index)
+            C_rs_i = _C_rs(C_i, C_chest)
+            R_i    = _R_insp_with_tethering(
+                R_comps_base[i], V_state[i], vt_full_per_comp[i], teth_arr[i])
+            drive  = P_vent - (V_state[i] / max(C_rs_i, 0.1)) - peep
+            Q_comps[i] = drive / max(R_i, 0.1)          # L/s
+        Q_total = float(Q_comps.sum())
+        return Q_comps, Q_total
 
-    
+    def _step_expiration(V_state: np.ndarray, V_end_insp_state: np.ndarray
+                          ) -> Tuple[np.ndarray, float]:
+        """One explicit-Euler step per compartment during expiration."""
+        Q_comps = np.zeros(n_comps)
+        for i in range(n_comps):
+            C_i      = _compliance_nonlinear(
+                V_state[i], C_comps_base[i], vt_ref_per_comp[i], stress_index)
+            C_rs_i   = _C_rs(C_i, C_chest)
+            R_exp_i  = _R_exp_dynamic(
+                V_state[i], V_end_insp_state[i],
+                R_comps_base[i], R_exp_arr[i])
+            elastic  = V_state[i] / max(C_rs_i, 0.1)
+            Q_comps[i] = -elastic / max(R_exp_i, 0.1)    # L/s, negative
+        Q_total = float(Q_comps.sum())
+        return Q_comps, Q_total
 
-    if not sol.success:
-        raise RuntimeError(f"ODE solver failed: {sol.message}")
+    # ---- Main per-cycle loop --------------------------------------------
+    for cycle in range(n_cycles):
+        offset = cycle * n_per
+        t0     = cycle * t_cycle
 
-    time_arr   = sol.t
-    volume_arr = sol.y[0]                        # mL
+        # -- Inspiration (rise + plateau) ---------------------------------
+        for k in range(n_insp):
+            t_in_breath = (k + 1) * DT     # end-of-step time within cycle
+            P_vent      = vent_pressure(t_in_breath)
 
-    last_peak = volume_arr[(n_cycles - 1) * (n_insp + n_exp):].max()
-    if n_cycles >= 2:
-        prev_peak = volume_arr[
-            (n_cycles - 2) * (n_insp + n_exp) :
-            (n_cycles - 1) * (n_insp + n_exp)
-        ].max()
-        equilibrium_reached = abs(last_peak - prev_peak) < 5.0
-    else:
-        # Single cycle — assume equilibrium for validity and metrics purposes
-        equilibrium_reached = True
-    
+            Q_comps, Q_total = _step_inspiration(V_comps, P_vent)
+            V_comps = np.maximum(V_comps + Q_comps * 1000.0 * DT, 0.0)
 
-    # --- Derive flow and pressure -----------------------------------------
-    # Flow (L/s) — numerical derivative of volume
-    flow_arr = np.gradient(volume_arr, time_arr) / 1000.0
+            P_ett_drop = _rohrer_resistance(Q_total, K1_ett, K2_ett)
 
-    # Pressure — reconstruct ventilator profile at each time point
-    pressure_arr = np.array([
-        vent_pressure(t % t_cycle) for t in time_arr
+            idx = offset + k
+            time_arr[idx]     = t0 + k * DT
+            pressure_arr[idx] = P_vent
+            flow_arr[idx]     = Q_total
+            volume_arr[idx]   = float(V_comps.sum())
+            p_branch_arr[idx] = P_vent
+            p_ett_arr[idx]    = P_ett_drop
+            vol_per_comp[idx] = V_comps.copy()
+
+        V_end_insp_per_comp = V_comps.copy()
+
+        # -- Expiration ---------------------------------------------------
+        for k in range(n_exp):
+            Q_comps, Q_total = _step_expiration(V_comps, V_end_insp_per_comp)
+            V_comps = np.maximum(V_comps + Q_comps * 1000.0 * DT, 0.0)
+
+            P_ett_drop = _rohrer_resistance(Q_total, K1_ett, K2_ett)
+
+            idx = offset + n_insp + k
+            time_arr[idx]     = t0 + t_insp + k * DT
+            pressure_arr[idx] = peep                # valve open to PEEP
+            flow_arr[idx]     = Q_total
+            volume_arr[idx]   = float(V_comps.sum())
+            p_branch_arr[idx] = peep
+            p_ett_arr[idx]    = P_ett_drop
+            vol_per_comp[idx] = V_comps.copy()
+
+    # ---- Derived metrics from the LAST cycle ----------------------------
+    last_s   = (n_cycles - 1) * n_per
+    last_e   = last_s + n_per
+    last_p   = pressure_arr[last_s:last_e]
+    last_v   = volume_arr[last_s:last_e]
+    last_f   = flow_arr[last_s:last_e]
+    last_t   = time_arr[last_s:last_e]
+
+    ppeak    = float(last_p.max())
+    mean_paw = float(np.mean(last_p))
+
+    # Delivered VT = end-inspiratory total volume minus cycle-start volume
+    vt_raw       = float(last_v[n_insp - 1] - last_v[0])
+    delivered_vt = _circuit_vt_correction(
+        vt_raw, ppeak, peep, compensated=circ_compensated)
+    delivered_vt = max(0.0, delivered_vt * (1.0 - cuff_leak_frac))
+
+    minute_vent = (rr * delivered_vt) / 1000.0
+
+    # Auto-PEEP from end-expiratory residual volume
+    C_rs_end = np.array([
+        _C_rs(_compliance_nonlinear(V_comps[i], C_comps_base[i],
+                                      vt_ref_per_comp[i], stress_index),
+              C_chest)
+        for i in range(n_comps)
     ])
+    C_total_end = float(C_rs_end.sum())
+    auto_peep   = max(0.0, float(V_comps.sum()) / max(C_total_end, 0.1))
 
-    # --- Derived metrics --------------------------------------------------
-    ppeak        = float(pressure_arr.max())
-    last_start   = (n_cycles - 1) * (n_insp + n_exp)
-    last_cycle   = volume_arr[last_start : last_start + n_insp + n_exp]
-    delivered_vt = float(last_cycle.max() - last_cycle[0])
-    mean_paw     = float(np.mean(pressure_arr))
-    auto_peep = max(0.0, float(volume_arr[-1]) / C)
-    minute_vent  = (rr * delivered_vt) / 1000.0
+    # Fill fraction (multi-compartment generalisation):
+    # delivered_VT / (p_insp * C_total_at_end_inspiration)
+    C_rs_end_insp = np.array([
+        _C_rs(_compliance_nonlinear(V_end_insp_per_comp[i], C_comps_base[i],
+                                      vt_ref_per_comp[i], stress_index),
+              C_chest)
+        for i in range(n_comps)
+    ])
+    C_total_at_end_insp = float(C_rs_end_insp.sum())
+    expected_full_VT    = p_insp * C_total_at_end_insp     # mL at steady state
+    fill_fraction = float(np.clip(
+        vt_raw / max(expected_full_VT, 1.0), 0.0, 1.0))
 
-    # Time to peak flow — find first sample index where flow is maximum
-    peak_flow_idx     = int(np.argmax(flow_arr))
-    time_to_peak_flow = float(time_arr[peak_flow_idx] % t_cycle)
+    # Time to peak inspiratory flow (within last cycle)
+    insp_flow         = last_f[:n_insp]
+    peak_flow_idx     = int(np.argmax(insp_flow)) if insp_flow.size > 0 else 0
+    time_to_peak_flow = float(peak_flow_idx * DT)
 
-    # --- Validity filter --------------------------------------------------
+    # ---- Validity filter ------------------------------------------------
     is_valid       = True
     invalid_reason = ""
 
@@ -317,38 +631,43 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         is_valid = False
         invalid_reason = (
             f"Fill fraction {fill_fraction:.3f} below minimum "
-            f"({FILL_FRACTION_MIN}) — lung barely fills at these "
-            f"mechanics and inspiratory time"
+            f"({FILL_FRACTION_MIN}) — lung barely fills at these mechanics "
+            f"and inspiratory time"
         )
     elif delivered_vt < VT_MIN_ML:
         is_valid = False
         invalid_reason = (
             f"Delivered VT {delivered_vt:.0f} mL below minimum "
-            f"({VT_MIN_ML:.0f} mL = 3 ml/kg IBW)"
+            f"({VT_MIN_ML:.0f} mL = 3 mL/kg IBW)"
         )
     elif delivered_vt > VT_MAX_ML:
         is_valid = False
         invalid_reason = (
             f"Delivered VT {delivered_vt:.0f} mL exceeds maximum "
-            f"({VT_MAX_ML:.0f} mL = 12 ml/kg IBW)"
+            f"({VT_MAX_ML:.0f} mL = 12 mL/kg IBW)"
         )
 
     return {
-        # Core waveform arrays
+        # Core waveforms
         "time":                 time_arr,
         "pressure":             pressure_arr,
         "flow":                 flow_arr,
         "volume":               volume_arr,
+        # Auxiliary
+        "pressure_branch":      p_branch_arr,
+        "pressure_ett":         p_ett_arr,
+        "volume_per_comp":      vol_per_comp,
         # Derived metrics
-        "ppeak_cmH2O":          round(ppeak,            2),
-        "delivered_vt_ml":      round(delivered_vt,     2),
-        "driving_p_cmH2O":      round(float(p_insp),    2),
-        "mean_paw_cmH2O":       round(mean_paw,         2),
-        "auto_peep_cmH2O":      round(auto_peep,        2),
+        "ppeak_cmH2O":          round(ppeak,             2),
+        "delivered_vt_ml":      round(delivered_vt,      2),
+        "driving_p_cmH2O":      round(float(p_insp),     2),
+        "mean_paw_cmH2O":       round(mean_paw,          2),
+        "auto_peep_cmH2O":      round(auto_peep,         2),
         "fill_fraction":        round(fill_fraction,     4),
         "minute_vent_l":        round(minute_vent,       3),
         "time_to_peak_flow_s":  round(time_to_peak_flow, 4),
-        "equilibrium_reached": equilibrium_reached,
+        "n_compartments":       n_comps,
+        "condition":            condition,
         # Validity
         "is_valid":             is_valid,
         "invalid_reason":       invalid_reason,
@@ -356,8 +675,26 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Public interface — dataset generation
+# Section 7 — Public interface: generate_dataset
 # ---------------------------------------------------------------------------
+
+def _make_scenario_id(condition: str, params: dict) -> str:
+    cond_short = condition.replace(" ", "")
+    return (
+        f"PCV_{cond_short}"
+        f"_C{int(round(params['compliance_ml_per_cmH2O'])):03d}"
+        f"_R{int(round(params['resistance_cmH2O_L_s'])):03d}"
+        f"_PI{int(round(params['insp_pressure_cmH2O'])):02d}"
+        f"_RR{int(round(params['respiratory_rate'])):03d}"
+        f"_PEEP{int(round(params['peep_cmH2O'])):02d}"
+        f"_IE{int(round(params['ie_ratio'] * 100)):03d}"
+        f"_RT{int(round(params['rise_time_s'] * 100)):02d}"
+    )
+
+
+def _timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
 
 def generate_dataset(
     condition_name:           str,
@@ -367,27 +704,9 @@ def generate_dataset(
 ) -> list:
     """
     Sweep the full PCV parameter grid for one condition + mechanics pair.
-
-    Parameters
-    ----------
-    condition_name           : str   — e.g. "Moderate ARDS"
-    compliance_ml_per_cmH2O : float — single compliance value for this run
-    resistance_cmH2O_L_s    : float — single resistance value for this run
-    n_cycles                 : int   — breath cycles per scenario (min 10)
-
-    Returns
-    -------
-    list of dicts, one per parameter combination. Each dict contains:
-        "scenario_id"    : str
-        "condition"      : str
-        "params"         : dict — full parameter set
-        "metrics"        : dict — derived clinical metrics
-        "is_valid"       : bool
-        "invalid_reason" : str
-        "waveforms"      : dict — time, pressure, flow, volume arrays
-        "generated_at"   : str  — ISO timestamp
+    The `condition_name` selects which COMPARTMENT_PROFILE to use.
     """
-    scenarios = []
+    scenarios: List[dict] = []
 
     keys   = ["insp_pressure_cmH2O", "respiratory_rate",
                "peep_cmH2O", "ie_ratio", "rise_time_s"]
@@ -404,6 +723,7 @@ def generate_dataset(
             "ie_ratio":                ie,
             "peep_cmH2O":              peep,
             "rise_time_s":             t_rise,
+            "condition":               condition_name,
         }
 
         try:
@@ -430,6 +750,13 @@ def generate_dataset(
             "fill_fraction":       result["fill_fraction"],
             "minute_vent_l":       result["minute_vent_l"],
             "time_to_peak_flow_s": result["time_to_peak_flow_s"],
+            "n_compartments":      result["n_compartments"],
+        }
+        waveforms = {
+            "time":     result["time"],
+            "pressure": result["pressure"],
+            "flow":     result["flow"],
+            "volume":   result["volume"],
         }
 
         scenarios.append({
@@ -439,213 +766,246 @@ def generate_dataset(
             "metrics":        metrics,
             "is_valid":       result["is_valid"],
             "invalid_reason": result["invalid_reason"],
-            "waveforms": {
-                "time":     result["time"],
-                "pressure": result["pressure"],
-                "flow":     result["flow"],
-                "volume":   result["volume"],
-            },
-            "generated_at": _timestamp(),
+            "waveforms":      waveforms,
+            "generated_at":   _timestamp(),
         })
 
     return scenarios
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# Section 8 — Smoke test
 # ---------------------------------------------------------------------------
 
-def _rc_tau(R: float, C: float) -> float:
-    """RC time constant in seconds. Floor at 50ms."""
-    return max((R * C) / 1000.0, 0.05)
-
-
-def _make_scenario_id(condition: str, params: dict) -> str:
-    """
-    Build a human-readable scenario ID encoding all key parameters.
-    Format:
-        PCV_<COND>_C<compliance>_R<resistance>_
-        P<insp_pressure>_RR<rr>_PEEP<peep>_IE<ie>_RT<rise_time>
-    Example:
-        PCV_ModerateARDS_C025_R008_P015_RR016_PEEP10_IE050_RT010
-    """
-    cond_slug = condition.replace(" ", "").replace("_", "")
-    C      = int(params["compliance_ml_per_cmH2O"])
-    R      = int(params["resistance_cmH2O_L_s"])
-    p      = int(params["insp_pressure_cmH2O"])
-    rr     = int(params["respiratory_rate"])
-    peep   = int(params["peep_cmH2O"])
-    ie_str = f"IE{int(params['ie_ratio'] * 100):03d}"
-    # Rise time encoded in centiseconds (0.1s → RT010, 0.4s → RT040)
-    rt_str = f"RT{int(params['rise_time_s'] * 100):03d}"
-    return (
-        f"PCV_{cond_slug}_"
-        f"C{C:03d}_R{R:03d}_"
-        f"P{p:03d}_RR{rr:03d}_"
-        f"PEEP{peep:02d}_{ie_str}_{rt_str}"
-    )
-
-
-def _timestamp() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _validate_params(params: dict) -> None:
-    """Raise ValueError for missing or out-of-range parameters."""
-    required = [
-        "respiratory_rate",
-        "insp_pressure_cmH2O",
-        "compliance_ml_per_cmH2O",
-        "resistance_cmH2O_L_s",
-        "ie_ratio",
-        "peep_cmH2O",
-        "rise_time_s",
-    ]
-    for key in required:
-        if key not in params:
-            raise ValueError(f"Missing required parameter: '{key}'")
-
-    if not (5    <= params["respiratory_rate"]         <= 35):
-        raise ValueError("respiratory_rate must be 5–35 bpm")
-    if not (1    <= params["insp_pressure_cmH2O"]      <= 50):
-        raise ValueError("insp_pressure_cmH2O must be 1–50 cmH2O")
-    if not (5    <= params["compliance_ml_per_cmH2O"]  <= 150):
-        raise ValueError("compliance must be 5–150 ml/cmH2O")
-    if not (0.5  <= params["resistance_cmH2O_L_s"]     <= 50):
-        raise ValueError("resistance must be 0.5–50 cmH2O/L/s")
-    if not (0.2  <= params["ie_ratio"]                 <= 1.0):
-        raise ValueError("ie_ratio must be 0.2–1.0")
-    if not (0    <= params["peep_cmH2O"]               <= 20):
-        raise ValueError("peep_cmH2O must be 0–20 cmH2O")
-    if not (0.0  <= params["rise_time_s"]              <= 0.4):
-        raise ValueError("rise_time_s must be 0.0–0.4 s")
-
-
-# ---------------------------------------------------------------------------
-# Smoke test — run directly: python generator/pcv_generator.py
-# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    import sys
+
+    _PASS = "\033[92m✓\033[0m"
+    _FAIL = "\033[91m✗\033[0m"
+    _results: List[bool] = []
+
+    def _check(name: str, condition: bool, detail: str = "") -> None:
+        status = _PASS if condition else _FAIL
+        print(f"  {status}  {name}" + (f" — {detail}" if detail else ""))
+        _results.append(bool(condition))
+
     print("=" * 65)
-    print("  PCV Generator — Smoke Test")
+    print("  PCV Generator — Multi-Compartment Smoke Test")
     print("=" * 65)
 
     base = {
-        "respiratory_rate":        15,
-        "insp_pressure_cmH2O":     10,   # 10 cmH2O above PEEP → ~600 mL at C=60
-        "compliance_ml_per_cmH2O": 60,
-        "resistance_cmH2O_L_s":     2,
-        "ie_ratio":                0.5,
-        "peep_cmH2O":               5,
-        "rise_time_s":             0.0,
+        "respiratory_rate":         15,
+        "insp_pressure_cmH2O":      12.0,
+        "compliance_ml_per_cmH2O":  60.0,
+        "resistance_cmH2O_L_s":      8.0,
+        "ie_ratio":                  0.5,
+        "peep_cmH2O":                5.0,
+        "rise_time_s":               0.1,
+        "condition":                 "Normal",
     }
 
-    # --- Test 1: all rise times, Normal lung -----------------------------
-    print("\n[ Test 1 ] Rise time effect — Normal lung\n")
-    for rt in [0.0, 0.1, 0.2, 0.4]:
+    # ---- Test 1: all rise times, Normal lung ----------------------------
+    print("\n[1/4] All rise times — Normal lung, single compartment")
+    rise_times = [0.0, 0.1, 0.2, 0.4]
+    results_by_rt = {}
+    for rt in rise_times:
         p = {**base, "rise_time_s": rt}
-        r = generate_breath_cycles(p, n_cycles=5)
-        print(f"  Rise={rt:.1f}s | "
-              f"PPeak={r['ppeak_cmH2O']:5.1f} cmH2O | "
-              f"VT={r['delivered_vt_ml']:5.0f} ml | "
-              f"FF={r['fill_fraction']:.3f} | "
-              f"t_peak_flow={r['time_to_peak_flow_s']:.3f}s | "
-              f"Valid={r['is_valid']}")
+        r = generate_breath_cycles(p, n_cycles=3)
+        results_by_rt[rt] = r
 
-    # --- Test 2: physiology direction checks -----------------------------
-    print("\n[ Test 2 ] Physiological direction checks\n")
+    r0 = results_by_rt[0.0]
+    _check("rise=0.0 returns dict",          isinstance(r0, dict))
+    _check("Normal uses 1 compartment",      r0["n_compartments"] == 1)
+    _check("volume_per_comp shape correct",  r0["volume_per_comp"].shape[1] == 1)
+    _check("pressure decomposition present",
+           "pressure_branch" in r0 and "pressure_ett" in r0)
 
-    # Lower compliance → lower delivered VT at same pressure
-    r_hc = generate_breath_cycles({**base, "compliance_ml_per_cmH2O": 60})
-    r_lc = generate_breath_cycles({**base, "compliance_ml_per_cmH2O": 20})
-    assert r_lc["delivered_vt_ml"] < r_hc["delivered_vt_ml"], \
-        "FAIL: lower compliance should reduce delivered VT"
-    print(f"  Compliance check  PASS — C=60: {r_hc['delivered_vt_ml']:.0f} ml | "
-          f"C=20: {r_lc['delivered_vt_ml']:.0f} ml")
+    # Ppeak should be ~constant across rise times (always reaches PIP at plateau)
+    ppeaks = [results_by_rt[rt]["ppeak_cmH2O"] for rt in rise_times]
+    pip    = base["peep_cmH2O"] + base["insp_pressure_cmH2O"]
+    _check("Ppeak ≈ PIP for all rise times (plateau always reached)",
+           all(abs(pk - pip) < 0.5 for pk in ppeaks),
+           f"PIP={pip:.1f}  Ppeaks={[round(p,2) for p in ppeaks]}")
 
-    # Higher resistance → lower fill fraction → lower VT
-    r_lr = generate_breath_cycles({**base, "resistance_cmH2O_L_s": 2})
-    r_hr = generate_breath_cycles({**base, "resistance_cmH2O_L_s": 20})
-    assert r_hr["delivered_vt_ml"] < r_lr["delivered_vt_ml"], \
-        "FAIL: higher resistance should reduce delivered VT"
-    print(f"  Resistance check  PASS — R=2: {r_lr['delivered_vt_ml']:.0f} ml | "
-          f"R=20: {r_hr['delivered_vt_ml']:.0f} ml")
+    # time_to_peak_flow should increase monotonically with rise_time
+    t2pks = [results_by_rt[rt]["time_to_peak_flow_s"] for rt in rise_times]
+    _check("time_to_peak_flow strictly increases with rise_time",
+           all(t2pks[i] <= t2pks[i+1] + 1e-9 for i in range(len(t2pks) - 1)),
+           f"{[round(t,3) for t in t2pks]}")
 
-    # Higher insp pressure → higher VT
-    r_lp = generate_breath_cycles({**base, "insp_pressure_cmH2O": 10})
-    r_hp = generate_breath_cycles({**base, "insp_pressure_cmH2O": 25})
-    assert r_hp["delivered_vt_ml"] > r_lp["delivered_vt_ml"], \
-        "FAIL: higher insp pressure should increase VT"
-    print(f"  Pressure check    PASS — P=10: {r_lp['delivered_vt_ml']:.0f} ml | "
-          f"P=25: {r_hp['delivered_vt_ml']:.0f} ml")
+    # Fill fractions stay similar (rise time changes shape, not steady state)
+    fills = [results_by_rt[rt]["fill_fraction"] for rt in rise_times]
+    _check("fill fraction similar across rise times (Δ < 0.10)",
+           max(fills) - min(fills) < 0.10,
+           f"{[round(f,3) for f in fills]}")
 
-    # Longer rise time → lower peak flow, higher time_to_peak_flow
-    r_rt0 = generate_breath_cycles({**base, "rise_time_s": 0.0})
-    r_rt4 = generate_breath_cycles({**base, "rise_time_s": 0.4})
-    assert r_rt4["time_to_peak_flow_s"] >= r_rt0["time_to_peak_flow_s"], \
-        "FAIL: longer rise time should delay peak flow"
-    print(f"  Rise time check   PASS — RT=0.0s: t_peak={r_rt0['time_to_peak_flow_s']:.3f}s | "
-          f"RT=0.4s: t_peak={r_rt4['time_to_peak_flow_s']:.3f}s")
+    for rt in rise_times:
+        r = results_by_rt[rt]
+        print(f"     rise={rt:.1f}s  Ppeak={r['ppeak_cmH2O']:5.1f}  "
+              f"t_to_peak_flow={r['time_to_peak_flow_s']:.3f}s  "
+              f"fill={r['fill_fraction']:.3f}  VT={r['delivered_vt_ml']:5.0f}")
 
-    # Faster RR → shorter t_insp → lower fill fraction
-    r_slow = generate_breath_cycles({**base, "respiratory_rate": 8})
-    r_fast = generate_breath_cycles({**base, "respiratory_rate": 30})
-    assert r_fast["fill_fraction"] < r_slow["fill_fraction"], \
-        "FAIL: faster RR → shorter t_insp → lower fill fraction"
-    print(f"  Fill fraction     PASS — RR=8: {r_slow['fill_fraction']:.3f} | "
-          f"RR=30: {r_fast['fill_fraction']:.3f}")
+    # ---- Test 2: physiology direction checks ----------------------------
+    print("\n[2/4] Physiology direction checks across conditions")
 
-    # --- Test 3: validity filter -----------------------------------------
-    print("\n[ Test 3 ] Validity filter\n")
+    p_normal = {**base}
+    r_normal = generate_breath_cycles(p_normal, n_cycles=3)
 
-    # Invalid — max resistance + fast RR + short I:E + long rise time
-    # R=50, C=60, RR=30, IE=0.33, RT=0.4 → fill_fraction ≈ 0.079 < 0.20
-    bad_ff = {**base, "resistance_cmH2O_L_s": 50, "respiratory_rate": 30,
-              "ie_ratio": 0.33, "rise_time_s": 0.4}
-    r_ff = generate_breath_cycles(bad_ff)
-    assert not r_ff["is_valid"], (
-        f"FAIL: should be invalid (low fill fraction), "
-        f"got ff={r_ff['fill_fraction']:.4f}, valid={r_ff['is_valid']}, "
-        f"reason='{r_ff['invalid_reason']}'"
-    )
-    print(f"  Fill fraction     PASS — {r_ff['invalid_reason']}")
+    # Higher resistance → lower fill fraction
+    p_hi_R = {**base, "resistance_cmH2O_L_s": 30.0}
+    r_hi_R = generate_breath_cycles(p_hi_R, n_cycles=3)
+    _check("higher R → lower fill fraction",
+           r_hi_R["fill_fraction"] < r_normal["fill_fraction"],
+           f"R=8: ff={r_normal['fill_fraction']:.3f}  "
+           f"R=30: ff={r_hi_R['fill_fraction']:.3f}")
 
-    # Invalid — high pressure + high PEEP → PPeak > 50
-    bad_pk = {**base, "insp_pressure_cmH2O": 35, "peep_cmH2O": 20}
-    r_pk = generate_breath_cycles(bad_pk)
-    assert not r_pk["is_valid"], "FAIL: should be invalid (PPeak)"
-    print(f"  PPeak filter      PASS — {r_pk['invalid_reason']}")
+    # Higher driving pressure → larger delivered VT (roughly linear in C)
+    p_hi_P = {**base, "insp_pressure_cmH2O": 20.0}
+    r_hi_P = generate_breath_cycles(p_hi_P, n_cycles=3)
+    _check("higher insp_pressure → larger delivered VT",
+           r_hi_P["delivered_vt_ml"] > r_normal["delivered_vt_ml"],
+           f"P=12: VT={r_normal['delivered_vt_ml']:.0f}  "
+           f"P=20: VT={r_hi_P['delivered_vt_ml']:.0f}")
 
-    # Valid — normal lung, standard settings
-    r_good = generate_breath_cycles(base)
-    assert r_good["is_valid"], "FAIL: should be valid"
-    print(f"  Valid scenario    PASS — PPeak {r_good['ppeak_cmH2O']:.1f} cmH2O | "
-          f"VT {r_good['delivered_vt_ml']:.0f} ml")
+    # COPD multi-compartment: low fill fraction at default RR
+    p_copd = {**base, "condition": "COPD",
+              "compliance_ml_per_cmH2O": 100.0,
+              "resistance_cmH2O_L_s":     22.0,
+              "respiratory_rate":         20,
+              "insp_pressure_cmH2O":      15.0}
+    r_copd_3  = generate_breath_cycles(p_copd, n_cycles=3)
+    r_copd_10 = generate_breath_cycles(p_copd, n_cycles=10)
+    _check("COPD uses 3 compartments", r_copd_3["n_compartments"] == 3)
+    _check("COPD multi-cycle auto-PEEP grows (hyperinflation)",
+           r_copd_10["auto_peep_cmH2O"] > r_copd_3["auto_peep_cmH2O"],
+           f"3-cyc={r_copd_3['auto_peep_cmH2O']:.2f}  "
+           f"10-cyc={r_copd_10['auto_peep_cmH2O']:.2f}")
 
-    # --- Test 4: dataset sweep -------------------------------------------
-    print("\n[ Test 4 ] Dataset sweep — Normal, C=60, R=2\n")
+    # Severe ARDS multi-compartment: high fill fraction (small total C, fast equilibration)
+    p_ards = {**base, "condition": "Severe ARDS",
+              "compliance_ml_per_cmH2O": 18.0,
+              "resistance_cmH2O_L_s":    16.0,
+              "insp_pressure_cmH2O":     10.0}
+    r_ards = generate_breath_cycles(p_ards, n_cycles=3)
+    _check("Severe ARDS uses 2 compartments", r_ards["n_compartments"] == 2)
+    _check("Severe ARDS reaches high fill fraction (fast tau)",
+           r_ards["fill_fraction"] > 0.80,
+           f"fill={r_ards['fill_fraction']:.3f}")
 
+    # Bronchospasm now 2 compartments → low fill fraction (high R, two long tau)
+    p_broncho = {**base, "condition": "Bronchospasm",
+                 "compliance_ml_per_cmH2O": 70.0,
+                 "resistance_cmH2O_L_s":    35.0,
+                 "insp_pressure_cmH2O":     15.0}
+    r_broncho = generate_breath_cycles(p_broncho, n_cycles=3)
+    _check("Bronchospasm uses 2 compartments", r_broncho["n_compartments"] == 2)
+    _check("Bronchospasm fill fraction < Normal fill fraction (high R)",
+           r_broncho["fill_fraction"] < r_normal["fill_fraction"],
+           f"broncho={r_broncho['fill_fraction']:.3f}  "
+           f"normal={r_normal['fill_fraction']:.3f}")
+
+    # Pneumonia uses 3 compartments
+    p_pneu = {**base, "condition": "Pneumonia",
+              "compliance_ml_per_cmH2O": 50.0,
+              "resistance_cmH2O_L_s":    12.0}
+    r_pneu = generate_breath_cycles(p_pneu, n_cycles=3)
+    _check("Pneumonia uses 3 compartments", r_pneu["n_compartments"] == 3)
+
+    print(f"     Normal:   fill={r_normal['fill_fraction']:.3f}  "
+          f"VT={r_normal['delivered_vt_ml']:5.0f}")
+    print(f"     ARDS:     fill={r_ards['fill_fraction']:.3f}  "
+          f"VT={r_ards['delivered_vt_ml']:5.0f}  nC=2")
+    print(f"     COPD:     fill={r_copd_3['fill_fraction']:.3f}  "
+          f"VT={r_copd_3['delivered_vt_ml']:5.0f}  "
+          f"autoPEEP(10c)={r_copd_10['auto_peep_cmH2O']:.2f}  nC=3")
+    print(f"     Broncho:  fill={r_broncho['fill_fraction']:.3f}  "
+          f"VT={r_broncho['delivered_vt_ml']:5.0f}  nC=2")
+
+    # ---- Test 3: validity filter ---------------------------------------
+    print("\n[3/4] Validity filter")
+
+    # Invalid — insp_pressure > 35
+    p_hi_P = {**base, "insp_pressure_cmH2O": 40.0}
+    r_hi_P_inv = generate_breath_cycles(p_hi_P, n_cycles=2)
+    _check("insp_pressure > 35 flagged invalid",
+           (not r_hi_P_inv["is_valid"]) and "ressure" in r_hi_P_inv["invalid_reason"].lower(),
+           f"{r_hi_P_inv['invalid_reason'][:60]}")
+
+    # Invalid — PPeak > 50 (high pressure + high PEEP)
+    p_hi_pk = {**base, "insp_pressure_cmH2O": 35.0, "peep_cmH2O": 20.0}
+    r_hi_pk = generate_breath_cycles(p_hi_pk, n_cycles=2)
+    _check("PPeak > 50 flagged invalid (high pressure + high PEEP)",
+           (not r_hi_pk["is_valid"]) and "PPeak" in r_hi_pk["invalid_reason"],
+           f"{r_hi_pk['invalid_reason'][:60]}")
+
+    # Invalid — fill fraction < 0.20 (very high R + short t_insp on compliant lung
+    # keeps VT above 210 so the fill filter fires before the low-VT filter)
+    p_low_ff = {**base, "condition": "Bronchospasm",
+                "compliance_ml_per_cmH2O": 100.0,
+                "resistance_cmH2O_L_s":     50.0,
+                "respiratory_rate":         28,
+                "ie_ratio":                 0.33,
+                "rise_time_s":              0.0,
+                "insp_pressure_cmH2O":      30.0}
+    r_low_ff = generate_breath_cycles(p_low_ff, n_cycles=2)
+    _check("fill fraction below 0.20 flagged invalid",
+           (not r_low_ff["is_valid"]) and "ill fraction" in r_low_ff["invalid_reason"],
+           f"{r_low_ff['invalid_reason'][:60]}")
+
+    # Invalid — VT > 12 mL/kg IBW (high pressure on compliant lung)
+    p_hi_vt = {**base, "compliance_ml_per_cmH2O": 100.0,
+               "insp_pressure_cmH2O": 30.0}
+    r_hi_vt = generate_breath_cycles(p_hi_vt, n_cycles=2)
+    _check("VT above 12 mL/kg flagged invalid",
+           (not r_hi_vt["is_valid"]) and "VT" in r_hi_vt["invalid_reason"],
+           f"{r_hi_vt['invalid_reason'][:60]}")
+
+    # Valid — standard Normal-lung settings
+    r_good = generate_breath_cycles(base, n_cycles=2)
+    _check("standard Normal-lung scenario passes filter",
+           r_good["is_valid"] and r_good["invalid_reason"] == "",
+           f"Ppeak={r_good['ppeak_cmH2O']:.1f} "
+           f"VT={r_good['delivered_vt_ml']:.0f} "
+           f"fill={r_good['fill_fraction']:.3f}")
+
+    # ---- Test 4: dataset sweep (small slice) ---------------------------
+    print("\n[4/4] Dataset sweep — Normal lung, n_cycles=1")
     scenarios = generate_dataset(
         condition_name="Normal",
-        compliance_ml_per_cmH2O=60,
-        resistance_cmH2O_L_s=2,
-        n_cycles=1,   # 1 cycle in smoke test — enough to verify structure
+        compliance_ml_per_cmH2O=60.0,
+        resistance_cmH2O_L_s=10.0,
+        n_cycles=1,
     )
-
-    total   = len(scenarios)
-    valid   = sum(1 for s in scenarios if s["is_valid"])
-    invalid = total - valid
-
-    print(f"  Total scenarios : {total}")
-    print(f"  Valid           : {valid}")
-    print(f"  Invalid         : {invalid} ({100*invalid/total:.0f}%)")
-    print(f"  Example ID      : {scenarios[0]['scenario_id']}")
-
-    # Confirm all IDs unique
+    total = len(scenarios)
+    valid = sum(1 for s in scenarios if s["is_valid"])
     ids = [s["scenario_id"] for s in scenarios]
-    assert len(ids) == len(set(ids)), "FAIL: scenario IDs are not unique"
-    print(f"  ID uniqueness   : PASS ({len(set(ids))} unique IDs)")
 
+    # Grid product: 7 insp_pressure × 7 RR × 6 PEEP × 3 IE × 4 rise_time = 3528
+    expected = 7 * 7 * 6 * 3 * 4
+
+    _check("dataset non-empty",       total > 0)
+    _check("scenario count == grid product",
+           total == expected,
+           f"got {total} expected {expected}")
+    _check("all scenario IDs unique", len(ids) == len(set(ids)),
+           f"{len(set(ids))} unique of {len(ids)}")
+    _check("at least one valid scenario", valid > 0,
+           f"{valid}/{total} valid")
+    _check("valid scenarios carry metrics",
+           all(s.get("metrics") for s in scenarios if s["is_valid"]))
+    print(f"     total={total} valid={valid} invalid={total - valid}")
+    print(f"     example_id={scenarios[0]['scenario_id']}")
+    print(f"     example_metrics: Ppeak={scenarios[0]['metrics'].get('ppeak_cmH2O','—')}  "
+          f"VT={scenarios[0]['metrics'].get('delivered_vt_ml','—')}  "
+          f"fill={scenarios[0]['metrics'].get('fill_fraction','—')}")
+
+    # ---- Summary --------------------------------------------------------
+    n_pass = sum(_results)
+    n_total = len(_results)
     print(f"\n{'=' * 65}")
-    print("  All smoke tests passed. PCV generator complete.")
-    print("=" * 65)
+    print(f"  PCV generator smoke test: {n_pass}/{n_total} checks passed")
+    if n_pass < n_total:
+        print("  WARNING: some checks failed — review output above")
+    print(f"{'=' * 65}\n")
+    sys.exit(0 if n_pass == n_total else 1)

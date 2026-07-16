@@ -59,6 +59,7 @@ CONDITIONS = {
         "effort_rate_per_min":      15,
         "effort_duration_s":        0.8,
         "pmus_cv":                  0.20,
+        "pressure_ceiling_cmH2O":   25
     },
 
     "Mild ARDS": {
@@ -84,6 +85,7 @@ CONDITIONS = {
         "effort_rate_per_min":     24,
         "effort_duration_s":        0.7,
         "pmus_cv":                  0.25,
+        "pressure_ceiling_cmH2O":   28
     },
 
     "Moderate ARDS": {
@@ -109,6 +111,7 @@ CONDITIONS = {
         "effort_rate_per_min":     30,
         "effort_duration_s":        0.60,
         "pmus_cv":                  0.25,
+        "pressure_ceiling_cmH2O":   30
     },
 
     "Severe ARDS": {
@@ -134,6 +137,7 @@ CONDITIONS = {
         "effort_rate_per_min":     35,
         "effort_duration_s":        0.50,
         "pmus_cv":                  0.30,
+        "pressure_ceiling_cmH2O":   30
     },
 
     "COPD": {
@@ -160,6 +164,7 @@ CONDITIONS = {
         "effort_rate_per_min":     24,
         "effort_duration_s":        0.75,
         "pmus_cv":                  0.28,
+        "pressure_ceiling_cmH2O":   30
     },
 
     "Bronchospasm": {
@@ -186,6 +191,7 @@ CONDITIONS = {
         "effort_rate_per_min":     12,
         "effort_duration_s":        0.85,
         "pmus_cv":                  0.15,
+        "pressure_ceiling_cmH2O":   30
     },
 
     "Pneumonia": {
@@ -211,6 +217,7 @@ CONDITIONS = {
         "effort_rate_per_min":     24,
         "effort_duration_s":        0.75,
         "pmus_cv":                  0.22,
+        "pressure_ceiling_cmH2O":   26
     },
 }
 
