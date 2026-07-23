@@ -1,0 +1,163 @@
+{
+  "mode": "PRVC",
+  "dataset_type": "thinned",
+  "generated_at": "2026-07-22T20:21:35.617615+00:00",
+  "ibw_kg": 70.0,
+  "output_dir": "/Users/riyagunuganti/TimeSeriesVentilatorData/data/exports/prvc",
+  "thinned_grid": {
+    "vt_target_ml_per_kg": [
+      4,
+      6,
+      10
+    ],
+    "respiratory_rate": [
+      8,
+      16,
+      24,
+      30
+    ],
+    "peep_cmH2O": [
+      0,
+      8,
+      16,
+      20
+    ],
+    "ie_ratio": [
+      1.0,
+      0.5,
+      0.33
+    ],
+    "pressure_ceiling_cmH2O": [
+      15,
+      20,
+      25,
+      35
+    ]
+  },
+  "combos_per_point": 576,
+  "adaptation_step_cmH2O": 2.0,
+  "vt_tolerance_frac": 0.1,
+  "grand_total": 78912,
+  "grand_valid": 76448,
+  "grand_invalid": 2464,
+  "grand_converged": 56635,
+  "grand_ceiling_limited": 6161,
+  "valid_pct": 96.9,
+  "converged_pct": 71.8,
+  "ceiling_limited_pct": 7.8,
+  "total_elapsed_s": 16507.4,
+  "total_elapsed_min": 275.1,
+  "tiers": [
+    {
+      "condition": "Normal",
+      "mechanics_pairs": 25,
+      "n_cycles": 12,
+      "tier_total": 14400,
+      "tier_valid": 14396,
+      "tier_invalid": 4,
+      "tier_converged": 9780,
+      "tier_ceiling_limited": 156,
+      "valid_pct": 100.0,
+      "converged_pct": 67.9,
+      "ceiling_limited_pct": 1.1,
+      "elapsed_s": 1599.7
+    },
+    {
+      "condition": "Mild ARDS",
+      "mechanics_pairs": 12,
+      "n_cycles": 12,
+      "tier_total": 6912,
+      "tier_valid": 6860,
+      "tier_invalid": 52,
+      "tier_converged": 5017,
+      "tier_ceiling_limited": 523,
+      "valid_pct": 99.2,
+      "converged_pct": 72.6,
+      "ceiling_limited_pct": 7.6,
+      "elapsed_s": 993.7
+    },
+    {
+      "condition": "Moderate ARDS",
+      "mechanics_pairs": 12,
+      "n_cycles": 12,
+      "tier_total": 6912,
+      "tier_valid": 6696,
+      "tier_invalid": 216,
+      "tier_converged": 5198,
+      "tier_ceiling_limited": 1074,
+      "valid_pct": 96.9,
+      "converged_pct": 75.2,
+      "ceiling_limited_pct": 15.5,
+      "elapsed_s": 984.8
+    },
+    {
+      "condition": "Severe ARDS",
+      "mechanics_pairs": 15,
+      "n_cycles": 12,
+      "tier_total": 8640,
+      "tier_valid": 7008,
+      "tier_invalid": 1632,
+      "tier_converged": 5693,
+      "tier_ceiling_limited": 2907,
+      "valid_pct": 81.1,
+      "converged_pct": 65.9,
+      "ceiling_limited_pct": 33.6,
+      "elapsed_s": 1233.2
+    },
+    {
+      "condition": "COPD",
+      "mechanics_pairs": 25,
+      "n_cycles": 25,
+      "tier_total": 14400,
+      "tier_valid": 14376,
+      "tier_invalid": 24,
+      "tier_converged": 10204,
+      "tier_ceiling_limited": 52,
+      "valid_pct": 99.8,
+      "converged_pct": 70.9,
+      "ceiling_limited_pct": 0.4,
+      "elapsed_s": 5244.5
+    },
+    {
+      "condition": "Bronchospasm",
+      "mechanics_pairs": 24,
+      "n_cycles": 25,
+      "tier_total": 13824,
+      "tier_valid": 13304,
+      "tier_invalid": 520,
+      "tier_converged": 11144,
+      "tier_ceiling_limited": 792,
+      "valid_pct": 96.2,
+      "converged_pct": 80.6,
+      "ceiling_limited_pct": 5.7,
+      "elapsed_s": 4075.1
+    },
+    {
+      "condition": "Pneumonia",
+      "mechanics_pairs": 24,
+      "n_cycles": 12,
+      "tier_total": 13824,
+      "tier_valid": 13808,
+      "tier_invalid": 16,
+      "tier_converged": 9599,
+      "tier_ceiling_limited": 657,
+      "valid_pct": 99.9,
+      "converged_pct": 69.4,
+      "ceiling_limited_pct": 4.8,
+      "elapsed_s": 2373.4
+    }
+  ],
+  "validity_thresholds": {
+    "ppeak_max_cmH2O": 50.0,
+    "vt_min_mL": 210.0,
+    "vt_max_mL": 840.0
+  },
+  "notes": [
+    "COPD and Bronchospasm use 25 cycles/scenario for auto-PEEP and pressure-staircase steady state; all other tiers use 12 cycles/scenario",
+    "adaptation_step_cmH2O and vt_tolerance_frac are fixed uniform constants, not swept -- see PRVC_PARAMETER_GRID.md",
+    "Breath 1 in every scenario is a volume-controlled test breath (AutoFlow-style bootstrap); it is excluded from convergence tracking and always delivers ~vt_target by construction",
+    "Ceiling-limited non-convergence is a deliberately retained, labeled outcome (see converged / ceiling_limited columns), not an invalidity condition on its own",
+    "Seeds are deterministic; prvc_generator has no stochastic elements (purely mandatory mode), so identical params always reproduce identical waveforms regardless of seed value",
+    "Full waveform arrays (including pressure_trajectory and delivered_vt_trajectory) are not persisted in the manifest -- regenerate via generate_breath_cycles(params, seed=seed) using the params implied by each row plus its recorded seed"
+  ]
+}

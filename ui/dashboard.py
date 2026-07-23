@@ -438,7 +438,7 @@ def render_sidebar():
             rise_time = st.slider(
                 "Rise Time (s)",
                 min_value=0.0, max_value=0.4,
-                value=0.0, step=0.1,
+                value=0.0 if engine_key == "pcv" else 0.10, step=0.1,
                 help=(
                     "Time for pressure to ramp from PEEP to PIP. "
                     "0.0 = square wave step (maximum initial flow). "
