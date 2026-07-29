@@ -44,7 +44,7 @@ from generator.vcv_generator import generate_breath_cycles as _gen_vcv
 from generator.pcv_generator import generate_breath_cycles as _gen_pcv
 from generator.psv_generator import generate_breath_cycles as _gen_psv
 from generator.prvc_generator import generate_breath_cycles as _gen_prvc
-
+from generator.simv_generator import generate_breath_cycles as _gen_simv  
 
 # ---------------------------------------------------------------------------
 # Engine registry — VCV and PCV only
@@ -74,7 +74,13 @@ ENGINES = {
         "fn":    _gen_prvc,
         "label": "PRVC · Pressure-Regulated Volume Control",
         "icon":  "◆",   # pick anything distinct from ▣ ◈ *
-    }
+    },
+    "SIMV": {                                                        # ADD
+        "key":   "simv",                                             # ADD
+        "fn":    _gen_simv,                                          # ADD
+        "label": "SIMV · Synchronized Intermittent Mandatory",        # ADD
+        "icon":  "◐",   # distinct from ▣ ◈ * ◆                      # ADD
+    },     
 }
 
 ENGINE_NAMES = list(ENGINES.keys())
@@ -314,6 +320,7 @@ def render_sidebar():
                 "VCV: ventilator prescribes flow — pressure is derived. "
                 "PCV: ventilator prescribes pressure — volume is derived."
                 "PSV: ventilator prescribes pressure support after a patient-initiated breath — volume is derived."
+                "SIMV: alternates mandatory VC/PC breaths with spontaneous PSV-style breaths, synchronized to patient effort."
             ),
         )
         engine_key = ENGINES[engine_name]["key"]
@@ -366,12 +373,36 @@ def render_sidebar():
             key=f"peep_{condition_name}_{engine_name}",
         )
 
+        mode = None                                                              # ADD
+        if engine_key == "simv":                                                 # ADD
+            st.markdown(                                                        # ADD
+                '<div class="section-label" style="margin-top:10px;">'          # ADD
+                'SIMV Settings</div>',                                          # ADD
+                unsafe_allow_html=True,                                          # ADD
+            )                                                                    # ADD
+            mode = st.radio(                                                     # ADD
+                "Mandatory Breath Type",                                         # ADD
+                options=["VC", "PC"],                                            # ADD
+                index=0,                                                         # ADD
+                help=(                                                           # ADD
+                    "VC: mandatory breaths deliver a set tidal volume "          # ADD
+                    "(like VCV). PC: mandatory breaths deliver a set "           # ADD
+                    "inspiratory pressure (like PCV). Spontaneous breaths "      # ADD
+                    "between mandatory breaths are always pressure-"             # ADD
+                    "supported, regardless of this choice."                      # ADD
+                ),                                                                # ADD
+                key=f"mode_{condition_name}_{engine_name}",                      # ADD
+            )           
 
 # --- RR and I:E — VCV, PCV and PRVC only (PSV uses effort_rate below) -
-        if engine_key in ("vcv", "pcv", "prvc"):
+        if engine_key in ("vcv", "pcv", "prvc", "simv"):
+            _rr_default = int(preset["respiratory_rate"])                                  # ADD
+            if engine_key == "simv":                                                       # ADD
+                _rr_default = max(4, round(_rr_default * 0.5))    
             rr = st.slider(
                 "Respiratory Rate (bpm)", 5, 40,
                 value=int(preset["respiratory_rate"]),
+                value=_rr_default,
                 step=1,
                 key=f"rr_{condition_name}_{engine_name}",
             )
@@ -385,7 +416,7 @@ def render_sidebar():
             ie = IE_OPTIONS[ie_label]
 
         # --- VCV-specific: flow pattern only ------------------------------
-        if engine_key == "vcv":
+        if engine_key == "vcv" or (engine_key == "simv" and mode == "VC"):
             st.markdown(
                 '<div class="section-label" style="margin-top:10px;">'
                 'VCV Settings</div>',
@@ -405,7 +436,7 @@ def render_sidebar():
             )
 
         # --- Tidal volume — VCV (its own setting) and PRVC (its target) --
-        if engine_key in ("vcv", "prvc"):
+        if engine_key in ("vcv", "prvc") or (engine_key == "simv" and mode == "VC"):
             tv = st.slider(
                 "Tidal Volume (ml)", 100, 900,
                 value=int(preset["tidal_volume_ml"]),
@@ -415,7 +446,7 @@ def render_sidebar():
             )
 
         # --- PCV-specific: inspiratory pressure only -----------------------
-        if engine_key == "pcv":
+        if engine_key == "pcv" or (engine_key == "simv" and mode == "PC"):
             st.markdown(
                 '<div class="section-label" style="margin-top:10px;">'
                 'PCV Settings</div>',
@@ -434,7 +465,7 @@ def render_sidebar():
             )
 
         # --- Rise time — PCV and PRVC ---------------------------------------
-        if engine_key in ("pcv", "prvc"):
+        if engine_key in ("pcv", "prvc", "simv"):
             rise_time = st.slider(
                 "Rise Time (s)",
                 min_value=0.0, max_value=0.4,
@@ -558,6 +589,94 @@ def render_sidebar():
                     st.session_state.get("psv_seed", 42) + 1
                 )
                 st.rerun()
+        
+        if engine_key == "simv":                                                          # ADD
+            st.markdown(                                                                  # ADD
+                '<div class="section-label" style="margin-top:10px;">'                    # ADD
+                'SIMV — Synchronization Window</div>',                                     # ADD
+                unsafe_allow_html=True,                                                    # ADD
+            )                                                                              # ADD
+            f_window = st.slider(                                                          # ADD
+                "Sync Window (fraction of mandatory cycle)",                               # ADD
+                min_value=0.05, max_value=0.60,                                            # ADD
+                value=0.25, step=0.05,                                                     # ADD
+                help=(                                                                     # ADD
+                    "Fraction of the mandatory cycle time, immediately "                   # ADD
+                    "before the scheduled mandatory breath, during which "                 # ADD
+                    "patient effort synchronizes (rather than replaces) "                  # ADD
+                    "the mandatory breath. No single ventilator vendor "                   # ADD
+                    "uses the same value for this -- 0.15-0.30 is the "                    # ADD
+                    "literature-grounded tunable range used for this "                     # ADD
+                    "project (see the SIMV grounding doc)."                                # ADD
+                ),                                                                          # ADD
+                key=f"fwindow_{condition_name}_{engine_name}",                             # ADD
+            )                                                                              # ADD
+
+            st.markdown(                                                                  # ADD
+                '<div class="section-label" style="margin-top:10px;">'                    # ADD
+                'SIMV — Spontaneous Breath Settings</div>',                                # ADD
+                unsafe_allow_html=True,                                                    # ADD
+            )                                                                              # ADD
+            ps = st.slider(                                                                # ADD
+                "Pressure Support (cmH\u2082O above PEEP)",                                # ADD
+                min_value=1, max_value=30,                                                 # ADD
+                value=int(preset["pressure_support_cmH2O"]), step=1,                       # ADD
+                help="Pressure applied above PEEP for spontaneous breaths.",               # ADD
+                key=f"simv_ps_{condition_name}_{engine_name}",                             # ADD
+            )                                                                              # ADD
+            fct = st.select_slider(                                                        # ADD
+                "Flow Cycle Threshold",                                                    # ADD
+                options=[0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45,                   # ADD
+                         0.50, 0.55, 0.60, 0.65, 0.70],                                    # ADD
+                value=float(preset["flow_cycle_threshold"]),                               # ADD
+                help=(                                                                     # ADD
+                    "Spontaneous breaths cycle off when flow decays to "                   # ADD
+                    "this fraction of peak. Low -> delayed cycling risk. "                 # ADD
+                    "High -> premature cycling risk."                                      # ADD
+                ),                                                                          # ADD
+                key=f"simv_fct_{condition_name}_{engine_name}",                            # ADD
+            )                                                                              # ADD
+            thr = st.slider(                                                               # ADD
+                "Trigger Threshold (cmH\u2082O)",                                          # ADD
+                min_value=0.5, max_value=3.0,                                              # ADD
+                value=float(preset["trigger_threshold_cmH2O"]), step=0.5,                  # ADD
+                help=(                                                                     # ADD
+                    "Minimum patient effort required to trigger either a "                 # ADD
+                    "synchronized mandatory breath (inside the window) or "                # ADD
+                    "a spontaneous breath (outside it)."                                   # ADD
+                ),                                                                          # ADD
+                key=f"simv_thr_{condition_name}_{engine_name}",                            # ADD
+            )                                                                              # ADD
+            effort_rate = st.slider(                                                       # ADD
+                "Effort Rate (breaths/min)", 8, 40,                                        # ADD
+                value=int(preset["effort_rate_per_min"]), step=1,                          # ADD
+                help="Patient's own neural respiratory rate.",                             # ADD
+                key=f"simv_erate_{condition_name}_{engine_name}",                          # ADD
+            )                                                                              # ADD
+            pmus = st.slider(                                                               # ADD
+                "Peak Effort (Pmus cmH\u2082O)", 2, 25,                                    # ADD
+                value=int(preset["pmus_peak_cmH2O"]), step=1,                              # ADD
+                key=f"simv_pmus_{condition_name}_{engine_name}",                           # ADD
+            )                                                                              # ADD
+            effort_dur = st.slider(                                                        # ADD
+                "Effort Duration (s)", 0.3, 1.4,                                           # ADD
+                value=float(preset["effort_duration_s"]), step=0.1,                        # ADD
+                key=f"simv_edur_{condition_name}_{engine_name}",                           # ADD
+            )                                                                              # ADD
+            pmus_cv = st.slider(                                                            # ADD
+                "Effort Variability (CV)", 0.0, 0.4,                                       # ADD
+                value=float(preset["pmus_cv"]), step=0.1,                                  # ADD
+                key=f"simv_pcv_{condition_name}_{engine_name}",                            # ADD
+            )                                                                              # ADD
+            if st.button(                                                                   # ADD
+                "⟳ Regenerate",                                                             # ADD
+                help="Draw a new set of stochastic patient-effort samples.",               # ADD
+                key="simv_regen",                                                          # ADD
+            ):                                                                              # ADD
+                st.session_state["simv_seed"] = (                                          # ADD
+                    st.session_state.get("simv_seed", 42) + 1                              # ADD
+                )                                                                            # ADD
+                st.rerun() 
 
         st.markdown("<hr>", unsafe_allow_html=True)
 
@@ -576,7 +695,7 @@ def render_sidebar():
             )
 
         # --- Breath cycle count — unconditional, every engine needs this ---
-        _ncycles_default = 12 if engine_key in ("psv", "prvc") else 5
+        _ncycles_default = 12 if engine_key in ("psv", "prvc") else (8 if engine_key == "simv" else 5) 
         n_cycles = st.slider(
             "Breath Cycles", 1, 30, _ncycles_default, step=1,
             help=(
@@ -584,7 +703,9 @@ def render_sidebar():
                 "reaches steady state. PRVC: use \u2265 12 cycles (\u2265 25 "
                 "for COPD/Bronchospasm) so the pressure staircase has room "
                 "to converge."
-            ) if engine_key in ("psv", "prvc") else None,
+                "SIMV: this counts mandatory macro-cycles, not total "                                          # ADD
+                "breaths -- spontaneous breaths interleave on top of these." 
+            ) if engine_key in ("psv", "prvc","simv") else None,
         )
 
         # --- Assemble params dict ---------------------------------------
@@ -641,6 +762,31 @@ def render_sidebar():
                 "resistance_cmH2O_L_s":    resistance,
                 "condition":               condition_name,
             }
+        
+        elif engine_key == "simv":                                                          # ADD (whole block)
+            params = {                                                                       # ADD
+                "mandatory_mode":           mode,                                            # ADD
+                "respiratory_rate":         rr,                                              # ADD
+                "peep_cmH2O":               peep,                                            # ADD
+                "ie_ratio":                 ie,                                              # ADD
+                "rise_time_s":              rise_time,                                       # ADD
+                "f_window":                 f_window,                                        # ADD
+                "pressure_support_cmH2O":   ps,                                              # ADD
+                "flow_cycle_threshold":     fct,                                             # ADD
+                "trigger_threshold_cmH2O":  thr,                                             # ADD
+                "pmus_peak_cmH2O":          pmus,                                            # ADD
+                "effort_rate_per_min":      effort_rate,                                     # ADD
+                "effort_duration_s":        effort_dur,                                      # ADD
+                "pmus_cv":                  pmus_cv,                                         # ADD
+                "compliance_ml_per_cmH2O":  compliance,                                      # ADD
+                "resistance_cmH2O_L_s":     resistance,                                      # ADD
+                "condition":                condition_name,                                  # ADD
+            }                                                                                # ADD
+            if mode == "VC":                                                                 # ADD
+                params["tidal_volume_ml"] = tv                                               # ADD
+                params["flow_pattern"]    = flow_pattern                                     # ADD
+            else:                                                                             # ADD
+                params["insp_pressure_cmH2O"] = insp_pressure 
 
         return params, condition_name, engine_name, n_cycles
 
@@ -829,9 +975,39 @@ def render_metrics(result, params, engine_key):
             ("Breaths to Converge",
              f"{breaths_conv}" if breaths_conv else "—",  ""),
         ]
+    
+    elif engine_key == "simv":                                                              # ADD (whole block)
+        cols = st.columns(8)                                                                 # ADD
+
+        mand_vt     = result["mandatory_delivered_vt_ml"]                                    # ADD
+        spont_vt    = result["spontaneous_delivered_vt_ml"]                                  # ADD
+        sync_frac   = result["mandatory_synchronized_fraction"]                              # ADD
+        n_spont     = result["n_spontaneous_breaths"]                                        # ADD
+        driving_p   = result["driving_p_cmH2O"]                                              # ADD
+        minute_vent = result["minute_vent_l"]                                                # ADD
+
+        metrics = [                                                                          # ADD
+            ("P Peak",          f"{peak_p:.1f}",                          "cmH₂O"),          # ADD
+            ("Mandatory VT",    f"{mand_vt:.0f}",                         "ml"),             # ADD
+            ("Spontaneous VT",  f"{spont_vt:.0f}" if n_spont else "—",    "ml"),             # ADD
+            ("P Drive (mand.)", f"{driving_p:.1f}",                       "cmH₂O"),          # ADD
+            ("P Mean",          f"{mean_paw:.1f}",                        "cmH₂O"),          # ADD
+            ("Synchronized",    f"{sync_frac*100:.0f}",                   "%"),              # ADD
+            ("Spont. Breaths",  f"{n_spont}",                             ""),               # ADD
+            ("Auto-PEEP",       f"{auto_peep:.2f}",                       "cmH₂O"),          # ADD
+        ]     
 
     for col, (label, value, unit) in zip(cols, metrics):
         _metric_card(col, label, value, unit)
+    
+    if engine_key == "simv" and result.get("ineffective_trigger_fraction", 0) > 0:          # ADD
+        st.markdown(                                                                         # ADD
+            f'<div style="font-family:JetBrains Mono,monospace;'                            # ADD
+            f'font-size:0.65rem;color:{COLOR_MUTED};margin-top:6px;">'                      # ADD
+            f'Ineffective efforts: '                                                         # ADD
+            f'{result["ineffective_trigger_fraction"]*100:.0f}%</div>',                     # ADD
+            unsafe_allow_html=True,                                                          # ADD
+        )       
 
     if engine_key == "prvc":
         if result["ceiling_limited"]:
@@ -987,7 +1163,7 @@ def render_export(result, params, condition_name, engine_name):
     }
     scenario.update({
         k: v for k, v in params.items()
-        if k != "tidal_volume_ml" or engine_key == "vcv"
+        if k != "tidal_volume_ml" or engine_key in ("vcv", "simv")
     })
 
     if engine_key == "psv":
@@ -1001,6 +1177,20 @@ def render_export(result, params, condition_name, engine_name):
         scenario["pres_pel_ratio"]               = result.get("pres_pel_ratio", 0.0)
         scenario["is_valid"]                     = result.get("is_valid", True)
         scenario["invalid_reason"]               = result.get("invalid_reason", "")
+
+    if engine_key == "simv":                                                                 # ADD (whole block)
+        scenario["breath_records"] = result.get("breath_records", [])                        # ADD
+        scenario["n_mandatory_breaths"] = result.get("n_mandatory_breaths", 0)                # ADD
+        scenario["n_spontaneous_breaths"] = result.get("n_spontaneous_breaths", 0)            # ADD
+        scenario["mandatory_synchronized_fraction"] = result.get(                             # ADD
+            "mandatory_synchronized_fraction", 0.0                                            # ADD
+        )                                                                                      # ADD
+        scenario["auto_peep_cmH2O"] = result.get("auto_peep_cmH2O", 0.0)                     # ADD
+        scenario["ineffective_trigger_fraction"] = result.get(                                # ADD
+            "ineffective_trigger_fraction", 0.0                                               # ADD
+        )                                                                                      # ADD
+        scenario["is_valid"] = result.get("is_valid", True)                                  # ADD
+        scenario["invalid_reason"] = result.get("invalid_reason", "")     
 
     json_bytes = json.dumps(scenario, indent=2).encode("utf-8")
 
@@ -1031,6 +1221,9 @@ def _run_engine(engine_name, params, n_cycles):
         # Fixed seed gives reproducible stochastic draws on the same params.
         # Stored in session state so a Regenerate button can increment it.
         seed = st.session_state.get("psv_seed", 42)
+        return ENGINES[engine_name]["fn"](params, n_cycles=n_cycles, seed=seed)
+    if ENGINES[engine_name]["key"] == "simv":                                                # ADD
+        seed = st.session_state.get("simv_seed", 42)                                         # ADD
         return ENGINES[engine_name]["fn"](params, n_cycles=n_cycles, seed=seed)
     return ENGINES[engine_name]["fn"](params, n_cycles=n_cycles)
 
