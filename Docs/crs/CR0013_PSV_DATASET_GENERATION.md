@@ -1,0 +1,73 @@
+# CR0013 — PSV Dataset Generation
+
+**Author:** Riya Gunuganti
+**Date:** 2026-05-20
+**Status:** Complete
+**Priority:** High
+**Project:** Time Series Ventilator Data
+
+---
+
+## Problem
+
+PSV dataset generation is substantially more complex than VCV or PCV dataset generation for two structural reasons. First, PSV has both a ventilator parameter space (pressure support, PEEP, rise time, flow cycle threshold, trigger threshold) and a patient parameter space (Pmus peak, effort rate, effort duration, effort variability), and the meaningful parameter combinations span both dimensions simultaneously. A VCV or PCV dataset sweeps only ventilator settings at fixed mechanics — in PSV, the patient's effort parameters are as clinically significant as the ventilator settings and must also be varied systematically. Second, PSV waveforms are stochastic: because effort parameters are sampled from log-normal distributions and inter-effort timing is jittered, two runs with the same parameters but different seeds produce physiologically similar but not identical waveforms. This means the dataset must fix seeds per scenario for reproducibility while covering enough of the combined parameter space to be useful for downstream model training.
+
+Additionally, without sufficient breath cycles per scenario, auto-PEEP-dependent phenomena (most critically: ineffective triggering in COPD, breath stacking in bronchospasm) cannot reach steady state. COPD and bronchospasm require more cycles than normal or ARDS scenarios to build up representative levels of auto-PEEP and to produce reliable dyssynchrony label distributions.
+
+---
+
+## Current State
+
+The PSV dataset generation script has been implemented and executed. The following work has been completed.
+
+**Script structure.** `generate_psv_dataset_thinned.py` sweeps the thinned parameter grid across all seven condition tier mechanics grids. For each tier, it iterates over all (compliance, resistance) mechanics pairs from the tier-specific mechanics grid, and for each mechanics pair it iterates over all combinations of ventilator parameters (pressure_support_cmH2O, peep_cmH2O, rise_time_s, flow_cycle_threshold, trigger_threshold_cmH2O) and patient parameters (pmus_peak_cmH2O, effort_rate_per_min, effort_duration_s, pmus_cv). Each combination calls `generate_breath_cycles()` with a deterministic seed derived from the scenario parameters, ensuring that any scenario can be regenerated identically from its manifest row.
+
+**Cycle counts.** The number of breath cycles per scenario was set based on the time constant and auto-PEEP accumulation requirements of each tier. Normal, Mild ARDS, Moderate ARDS, and Pneumonia use 12 cycles — sufficient for the waveform to reach statistical steady state given their short-to-moderate time constants and low auto-PEEP. Severe ARDS uses 12 cycles as well, but the very short time constant (τ ≈ R × C ≈ 16 × 0.018 = 0.29 s) means the first few breaths are already representative of the steady state. COPD uses 25 cycles to allow the three-compartment system with long time constants (τ up to 2.2 s per compartment) to reach auto-PEEP steady state, after which the auto-PEEP and ineffective trigger fraction stabilize. Bronchospasm uses 20 cycles for the same reason — the very high resistance (R ≈ 35 cmH₂O/L/s) produces τ ≈ 2.45 s and requires multiple cycles to build up the representative trapped-gas pattern.
+
+**Two-level parameter structure.** The generation grid is organized into a ventilator settings dimension and a patient effort dimension. This reflects the clinical reality that ventilator settings and patient effort parameters are independently varied in practice: a given ventilator setup (PS, PEEP, rise time, ETS) interacts with different patient effort profiles (strong vs. weak effort, tachypneic vs. slow). Tracking both dimensions in the manifest allows downstream analyses to isolate the effect of ventilator parameters from the effect of patient effort parameters on the generated waveform characteristics.
+
+**Dyssynchrony labels in the manifest.** Unlike VCV and PCV, which do not model patient dyssynchrony, the PSV manifest includes a per-breath dyssynchrony label list for every valid scenario. These labels (synchronous, ineffective_trigger, double_trigger, reverse_trigger, delayed_cycling, premature_cycling, flow_starvation) are stored as a comma-separated string in the manifest column breath_dyssynchrony_labels and as a list in the generation log. The dominant dyssynchrony subtype per tier is printed in the per-tier summary table at the end of the generation run. This is the primary dataset feature that distinguishes PSV from the earlier modes and is the main signal AiRA's downstream classification agent is expected to learn.
+
+**Seed strategy.** Each scenario receives a deterministic integer seed derived from its parameter combination. The seeding strategy ensures reproducibility: any scenario in the manifest can be regenerated by re-running generate_breath_cycles() with the same parameter dict and the same seed, producing an identical waveform. Different seeds across scenarios ensure that the breath-to-breath variability patterns are uncorrelated across the dataset even when two scenarios share the same mechanics but differ in a single parameter.
+
+**Manifest columns.** The PSV manifest (psv_manifest_thinned.csv) contains the following columns beyond those present in vcv_manifest_thinned.csv and pcv_manifest_thinned.csv: pressure_support_cmH2O, flow_cycle_threshold, trigger_threshold_cmH2O, pmus_peak_cmH2O, effort_rate_per_min, effort_duration_s, pmus_cv, fill_fraction, auto_peep_cmH2O, total_peep_cmH2O, pres_peak_cmH2O, pel_end_insp_cmH2O, stress_index, pres_pel_ratio, triggered_breath_rate, ineffective_trigger_fraction, patient_vt_ml, breath_dyssynchrony_labels, and dominant_dyssync. The fill_fraction column uses the PSV-specific definition (Vt / ((PS + Pmus_mean) × C_lung_rec)) rather than the PCV exponential formula.
+
+**Output files.** The generation run produces psv_manifest_thinned.csv containing one row per scenario with all parameters, metrics, validity flag, invalid reason, and dyssynchrony summary; psv_generation_log.json capturing full run provenance including the thinned grid definition, per-tier counts and elapsed times, validity thresholds, dyssynchrony subtype totals per tier, n_cycles per tier, and total runtime; and waveform data embedded in the manifest for valid scenarios (the PSV dataset does not write per-scenario CSV files as VCV and PCV originally did — the waveform arrays are stored in the manifest structure directly, following the lessons learned from the HDF5 and CSV experiments on disk efficiency).
+
+---
+
+## Proposed Change
+
+Execute the full PSV thinned dataset generation sweep across all seven condition tiers using a structured batch script that sweeps both ventilator and patient parameter dimensions, runs the appropriate number of cycles per tier for auto-PEEP steady state, records dyssynchrony labels per breath, writes a manifest with PSV-specific columns, and produces a JSON provenance log with per-tier dyssynchrony summaries. The script must flush output continuously for overnight monitoring and handle per-scenario generator exceptions gracefully without aborting the entire run.
+
+---
+
+## Acceptance Criteria
+
+- The generation run completes without errors across all seven condition tiers and all mechanics pairs
+- psv_manifest_thinned.csv contains one row per scenario with all required columns populated for valid scenarios and empty metric fields for invalid scenarios
+- All scenario IDs in psv_manifest_thinned.csv are unique — no two scenarios share the same ID
+- The psv_manifest_thinned.csv contains PSV-specific columns not present in vcv_manifest_thinned.csv or pcv_manifest_thinned.csv: flow_cycle_threshold, trigger_threshold_cmH2O, pmus_peak_cmH2O, effort_rate_per_min, effort_duration_s, pmus_cv, fill_fraction, auto_peep_cmH2O, pres_pel_ratio, triggered_breath_rate, ineffective_trigger_fraction, patient_vt_ml, and breath_dyssynchrony_labels
+- COPD scenarios in the manifest show auto_peep_cmH2O > 0.5 cmH₂O for the majority of valid scenarios at high resistance values, confirming that 25 cycles is sufficient for auto-PEEP steady state
+- COPD and bronchospasm scenarios show non-zero ineffective_trigger_fraction values at trigger thresholds above 1.0 cmH₂O, confirming that auto-PEEP is being correctly modeled and reported
+- The dominant dyssynchrony subtype for COPD is ineffective_trigger or delayed_cycling (not synchronous), confirming the condition-specific ETS calibration is producing clinically representative dyssynchrony patterns
+- The dominant dyssynchrony subtype for Severe ARDS is flow_starvation, reflecting the high-drive, low-compliance P-SILI scenario modeled in that tier's presets
+- Severe ARDS shows the smallest mean delivered_vt_ml of all seven tiers, confirming the compliance gradient is preserved in the output
+- psv_generation_log.json is present and contains the thinned grid definition, n_cycles per tier, per-tier counts, per-tier elapsed times, per-tier dyssynchrony totals, validity thresholds, and total runtime
+- The per-tier invalidity distribution reflects PSV-specific filter interactions: scenarios with very high combined driving pressure (PS + Pmus) on high-compliance lungs are flagged by the VT_MAX filter, and scenarios with very high PEEP plus PS are flagged by the PPEAK_MAX filter
+
+---
+
+## Files Likely to Be Touched
+
+- **Created:** `generate_psv_dataset_thinned.py` — the production batch script defining the seven condition tier mechanics grids, the thinned parameter grid for both ventilator and patient dimensions, the per-tier n_cycles assignments, the seed strategy, the manifest row assembly, and the generation log structure
+- **Populated:** `data/exports/psv/` — psv_manifest_thinned.csv containing all scenario rows with parameters, metrics, validity, and dyssynchrony data; and psv_generation_log.json containing full run provenance
+- **Update:** `EXPERIMENT_LOG.md` — add an entry documenting the generation run results, the per-tier valid and invalid counts, the dominant dyssynchrony subtypes per tier, the total runtime, and confirmation that the invalidity distribution reflects the expected PSV-specific filter interactions
+
+---
+
+## Status
+
+**Complete**
+
+The full PSV thinned dataset has been generated and exported. psv_manifest_thinned.csv and psv_generation_log.json are present in data/exports/psv/.
