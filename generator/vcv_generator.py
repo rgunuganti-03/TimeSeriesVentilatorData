@@ -671,6 +671,9 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         # Each compartment empties driven by its own elastic recoil through
         # its dynamic expiratory resistance. Pao at the airway opening = PEEP
         # plus the ETT drop on outflow (small negative dip at valve opening).
+        q_total_list = []
+        p_ett_drop_list = []
+
         for k in range(n_exp):
             C_rs_arr = _per_compartment_C_rs(V_comps)
             R_exp_arr_now = np.array([
@@ -698,9 +701,14 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
             p_branch_arr[idx]  = peep
             p_ett_arr[idx]     = P_ett_drop
             vol_per_comp[idx]  = V_comps.copy()
+            q_total_list.append(Q_total)
+            p_ett_drop_list.append(P_ett_drop)
+        
+
         
         t_cursor = t0 + t_insp + t_pause + n_exp * DT
-
+    print(q_total_list)
+    print(p_ett_drop_list)
     # ---- Derived metrics from the LAST cycle ----------------------------
     last_s = (n_cycles - 1) * n_per
     last_e = last_s + n_per
