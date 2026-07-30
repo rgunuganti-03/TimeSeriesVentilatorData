@@ -578,8 +578,87 @@ class TestMultiCompartmentMechanics:
             f"Moderate ARDS PEEP-sensitivity ({mod_delta:.1f}) should exceed "
             f"COPD's ({copd_delta:.1f}), given recruitment slopes 0.90 vs 0.0"
         )
+
 # ---------------------------------------------------------------------------
-# Class 8 — Physiological directions
+# Class 8 — Mechanics refinement parameters
+# ---------------------------------------------------------------------------
+
+class TestMechanicsRefinementParameters:
+    """
+    Same refinement params as VCV/PCV. PRVC's adaptive controller targets
+    vt_target_ml directly, so effects here surface as a shift in the
+    converged driving_p_cmH2O rather than a direct Vt or Ppeak change.
+    """
+
+    # -- circuit_compensated ------------------------------------------------
+
+    def test_circuit_compensated_false_reduces_delivered_vt(self):
+        r_comp = generate_breath_cycles(NORMAL_PARAMS, n_cycles=12, seed=58)
+        p_uncomp = {**NORMAL_PARAMS, "circuit_compensated": False}
+        r_uncomp = generate_breath_cycles(p_uncomp, n_cycles=12, seed=58)
+        assert r_uncomp["delivered_vt_ml"] < r_comp["delivered_vt_ml"]
+
+    def test_circuit_compensated_true_matches_default(self):
+        r_default = generate_breath_cycles(NORMAL_PARAMS, n_cycles=12, seed=59)
+        p_explicit = {**NORMAL_PARAMS, "circuit_compensated": True}
+        r_explicit = generate_breath_cycles(p_explicit, n_cycles=12, seed=59)
+        assert r_default["delivered_vt_ml"] == pytest.approx(
+            r_explicit["delivered_vt_ml"], abs=1e-6
+        )
+
+    # -- chest_wall_compliance_ml_per_cmH2O ---------------------------------
+
+    def test_restrictive_chest_wall_requires_higher_driving_pressure(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=12, seed=60)
+        p_restricted = {**NORMAL_PARAMS,
+                         "chest_wall_compliance_ml_per_cmH2O": 30.0}
+        r_restricted = generate_breath_cycles(p_restricted, n_cycles=12, seed=60)
+        assert r_restricted["driving_p_cmH2O"] > r_normal["driving_p_cmH2O"]
+
+    def test_more_restrictive_chest_wall_raises_driving_pressure_further(self):
+        p_mild = {**NORMAL_PARAMS, "chest_wall_compliance_ml_per_cmH2O": 60.0}
+        p_severe = {**NORMAL_PARAMS, "chest_wall_compliance_ml_per_cmH2O": 20.0}
+        r_mild = generate_breath_cycles(p_mild, n_cycles=12, seed=61)
+        r_severe = generate_breath_cycles(p_severe, n_cycles=12, seed=61)
+        assert r_severe["driving_p_cmH2O"] > r_mild["driving_p_cmH2O"]
+
+    # -- recruitment_slope override -----------------------------------------
+
+    def test_recruitment_slope_override_beats_copd_zero_default(self):
+        p_low_peep = {**COPD_PARAMS, "peep_cmH2O": 5, "recruitment_slope": 2.0}
+        p_high_peep = {**p_low_peep, "peep_cmH2O": 15}
+        r_low = generate_breath_cycles(p_low_peep, n_cycles=12, seed=62)
+        r_high = generate_breath_cycles(p_high_peep, n_cycles=12, seed=62)
+        assert r_high["driving_p_cmH2O"] < r_low["driving_p_cmH2O"]
+
+    def test_recruitment_slope_default_matches_condition_lookup(self):
+        p_implicit = {**MODERATE_ARDS_PARAMS, "peep_cmH2O": 15}
+        p_explicit = {**p_implicit,
+                      "recruitment_slope": RECRUITMENT_SLOPES["Moderate ARDS"]}
+        r_implicit = generate_breath_cycles(p_implicit, n_cycles=12, seed=63)
+        r_explicit = generate_breath_cycles(p_explicit, n_cycles=12, seed=63)
+        assert r_implicit["driving_p_cmH2O"] == pytest.approx(
+            r_explicit["driving_p_cmH2O"], abs=1e-6
+        )
+
+    # -- peep_reference_cmH2O override --------------------------------------
+
+    def test_peep_reference_override_suppresses_recruitment(self):
+        base = {**MODERATE_ARDS_PARAMS, "peep_cmH2O": 10}
+        r_default_ref = generate_breath_cycles(base, n_cycles=12, seed=64)
+        p_high_ref = {**base, "peep_reference_cmH2O": 12.0}
+        r_high_ref = generate_breath_cycles(p_high_ref, n_cycles=12, seed=64)
+        assert r_high_ref["driving_p_cmH2O"] > r_default_ref["driving_p_cmH2O"]
+
+    def test_lower_peep_reference_extends_recruitment_range(self):
+        base = {**MODERATE_ARDS_PARAMS, "peep_cmH2O": 10,
+                "peep_reference_cmH2O": 5.0}
+        p_low_ref = {**base, "peep_reference_cmH2O": 0.0}
+        r_normal_ref = generate_breath_cycles(base, n_cycles=12, seed=65)
+        r_low_ref = generate_breath_cycles(p_low_ref, n_cycles=12, seed=65)
+        assert r_low_ref["driving_p_cmH2O"] < r_normal_ref["driving_p_cmH2O"]
+# ---------------------------------------------------------------------------
+# Class 9 — Physiological directions
 # ---------------------------------------------------------------------------
 
 class TestPhysiologicalDirections:
@@ -637,7 +716,7 @@ class TestPhysiologicalDirections:
         assert r_broncho["ppeak_cmH2O"] > r_normal["ppeak_cmH2O"]
 
 # ---------------------------------------------------------------------------
-# Class 9 — Validity filter
+# Class 10 — Validity filter
 # ---------------------------------------------------------------------------
 
 class TestValidityFilter:
@@ -677,7 +756,7 @@ class TestValidityFilter:
 
 
 # ---------------------------------------------------------------------------
-# Class 10 — Dataset generation
+# Class 11 — Dataset generation
 # ---------------------------------------------------------------------------
 
 class TestDatasetGeneration:
@@ -779,7 +858,7 @@ class TestDatasetGeneration:
             assert s["params"]["vt_tolerance_frac"] == PARAMETER_GRID["vt_tolerance_frac"][0]
 
 # ---------------------------------------------------------------------------
-# Class 11 — Parameter grid
+# Class 12 — Parameter grid
 # ---------------------------------------------------------------------------
 
 class TestParameterGrid:

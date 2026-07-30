@@ -23,6 +23,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from generator.vcv_generator import (
+    CIRCUIT_COMPLIANCE_ML_PER_CMH2O,
     DRIVING_P_MAX_CMHH2O,
     COMPARTMENT_PROFILES,
     IBW_KG,
@@ -529,10 +530,151 @@ class TestMultiCompartmentMechanics:
         r_normal = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=3)
         r_broncho = generate_breath_cycles(p_broncho, n_cycles=3)
         assert r_broncho["ppeak_cmH2O"] > r_normal["ppeak_cmH2O"] + 5.0
+# ---------------------------------------------------------------------------
+# Class 5 — Mechanics refinement parameters
+# ---------------------------------------------------------------------------
 
+class TestMechanicsRefinementParameters:
+    """
+    Documented optional refinement params (circuit_compensated,
+    chest_wall_compliance_ml_per_cmH2O, recruitment_slope,
+    peep_reference_cmH2O) that have interface-contract coverage but no
+    dedicated behavioral tests.
+    """
+
+    # -- circuit_compensated ------------------------------------------------
+
+    def test_circuit_compensated_false_reduces_delivered_vt(self):
+        r_comp = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=3)
+        p_uncomp = {**NORMAL_PARAMS_SQR, "circuit_compensated": False}
+        r_uncomp = generate_breath_cycles(p_uncomp, n_cycles=3)
+        assert r_uncomp["delivered_vt_ml"] < r_comp["delivered_vt_ml"]
+
+    def test_circuit_compensated_true_matches_default(self):
+        r_default = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=3)
+        p_explicit = {**NORMAL_PARAMS_SQR, "circuit_compensated": True}
+        r_explicit = generate_breath_cycles(p_explicit, n_cycles=3)
+        assert r_default["delivered_vt_ml"] == pytest.approx(
+            r_explicit["delivered_vt_ml"], abs=1e-6
+        )
+
+    def test_circuit_uncompensated_loss_matches_formula(self):
+        """circuit_loss = C_circ * (ppeak - peep); ppeak itself is computed
+        before the correction, so it's identical between the two runs."""
+        r_comp = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=3)
+        p_uncomp = {**NORMAL_PARAMS_SQR, "circuit_compensated": False}
+        r_uncomp = generate_breath_cycles(p_uncomp, n_cycles=3)
+        expected_loss = CIRCUIT_COMPLIANCE_ML_PER_CMH2O * (
+            r_comp["ppeak_cmH2O"] - NORMAL_PARAMS_SQR["peep_cmH2O"]
+        )
+        actual_loss = r_comp["delivered_vt_ml"] - r_uncomp["delivered_vt_ml"]
+        assert actual_loss == pytest.approx(expected_loss, abs=1.0)
+
+    def test_uncompensated_loss_scales_with_driving_pressure(self):
+        """Higher Ppeak-PEEP gap -> more circuit compliance loss."""
+        p_comp_low = {**NORMAL_PARAMS_SQR, "tidal_volume_ml": 300}
+        p_comp_high = {**NORMAL_PARAMS_SQR, "tidal_volume_ml": 700}
+        p_uncomp_low = {**p_comp_low, "circuit_compensated": False}
+        p_uncomp_high = {**p_comp_high, "circuit_compensated": False}
+        r_comp_low = generate_breath_cycles(p_comp_low, n_cycles=3)
+        r_comp_high = generate_breath_cycles(p_comp_high, n_cycles=3)
+        r_uncomp_low = generate_breath_cycles(p_uncomp_low, n_cycles=3)
+        r_uncomp_high = generate_breath_cycles(p_uncomp_high, n_cycles=3)
+        loss_low = r_comp_low["delivered_vt_ml"] - r_uncomp_low["delivered_vt_ml"]
+        loss_high = r_comp_high["delivered_vt_ml"] - r_uncomp_high["delivered_vt_ml"]
+        assert loss_high > loss_low
+
+    # -- chest_wall_compliance_ml_per_cmH2O ---------------------------------
+
+    def test_restrictive_chest_wall_raises_ppeak(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=3)
+        p_restricted = {**NORMAL_PARAMS_SQR,
+                         "chest_wall_compliance_ml_per_cmH2O": 30.0}
+        r_restricted = generate_breath_cycles(p_restricted, n_cycles=3)
+        assert r_restricted["ppeak_cmH2O"] > r_normal["ppeak_cmH2O"]
+
+    def test_more_restrictive_chest_wall_raises_ppeak_further(self):
+        p_mild = {**NORMAL_PARAMS_SQR, "chest_wall_compliance_ml_per_cmH2O": 60.0}
+        p_severe = {**NORMAL_PARAMS_SQR, "chest_wall_compliance_ml_per_cmH2O": 20.0}
+        r_mild = generate_breath_cycles(p_mild, n_cycles=3)
+        r_severe = generate_breath_cycles(p_severe, n_cycles=3)
+        assert r_severe["ppeak_cmH2O"] > r_mild["ppeak_cmH2O"]
+
+    def test_higher_chest_wall_compliance_lowers_ppeak_vs_default(self):
+        """Moving toward the fully-inert special case (_C_rs treats
+        C_chest>=9000 as C_chest->inf) should lower Ppeak vs the default
+        250 — direction only, since 250 isn't actually close to 9000."""
+        r_default = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=3)
+        p_more_inert = {**NORMAL_PARAMS_SQR,
+                         "chest_wall_compliance_ml_per_cmH2O": 9000.0}
+        r_more_inert = generate_breath_cycles(p_more_inert, n_cycles=3)
+        assert r_more_inert["ppeak_cmH2O"] < r_default["ppeak_cmH2O"]
+
+    # -- recruitment_slope override -----------------------------------------
+
+    def test_recruitment_slope_override_beats_copd_zero_default(self):
+        """COPD's default slope is 0.0 (no PEEP recruitment). An explicit
+        override should be honored instead of the condition lookup."""
+        p_low_peep = {**NORMAL_PARAMS_SQR, "condition": "COPD",
+                      "compliance_ml_per_cmH2O": 100.0,
+                      "resistance_cmH2O_L_s": 22.0,
+                      "peep_cmH2O": 5, "recruitment_slope": 2.0}
+        p_high_peep = {**p_low_peep, "peep_cmH2O": 15}
+        r_low = generate_breath_cycles(p_low_peep, n_cycles=3)
+        r_high = generate_breath_cycles(p_high_peep, n_cycles=3)
+        assert r_high["driving_p_cmH2O"] < r_low["driving_p_cmH2O"]
+
+    def test_recruitment_slope_zero_override_removes_ards_recruitment(self):
+        """Moderate ARDS's default slope is 0.90 (strong). Overriding to
+        0.0 should remove the PEEP-recruitment benefit."""
+        p_low_peep = {**NORMAL_PARAMS_SQR, "condition": "Moderate ARDS",
+                      "compliance_ml_per_cmH2O": 32.0,
+                      "resistance_cmH2O_L_s": 14.0,
+                      "peep_cmH2O": 5, "recruitment_slope": 0.0}
+        p_high_peep = {**p_low_peep, "peep_cmH2O": 15}
+        r_low = generate_breath_cycles(p_low_peep, n_cycles=3)
+        r_high = generate_breath_cycles(p_high_peep, n_cycles=3)
+        assert r_high["driving_p_cmH2O"] >= r_low["driving_p_cmH2O"] - 1.0
+
+    def test_recruitment_slope_default_matches_condition_lookup(self):
+        """Omitting recruitment_slope should behave identically to passing
+        RECRUITMENT_SLOPES[condition] explicitly."""
+        p_implicit = {**NORMAL_PARAMS_SQR, "condition": "Moderate ARDS",
+                      "compliance_ml_per_cmH2O": 32.0,
+                      "resistance_cmH2O_L_s": 14.0, "peep_cmH2O": 15}
+        p_explicit = {**p_implicit,
+                      "recruitment_slope": RECRUITMENT_SLOPES["Moderate ARDS"]}
+        r_implicit = generate_breath_cycles(p_implicit, n_cycles=3)
+        r_explicit = generate_breath_cycles(p_explicit, n_cycles=3)
+        assert r_implicit["driving_p_cmH2O"] == pytest.approx(
+            r_explicit["driving_p_cmH2O"], abs=1e-6
+        )
+
+    # -- peep_reference_cmH2O override --------------------------------------
+
+    def test_peep_reference_override_suppresses_recruitment(self):
+        """Raising peep_reference above the set PEEP means delta_peep<=0,
+        so recruitment shouldn't fire even for a condition that normally
+        recruits at this PEEP."""
+        base = {**NORMAL_PARAMS_SQR, "condition": "Moderate ARDS",
+                "compliance_ml_per_cmH2O": 32.0, "resistance_cmH2O_L_s": 14.0,
+                "peep_cmH2O": 10}
+        r_default_ref = generate_breath_cycles(base, n_cycles=3)  # ref=5, PEEP=10 -> recruits
+        p_high_ref = {**base, "peep_reference_cmH2O": 12.0}       # PEEP=10 < 12 -> no recruitment
+        r_high_ref = generate_breath_cycles(p_high_ref, n_cycles=3)
+        assert r_high_ref["driving_p_cmH2O"] > r_default_ref["driving_p_cmH2O"]
+
+    def test_lower_peep_reference_extends_recruitment_range(self):
+        base = {**NORMAL_PARAMS_SQR, "condition": "Moderate ARDS",
+                "compliance_ml_per_cmH2O": 32.0, "resistance_cmH2O_L_s": 14.0,
+                "peep_cmH2O": 10, "peep_reference_cmH2O": 5.0}
+        p_low_ref = {**base, "peep_reference_cmH2O": 0.0}
+        r_normal_ref = generate_breath_cycles(base, n_cycles=3)
+        r_low_ref = generate_breath_cycles(p_low_ref, n_cycles=3)
+        assert r_low_ref["driving_p_cmH2O"] < r_normal_ref["driving_p_cmH2O"]
 
 # ---------------------------------------------------------------------------
-# Class 5 — ETT complications
+# Class 6 — ETT complications
 # ---------------------------------------------------------------------------
 
 class TestETTComplications:
@@ -621,7 +763,7 @@ class TestETTComplications:
 
 
 # ---------------------------------------------------------------------------
-# Class 6 — Physiological directions
+# Class 7 — Physiological directions
 # ---------------------------------------------------------------------------
 
 class TestPhysiologicalDirections:
@@ -686,7 +828,7 @@ class TestPhysiologicalDirections:
         r_short = generate_breath_cycles(p_short_exp, n_cycles=10)
         assert r_short["auto_peep_cmH2O"] >= r_long["auto_peep_cmH2O"] - 0.1
 # ---------------------------------------------------------------------------
-# Class 7 — Validity filter
+# Class 8 — Validity filter
 # ---------------------------------------------------------------------------
 
 class TestValidityFilter:
@@ -779,7 +921,7 @@ class TestValidityFilter:
 
 
 # ---------------------------------------------------------------------------
-# Class 8 — Dataset generation
+# Class 9 — Dataset generation
 # ---------------------------------------------------------------------------
 
 class TestDatasetGeneration:
@@ -925,7 +1067,7 @@ class TestDatasetGeneration:
             f"All scenarios should use C=60, got {compliances}"
         )
 # ---------------------------------------------------------------------------
-# Class 9 — Parameter grid
+# Class 10 — Parameter grid
 # ---------------------------------------------------------------------------
 
 class TestParameterGrid:

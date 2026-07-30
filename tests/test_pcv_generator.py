@@ -32,6 +32,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from generator.pcv_generator import (
+    CIRCUIT_COMPLIANCE_ML_PER_CMH2O,
     COMPARTMENT_PROFILES,
     FILL_FRACTION_MIN,
     IBW_KG,
@@ -510,14 +511,6 @@ class TestMultiCompartmentMechanics:
         result = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
         assert result["auto_peep_cmH2O"] < 1.0
 
-    def test_severe_ards_delivered_vt_below_normal_at_same_pip(self):
-        """Baby lung -> lower compliance compartment dominates fill ->
-        less delivered VT than Normal at the same PIP."""
-        p_ards = {**NORMAL_PARAMS, "condition": "Severe ARDS"}
-        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1)
-        r_ards = generate_breath_cycles(p_ards, n_cycles=1)
-        assert r_ards["delivered_vt_ml"] < r_normal["delivered_vt_ml"]
-
     def test_bronchospasm_fill_fraction_below_normal(self):
         p_broncho = {**NORMAL_PARAMS, "condition": "Bronchospasm",
                      "resistance_cmH2O_L_s": 35.0}
@@ -525,9 +518,135 @@ class TestMultiCompartmentMechanics:
         r_broncho = generate_breath_cycles(p_broncho, n_cycles=1)
         assert r_broncho["fill_fraction"] < r_normal["fill_fraction"]
 
+# ---------------------------------------------------------------------------
+# Class 5 — Mechanics refinement parameters
+# ---------------------------------------------------------------------------
+
+class TestMechanicsRefinementParameters:
+    """
+    Same documented refinement params as VCV, but PIP is prescribed in PCV
+    (Ppeak is fixed by PIP+PEEP), so effects surface in delivered_vt_ml
+    rather than ppeak for chest wall / recruitment.
+    """
+
+    # -- circuit_compensated ------------------------------------------------
+
+    def test_circuit_compensated_false_reduces_delivered_vt(self):
+        r_comp = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1)
+        p_uncomp = {**NORMAL_PARAMS, "circuit_compensated": False}
+        r_uncomp = generate_breath_cycles(p_uncomp, n_cycles=1)
+        assert r_uncomp["delivered_vt_ml"] < r_comp["delivered_vt_ml"]
+
+    def test_circuit_compensated_true_matches_default(self):
+        r_default = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1)
+        p_explicit = {**NORMAL_PARAMS, "circuit_compensated": True}
+        r_explicit = generate_breath_cycles(p_explicit, n_cycles=1)
+        assert r_default["delivered_vt_ml"] == pytest.approx(
+            r_explicit["delivered_vt_ml"], abs=1e-6
+        )
+
+    def test_circuit_uncompensated_loss_matches_formula(self):
+        r_comp = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1)
+        p_uncomp = {**NORMAL_PARAMS, "circuit_compensated": False}
+        r_uncomp = generate_breath_cycles(p_uncomp, n_cycles=1)
+        expected_loss = CIRCUIT_COMPLIANCE_ML_PER_CMH2O * (
+            r_comp["ppeak_cmH2O"] - NORMAL_PARAMS["peep_cmH2O"]
+        )
+        actual_loss = r_comp["delivered_vt_ml"] - r_uncomp["delivered_vt_ml"]
+        assert actual_loss == pytest.approx(expected_loss, abs=1.0)
+
+    def test_uncompensated_loss_scales_with_driving_pressure(self):
+        p_comp_low = {**NORMAL_PARAMS, "insp_pressure_cmH2O": 8}
+        p_comp_high = {**NORMAL_PARAMS, "insp_pressure_cmH2O": 20}
+        p_uncomp_low = {**p_comp_low, "circuit_compensated": False}
+        p_uncomp_high = {**p_comp_high, "circuit_compensated": False}
+        r_comp_low = generate_breath_cycles(p_comp_low, n_cycles=1)
+        r_comp_high = generate_breath_cycles(p_comp_high, n_cycles=1)
+        r_uncomp_low = generate_breath_cycles(p_uncomp_low, n_cycles=1)
+        r_uncomp_high = generate_breath_cycles(p_uncomp_high, n_cycles=1)
+        loss_low = r_comp_low["delivered_vt_ml"] - r_uncomp_low["delivered_vt_ml"]
+        loss_high = r_comp_high["delivered_vt_ml"] - r_uncomp_high["delivered_vt_ml"]
+        assert loss_high > loss_low
+
+    # -- chest_wall_compliance_ml_per_cmH2O ---------------------------------
+
+    def test_restrictive_chest_wall_reduces_delivered_vt(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1)
+        p_restricted = {**NORMAL_PARAMS,
+                         "chest_wall_compliance_ml_per_cmH2O": 30.0}
+        r_restricted = generate_breath_cycles(p_restricted, n_cycles=1)
+        assert r_restricted["delivered_vt_ml"] < r_normal["delivered_vt_ml"]
+
+    def test_more_restrictive_chest_wall_reduces_vt_further(self):
+        p_mild = {**NORMAL_PARAMS, "chest_wall_compliance_ml_per_cmH2O": 60.0}
+        p_severe = {**NORMAL_PARAMS, "chest_wall_compliance_ml_per_cmH2O": 20.0}
+        r_mild = generate_breath_cycles(p_mild, n_cycles=1)
+        r_severe = generate_breath_cycles(p_severe, n_cycles=1)
+        assert r_severe["delivered_vt_ml"] < r_mild["delivered_vt_ml"]
+
+    def test_higher_chest_wall_compliance_raises_vt_vs_default(self):
+        r_default = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1)
+        p_more_inert = {**NORMAL_PARAMS,
+                         "chest_wall_compliance_ml_per_cmH2O": 9000.0}
+        r_more_inert = generate_breath_cycles(p_more_inert, n_cycles=1)
+        assert r_more_inert["delivered_vt_ml"] > r_default["delivered_vt_ml"]
+
+    # -- recruitment_slope override -----------------------------------------
+
+    def test_recruitment_slope_override_beats_copd_zero_default(self):
+        p_low_peep = {**NORMAL_PARAMS, "condition": "COPD",
+                      "compliance_ml_per_cmH2O": 100.0,
+                      "resistance_cmH2O_L_s": 22.0,
+                      "peep_cmH2O": 5, "recruitment_slope": 2.0}
+        p_high_peep = {**p_low_peep, "peep_cmH2O": 15}
+        r_low = generate_breath_cycles(p_low_peep, n_cycles=1)
+        r_high = generate_breath_cycles(p_high_peep, n_cycles=1)
+        assert r_high["delivered_vt_ml"] > r_low["delivered_vt_ml"]
+
+    def test_recruitment_slope_zero_override_removes_ards_recruitment(self):
+        p_low_peep = {**NORMAL_PARAMS, "condition": "Moderate ARDS",
+                      "compliance_ml_per_cmH2O": 32.0,
+                      "resistance_cmH2O_L_s": 14.0,
+                      "peep_cmH2O": 5, "recruitment_slope": 0.0}
+        p_high_peep = {**p_low_peep, "peep_cmH2O": 15}
+        r_low = generate_breath_cycles(p_low_peep, n_cycles=1)
+        r_high = generate_breath_cycles(p_high_peep, n_cycles=1)
+        assert r_high["delivered_vt_ml"] <= r_low["delivered_vt_ml"] + 5.0
+
+    def test_recruitment_slope_default_matches_condition_lookup(self):
+        p_implicit = {**NORMAL_PARAMS, "condition": "Moderate ARDS",
+                      "compliance_ml_per_cmH2O": 32.0,
+                      "resistance_cmH2O_L_s": 14.0, "peep_cmH2O": 15}
+        p_explicit = {**p_implicit,
+                      "recruitment_slope": RECRUITMENT_SLOPES["Moderate ARDS"]}
+        r_implicit = generate_breath_cycles(p_implicit, n_cycles=1)
+        r_explicit = generate_breath_cycles(p_explicit, n_cycles=1)
+        assert r_implicit["delivered_vt_ml"] == pytest.approx(
+            r_explicit["delivered_vt_ml"], abs=1e-6
+        )
+
+    # -- peep_reference_cmH2O override --------------------------------------
+
+    def test_peep_reference_override_suppresses_recruitment(self):
+        base = {**NORMAL_PARAMS, "condition": "Moderate ARDS",
+                "compliance_ml_per_cmH2O": 32.0, "resistance_cmH2O_L_s": 14.0,
+                "peep_cmH2O": 10}
+        r_default_ref = generate_breath_cycles(base, n_cycles=1)
+        p_high_ref = {**base, "peep_reference_cmH2O": 12.0}
+        r_high_ref = generate_breath_cycles(p_high_ref, n_cycles=1)
+        assert r_high_ref["delivered_vt_ml"] < r_default_ref["delivered_vt_ml"]
+
+    def test_lower_peep_reference_extends_recruitment_range(self):
+        base = {**NORMAL_PARAMS, "condition": "Moderate ARDS",
+                "compliance_ml_per_cmH2O": 32.0, "resistance_cmH2O_L_s": 14.0,
+                "peep_cmH2O": 10, "peep_reference_cmH2O": 5.0}
+        p_low_ref = {**base, "peep_reference_cmH2O": 0.0}
+        r_normal_ref = generate_breath_cycles(base, n_cycles=1)
+        r_low_ref = generate_breath_cycles(p_low_ref, n_cycles=1)
+        assert r_low_ref["delivered_vt_ml"] > r_normal_ref["delivered_vt_ml"]
 
 # ---------------------------------------------------------------------------
-# Class 5 — ETT complications
+# Class 6 — ETT complications
 # ---------------------------------------------------------------------------
 
 class TestETTComplications:
@@ -604,7 +723,7 @@ class TestETTComplications:
 
 
 # ---------------------------------------------------------------------------
-# Class 6 — Physiological directions
+# Class 7 — Physiological directions
 # ---------------------------------------------------------------------------
 
 class TestPhysiologicalDirections:
@@ -650,11 +769,17 @@ class TestPhysiologicalDirections:
         assert r_long["fill_fraction"] >= r_short["fill_fraction"] - 0.02
 
     def test_severe_ards_delivered_vt_below_normal_at_same_pip(self):
-        p_ards = {**NORMAL_PARAMS, "condition": "Severe ARDS"}
+        """Baby lung -> globally stiffer + heterogeneous compartments ->
+        less delivered VT than Normal at the same PIP."""
+        p_ards = {**NORMAL_PARAMS, "condition": "Severe ARDS",
+                  "compliance_ml_per_cmH2O": 18.0,
+                  "resistance_cmH2O_L_s": 16.0}
         r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1)
         r_ards = generate_breath_cycles(p_ards, n_cycles=1)
-        assert r_ards["delivered_vt_ml"] < r_normal["delivered_vt_ml"]
-
+        assert r_ards["delivered_vt_ml"] < r_normal["delivered_vt_ml"] - 20.0, (
+            f"ARDS={r_ards['delivered_vt_ml']:.1f} "
+            f"Normal={r_normal['delivered_vt_ml']:.1f}"
+        )
     def test_ppeak_independent_of_resistance(self):
         p_low_r = {**NORMAL_PARAMS, "resistance_cmH2O_L_s": 5.0}
         p_high_r = {**NORMAL_PARAMS, "resistance_cmH2O_L_s": 30.0}
@@ -669,7 +794,7 @@ class TestPhysiologicalDirections:
         r_fast = generate_breath_cycles(p_fast, n_cycles=1)
         assert r_fast["minute_vent_l"] > r_slow["minute_vent_l"]
 # ---------------------------------------------------------------------------
-# Class 7 — Validity filter
+# Class 8 — Validity filter
 # ---------------------------------------------------------------------------
 
 class TestValidityFilter:
@@ -779,7 +904,7 @@ class TestValidityFilter:
 
 
 # ---------------------------------------------------------------------------
-# Class 8 — Dataset generation
+# Class 9 — Dataset generation
 # ---------------------------------------------------------------------------
 
 class TestDatasetGeneration:
@@ -946,7 +1071,7 @@ class TestDatasetGeneration:
                     "time_to_peak_flow_s must be present in PCV metrics"
                 )
 # ---------------------------------------------------------------------------
-# Class 9 — Parameter grid
+# Class 10 — Parameter grid
 # ---------------------------------------------------------------------------
 
 class TestParameterGrid:
