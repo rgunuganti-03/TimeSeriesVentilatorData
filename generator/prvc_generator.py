@@ -756,6 +756,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
         "pressure_trajectory": pressure_trajectory,
         "delivered_vt_trajectory": delivered_vt_trajectory,
         "ppeak_cmH2O": ppeak,
+        "ppeak_final_breath_cmH2O": ppeak_final_breath, 
         "delivered_vt_ml": delivered_vt_final,
         "driving_p_cmH2O": driving_p,
         "mean_paw_cmH2O": mean_paw,

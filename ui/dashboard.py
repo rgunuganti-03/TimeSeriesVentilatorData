@@ -90,6 +90,8 @@ IE_OPTIONS = {
     "1:1  (ie = 1.0)": 1.0,
     "1:2  (ie = 0.5)": 0.5,
     "1:3  (ie = 0.33)": 0.33,
+    "1:4  (ie = 0.25)": 0.25,
+    "1:5  (ie = 0.20)": 0.20,
 }
 
 
@@ -963,9 +965,10 @@ def render_metrics(result, params, engine_key):
         driving_p    = result["driving_p_cmH2O"]
         minute_vent  = result["minute_vent_l"]
         breaths_conv = result["breaths_to_converge"]
+        ppeak_final  = result["ppeak_final_breath_cmH2O"]
 
         metrics = [
-            ("PPeak",              f"{peak_p:.1f}",       "cmH₂O"),
+            ("PPeak",              f"{ppeak_final:.1f}",       "cmH₂O"),
             ("Delivered VT",       f"{delivered_vt:.0f}", "ml"),
             ("Driving P (final)",  f"{driving_p:.1f}",    "cmH₂O"),
             ("P Mean",             f"{mean_paw:.1f}",     "cmH₂O"),

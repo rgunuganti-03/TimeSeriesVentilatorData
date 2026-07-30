@@ -374,7 +374,29 @@ class TestSynchronizationWindow:
     prevention), classified as synchronized or time-triggered depending on
     whether patient effort fell inside the window.
     """
-
+    def test_no_zero_gap_retrigger_after_mandatory_breath(self):
+        """Regression test for the breath-stacking bug: a scheduled
+        patient-effort attempt that fell inside a mandatory breath's own
+        inspiration used to get clamped to the mandatory breath's end time
+        exactly, firing a second breath with zero expiratory time between
+        them. Use hard-to-trigger effort (forces most/all mandatory breaths
+        to be time-triggered) with a fast effort rate and narrow window
+        (maximizes the chance a scheduled attempt lands inside a mandatory
+        breath's inspiratory window) to reliably exercise the bug path."""
+        p = {**NORMAL_PARAMS_VC, "effort_rate_per_min": 30.0,
+             "pmus_peak_cmH2O": 3.0, "trigger_threshold_cmH2O": 2.5,
+             "f_window": 0.15}
+        result = generate_breath_cycles(p, n_cycles=10, seed=21)
+        records = result["breath_records"]
+        for prev, nxt in zip(records, records[1:]):
+            prev_end = prev["t_start_s"] + prev["duration_s"]
+            gap = nxt["t_start_s"] - prev_end
+            assert gap >= -1e-6, (
+                f"Breath started before the previous one ended: "
+                f"prev end={prev_end:.3f}s, next start={nxt['t_start_s']:.3f}s "
+                f"(prev={prev['breath_type']}/{prev['trigger_mode']}, "
+                f"next={nxt['breath_type']}/{nxt['trigger_mode']})"
+            )
     def test_exactly_one_mandatory_breath_per_macrocycle(self):
         """No breath-stacking: n_mandatory_breaths == n_cycles always,
         regardless of effort rate."""
@@ -629,6 +651,29 @@ class TestMultiCompartmentMechanics:
         assert result["n_compartments"] == n_expected
 
     @pytest.mark.parametrize("condition,n_expected", list(EXPECTED_COMPARTMENTS.items()))
+
+    def test_mandatory_vt_unaffected_by_carried_over_volume(self):
+        """Regression test: delivered_vt_ml must reflect only the volume
+        this breath added, not the compartment volume it started from.
+        Provoke meaningful auto-PEEP (high resistance relative to
+        expiratory time) and confirm mandatory VT still tracks the VC
+        target rather than inflating with the trapped volume."""
+        p = {**NORMAL_PARAMS_VC, "condition": "COPD",
+             "compliance_ml_per_cmH2O": 100.0, "resistance_cmH2O_L_s": 30.0,
+             "respiratory_rate": 20.0, "tidal_volume_ml": 500.0,
+             "pmus_peak_cmH2O": 2.0, "trigger_threshold_cmH2O": 5.0}
+        result = generate_breath_cycles(p, n_cycles=10, seed=22)
+        assert result["auto_peep_cmH2O"] > 2.0, (
+            "Fixture should provoke meaningful auto-PEEP to actually test "
+            f"this; got {result['auto_peep_cmH2O']:.2f} cmH2O — adjust "
+            "resistance/RR if this fails on an otherwise-correct generator"
+        )
+        target = p["tidal_volume_ml"]
+        assert abs(result["mandatory_delivered_vt_ml"] - target) < 0.25 * target, (
+            f"Mandatory VT {result['mandatory_delivered_vt_ml']:.0f} mL "
+            f"strayed too far from the {target:.0f} mL VC target under "
+            f"auto-PEEP — delivered_vt_ml may be including carried-over volume"
+        )
     def test_generator_reports_correct_n_compartments_pc(self, condition, n_expected):
         result = generate_breath_cycles(
             {**NORMAL_PARAMS_PC, "condition": condition}, n_cycles=3, seed=33)

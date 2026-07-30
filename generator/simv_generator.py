@@ -144,7 +144,7 @@ Output dict keys
 
     Per-breath records (list of dicts, length = total breaths delivered):
         breath_records — each: {"breath_type", "trigger_mode",
-        "dyssynchrony_label", "delivered_vt_ml", "ppeak_cmH2O", "t_start_s"}
+        "dyssynchrony_label", "delivered_vt_ml", "ppeak_cmH2O", "t_start_s","duration_s"}
 
     Scalar metrics:
         n_mandatory_breaths, n_spontaneous_breaths,
@@ -372,6 +372,25 @@ def _check_trigger(pmus_at_onset: float, auto_peep: float, threshold: float) -> 
     """
     return (pmus_at_onset - auto_peep) >= threshold
 
+def _advance_schedule(next_attempt_t: float, floor_t: float, interval: float) -> float:
+    """
+    Advance a periodic patient-effort schedule to the first slot at or after
+    floor_t, preserving the schedule's original neural phase rather than
+    snapping it to floor_t.
+
+    Bug this fixes: previously, when a scheduled attempt fell inside a
+    mandatory breath's own inspiration/pause, the schedule was clamped to
+    the mandatory breath's end time exactly (`max(next_attempt_t, t_current)`),
+    producing a zero-gap re-trigger — a spontaneous breath firing in the
+    same instant the mandatory breath's inspiration ended, with no passive
+    expiratory time between them. Advancing by whole `interval` steps
+    instead guarantees the next attempt is strictly in the future and stays
+    on the patient's original neural timing.
+    """
+    while next_attempt_t <= floor_t + 1e-9:
+        next_attempt_t += interval
+    return next_attempt_t
+
 
 def _pmus_waveform(t_elapsed: float, t_duration: float, pmus_peak: float) -> float:
     """Half-sinusoidal Pmus profile for a single inspiratory effort."""
@@ -561,6 +580,7 @@ def _run_mandatory_vc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
     """One VC mandatory breath: prescribed-flow inspiration + inspiratory
     pause, algebraic branch-point solve each step (vcv_generator physics)."""
     n_comps = comps["n_comps"]
+    V_start = float(V_comps.sum()) 
     n_insp  = max(2, int(round(t_insp / DT)))
     n_pause = max(1, int(round(INSPIRATORY_PAUSE_S / DT)))
 
@@ -615,7 +635,7 @@ def _run_mandatory_vc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
         "t_rel": t_rel, "pressure": Pao, "flow": Q_tot, "volume": V_tot,
         "V_comps": V_comps, "duration": t_insp + INSPIRATORY_PAUSE_S,
         "ppeak_cmH2O": float(Pao.max()), "pplat_cmH2O": float(Pao[-1]),
-        "delivered_vt_ml": float(V_tot[n_insp - 1]),
+        "delivered_vt_ml": float(V_tot[n_insp - 1]) - V_start,
     }
 
 
@@ -628,6 +648,7 @@ def _run_mandatory_pc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
     only; expiration handled generically), per-compartment ODE (pcv_generator
     physics)."""
     n_comps = comps["n_comps"]
+    V_start = float(V_comps.sum()) 
     t_rise_capped = min(t_rise, t_insp * 0.5)
     PIP = peep + insp_pressure
     n_insp = max(2, int(round(t_insp / DT)))
@@ -679,7 +700,7 @@ def _run_mandatory_pc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
         "t_rel": t_rel, "pressure": Pao, "flow": Q_tot, "volume": V_tot,
         "V_comps": V_comps, "duration": t_insp,
         "ppeak_cmH2O": float(Pao.max()), "pplat_cmH2O": PIP,
-        "delivered_vt_ml": float(V_tot[-1]),
+        "delivered_vt_ml": float(V_tot[-1]) - V_start,
     }
 
 
@@ -693,6 +714,7 @@ def _run_spontaneous_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: floa
     flow-cycled off, per-compartment ODE with combined ventilator + patient
     driving pressure (psv_generator physics)."""
     n_comps = comps["n_comps"]
+    V_start = float(V_comps.sum()) 
     t_list: List[float] = []
     Pao_list: List[float] = []
     Q_list: List[float] = []
@@ -755,7 +777,7 @@ def _run_spontaneous_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: floa
         "flow": np.array(Q_list), "volume": np.array(V_list),
         "V_comps": V_comps, "duration": t,
         "ppeak_cmH2O": float(max(Pao_list)) if Pao_list else peep,
-        "delivered_vt_ml": float(V_list[-1]) if V_list else 0.0,
+        "delivered_vt_ml": (float(V_list[-1]) - V_start) if V_list else 0.0,
         "Q_peak_insp": Q_peak_insp, "Q_at_trigger": Q_at_trigger,
         "insp_ended_by_reversal": insp_ended_by_reversal,
     }
@@ -937,12 +959,13 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 "dyssynchrony_label": "controlled",
                 "delivered_vt_ml": delivered_vt,
                 "ppeak_cmH2O": seg["ppeak_cmH2O"], "t_start_s": t_current,
+                "duration_s": seg["duration"],
             })
             V_comps = seg["V_comps"]
             t_mand_start = t_current
             t_current = t_current + seg["duration"]
             mandatory_count += 1
-            next_attempt_t = max(next_attempt_t, t_current)
+            next_attempt_t = _advance_schedule(next_attempt_t, t_current, attempt_interval)
             continue
 
         # Advance passive/idle time up to the sooner of: next effort attempt,
@@ -988,12 +1011,13 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 "dyssynchrony_label": "controlled",
                 "delivered_vt_ml": delivered_vt,
                 "ppeak_cmH2O": seg["ppeak_cmH2O"], "t_start_s": t_current,
+                "duration_s": seg["duration"],
             })
             V_comps = seg["V_comps"]
             t_mand_start = attempt_onset_t
             t_current = attempt_onset_t + seg["duration"]
             mandatory_count += 1
-            next_attempt_t = max(attempt_onset_t + attempt_interval, t_current)
+            next_attempt_t = _advance_schedule(next_attempt_t, t_current, attempt_interval)
             continue
 
         if triggered and not in_window:
@@ -1015,10 +1039,11 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 "breath_type": "spontaneous", "trigger_mode": "patient",
                 "dyssynchrony_label": label, "delivered_vt_ml": delivered_vt,
                 "ppeak_cmH2O": seg["ppeak_cmH2O"], "t_start_s": t_current,
+                "duration_s": seg["duration"],
             })
             V_comps = seg["V_comps"]
             t_current = attempt_onset_t + seg["duration"]
-            next_attempt_t = max(attempt_onset_t + attempt_interval, t_current)
+            next_attempt_t = _advance_schedule(next_attempt_t, t_current, attempt_interval)
             continue
 
         # Ineffective attempt (failed trigger, either zone): small perturbation,
@@ -1046,9 +1071,10 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
             "dyssynchrony_label": "ineffective_trigger",
             "delivered_vt_ml": 0.0, "ppeak_cmH2O": float(seg_p.max()) if n_eff_steps else peep,
             "t_start_s": t_current,
+            "duration_s": n_eff_steps * DT,
         })
         t_current = attempt_onset_t + n_eff_steps * DT
-        next_attempt_t = max(attempt_onset_t + attempt_interval, t_current)
+        next_attempt_t = _advance_schedule(next_attempt_t, t_current, attempt_interval)
 
     # The while loop above always exits immediately after delivering the
     # n_cycles-th mandatory breath's INSPIRATION (mandatory_count reaches
