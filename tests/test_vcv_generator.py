@@ -500,11 +500,16 @@ class TestMultiCompartmentMechanics:
 
     def test_severe_ards_driving_pressure_exceeds_normal(self):
         """Baby-lung effect: the low-compliance compartment should
-        dominate and raise driving pressure vs Normal at the same VT."""
-        p_ards = {**NORMAL_PARAMS_SQR, "condition": "Severe ARDS"}
+        dominate and raise driving pressure vs Normal at matched VT."""
+        p_ards = {**NORMAL_PARAMS_SQR, "condition": "Severe ARDS",
+                  "compliance_ml_per_cmH2O": 18.0,
+                  "resistance_cmH2O_L_s": 16.0}
         r_normal = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=3)
         r_ards = generate_breath_cycles(p_ards, n_cycles=3)
-        assert r_ards["driving_p_cmH2O"] > r_normal["driving_p_cmH2O"]
+        assert r_ards["driving_p_cmH2O"] > r_normal["driving_p_cmH2O"] + 2.0, (
+            f"ARDS={r_ards['driving_p_cmH2O']:.2f} "
+            f"Normal={r_normal['driving_p_cmH2O']:.2f}"
+        )
 
     def test_copd_stress_index_deviates_from_one(self):
         """Time-constant heterogeneity across COPD's 3 compartments should
