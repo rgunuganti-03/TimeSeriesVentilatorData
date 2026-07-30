@@ -685,6 +685,8 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
             # Q_i (L/s, negative for outflow) = -(V_i/C_rs_i) / R_exp_i
             elastic = V_comps / np.maximum(C_rs_arr, 0.1)
             Q_comps = -(elastic / np.maximum(R_exp_arr_now, 0.1))
+            print(f"cycle={cycle} k={k} V_comps_sum={float(V_comps.sum()):.2f} "
+                f"C_rs_sum={float(C_rs_arr.sum()):.2f} Q_total={Q_total:.3f}")
             Q_total = float(Q_comps.sum())
 
             V_comps = np.maximum(V_comps + Q_comps * 1000.0 * DT, 0.0)
@@ -707,8 +709,8 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
 
         
         t_cursor = t0 + t_insp + t_pause + n_exp * DT
-    print(q_total_list)
-    print(p_ett_drop_list)
+    # print(q_total_list)
+    # print(p_ett_drop_list)
     # ---- Derived metrics from the LAST cycle ----------------------------
     last_s = (n_cycles - 1) * n_per
     last_e = last_s + n_per
