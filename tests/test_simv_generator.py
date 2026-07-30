@@ -652,6 +652,11 @@ class TestMultiCompartmentMechanics:
 
     @pytest.mark.parametrize("condition,n_expected", list(EXPECTED_COMPARTMENTS.items()))
 
+    def test_generator_reports_correct_n_compartments_pc(self, condition, n_expected):
+        result = generate_breath_cycles(
+            {**NORMAL_PARAMS_PC, "condition": condition}, n_cycles=3, seed=33)
+        assert result["n_compartments"] == n_expected
+    
     def test_mandatory_vt_unaffected_by_carried_over_volume(self):
         """Regression test: delivered_vt_ml must reflect only the volume
         this breath added, not the compartment volume it started from.
@@ -674,10 +679,6 @@ class TestMultiCompartmentMechanics:
             f"strayed too far from the {target:.0f} mL VC target under "
             f"auto-PEEP — delivered_vt_ml may be including carried-over volume"
         )
-    def test_generator_reports_correct_n_compartments_pc(self, condition, n_expected):
-        result = generate_breath_cycles(
-            {**NORMAL_PARAMS_PC, "condition": condition}, n_cycles=3, seed=33)
-        assert result["n_compartments"] == n_expected
 
     def test_recruitment_slopes_zero_for_obstructive_disease(self):
         assert RECRUITMENT_SLOPES["COPD"] == 0.0
