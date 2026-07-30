@@ -671,8 +671,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         # Each compartment empties driven by its own elastic recoil through
         # its dynamic expiratory resistance. Pao at the airway opening = PEEP
         # plus the ETT drop on outflow (small negative dip at valve opening).
-        q_total_list = []
-        p_ett_drop_list = []
+       
 
         for k in range(n_exp):
             C_rs_arr = _per_compartment_C_rs(V_comps)
@@ -685,15 +684,13 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
             # Q_i (L/s, negative for outflow) = -(V_i/C_rs_i) / R_exp_i
             elastic = V_comps / np.maximum(C_rs_arr, 0.1)
             Q_comps = -(elastic / np.maximum(R_exp_arr_now, 0.1))
-            print(f"cycle={cycle} k={k} V_comps_sum={float(V_comps.sum()):.2f} "
-                f"C_rs_sum={float(C_rs_arr.sum()):.2f} Q_total={Q_total:.3f}")
             Q_total = float(Q_comps.sum())
 
             V_comps = np.maximum(V_comps + Q_comps * 1000.0 * DT, 0.0)
 
             # Displayed Pao during expiration: PEEP + ETT Rohrer drop (small dip)
             P_ett_drop = _rohrer_resistance(Q_total, K1_ett, K2_ett)
-            Pao        = peep + P_ett_drop   # Q<0 → P_ett_drop<0 → Pao<PEEP
+            Pao        = peep 
 
             idx = offset + n_insp + n_pause + k
             time_arr[idx]      = t0 + t_insp + t_pause + (k + 1) * DT
@@ -703,8 +700,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
             p_branch_arr[idx]  = peep
             p_ett_arr[idx]     = P_ett_drop
             vol_per_comp[idx]  = V_comps.copy()
-            q_total_list.append(Q_total)
-            p_ett_drop_list.append(P_ett_drop)
+           
         
 
         

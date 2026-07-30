@@ -523,9 +523,10 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
         return Q_comps, Q_total
 
     # ---- Main per-cycle loop --------------------------------------------
+    t_cursor = 0.0
     for cycle in range(n_cycles):
         offset = cycle * n_per
-        t0     = cycle * t_cycle
+        t0     = t_cursor
 
         # -- Inspiration (rise + plateau) ---------------------------------
         for k in range(n_insp):
@@ -563,6 +564,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
             p_branch_arr[idx] = peep
             p_ett_arr[idx]    = P_ett_drop
             vol_per_comp[idx] = V_comps.copy()
+        t_cursor = t0 + t_insp + n_exp * DT
 
     # ---- Derived metrics from the LAST cycle ----------------------------
     last_s   = (n_cycles - 1) * n_per
