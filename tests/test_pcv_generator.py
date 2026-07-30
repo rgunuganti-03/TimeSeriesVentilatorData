@@ -32,11 +32,13 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from generator.pcv_generator import (
+    COMPARTMENT_PROFILES,
     FILL_FRACTION_MIN,
     IBW_KG,
     INSP_PRESSURE_MAX_CMHH2O,
     PARAMETER_GRID,
     PPEAK_MAX_CMHH2O,
+    RECRUITMENT_SLOPES,
     VT_MAX_ML,
     VT_MIN_ML,
     generate_breath_cycles,
@@ -443,9 +445,231 @@ class TestPCVWaveformShape:
             "Pressure must equal PIP throughout the plateau phase"
         )
 
+# ---------------------------------------------------------------------------
+# Class 4 — Multi-compartment mechanics
+# ---------------------------------------------------------------------------
+
+class TestMultiCompartmentMechanics:
+    """
+    PCV's parallel-compartment lung model. Note obstruction here scales
+    BOTH the ETT Rohrer terms AND per-compartment R (unlike VCV, where
+    only the ETT terms scale) — see pcv_generator.py docstring.
+    """
+
+    EXPECTED_COMPARTMENTS = {
+        "Normal": 1, "Mild ARDS": 2, "Moderate ARDS": 2, "Severe ARDS": 2,
+        "COPD": 3, "Bronchospasm": 2, "Pneumonia": 3,
+    }
+
+    def test_compartment_counts_match_documented_scheme(self):
+        for condition, n in self.EXPECTED_COMPARTMENTS.items():
+            assert len(COMPARTMENT_PROFILES[condition]) == n, (
+                f"{condition} expected {n} compartments, "
+                f"got {len(COMPARTMENT_PROFILES[condition])}"
+            )
+
+    def test_compartment_fractions_sum_to_one(self):
+        for condition, profile in COMPARTMENT_PROFILES.items():
+            total = sum(c["fraction"] for c in profile)
+            assert total == pytest.approx(1.0, abs=0.01), (
+                f"{condition} compartment fractions sum to {total}, not 1.0"
+            )
+
+    def test_generator_reports_correct_n_compartments(self):
+        for condition, n in self.EXPECTED_COMPARTMENTS.items():
+            params = {**NORMAL_PARAMS, "condition": condition}
+            result = generate_breath_cycles(params, n_cycles=1)
+            assert result["n_compartments"] == n, (
+                f"{condition}: expected n_compartments={n}, "
+                f"got {result['n_compartments']}"
+            )
+
+    def test_recruitment_slopes_zero_for_obstructive_disease(self):
+        assert RECRUITMENT_SLOPES["COPD"] == 0.0
+        assert RECRUITMENT_SLOPES["Bronchospasm"] == 0.0
+
+    def test_recruitment_slopes_positive_for_ards(self):
+        for condition in ("Mild ARDS", "Moderate ARDS", "Severe ARDS"):
+            assert RECRUITMENT_SLOPES[condition] > 0.0
+
+    def test_copd_develops_auto_peep(self):
+        p_copd = {**NORMAL_PARAMS, "condition": "COPD",
+                  "compliance_ml_per_cmH2O": 100.0,
+                  "resistance_cmH2O_L_s": 22.0,
+                  "respiratory_rate": 22}
+        result = generate_breath_cycles(p_copd, n_cycles=5)
+        assert result["auto_peep_cmH2O"] > 0.3
+
+    def test_bronchospasm_develops_auto_peep(self):
+        p_broncho = {**NORMAL_PARAMS, "condition": "Bronchospasm",
+                     "resistance_cmH2O_L_s": 35.0, "respiratory_rate": 22}
+        result = generate_breath_cycles(p_broncho, n_cycles=5)
+        assert result["auto_peep_cmH2O"] > 0.3
+
+    def test_normal_has_minimal_auto_peep(self):
+        result = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
+        assert result["auto_peep_cmH2O"] < 1.0
+
+    def test_severe_ards_delivered_vt_below_normal_at_same_pip(self):
+        """Baby lung -> lower compliance compartment dominates fill ->
+        less delivered VT than Normal at the same PIP."""
+        p_ards = {**NORMAL_PARAMS, "condition": "Severe ARDS"}
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1)
+        r_ards = generate_breath_cycles(p_ards, n_cycles=1)
+        assert r_ards["delivered_vt_ml"] < r_normal["delivered_vt_ml"]
+
+    def test_bronchospasm_fill_fraction_below_normal(self):
+        p_broncho = {**NORMAL_PARAMS, "condition": "Bronchospasm",
+                     "resistance_cmH2O_L_s": 35.0}
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1)
+        r_broncho = generate_breath_cycles(p_broncho, n_cycles=1)
+        assert r_broncho["fill_fraction"] < r_normal["fill_fraction"]
+
 
 # ---------------------------------------------------------------------------
-# Class 4 — Validity filter
+# Class 5 — ETT complications
+# ---------------------------------------------------------------------------
+
+class TestETTComplications:
+    """
+    PCV is pressure-prescribed/time-cycled, so Ppeak = PIP + PEEP
+    regardless of mechanics or ETT complications:
+      - cuff leak: post-hoc volume-balance correction on delivered_vt,
+        no effect on Ppeak or cycling (PCV is time-cycled)
+      - obstruction: scales both ETT Rohrer terms AND per-compartment R,
+        reducing fill within the fixed inspiratory time -> lower
+        delivered_vt / fill_fraction, but Ppeak still equals PIP
+    """
+
+    def test_cuff_leak_reduces_delivered_vt(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
+        p_leak = {**NORMAL_PARAMS, "ett_cuff_leak_fraction": 0.20}
+        r_leak = generate_breath_cycles(p_leak, n_cycles=3)
+        assert r_leak["delivered_vt_ml"] < r_normal["delivered_vt_ml"]
+
+    def test_cuff_leak_fraction_matches_expected_reduction(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
+        p_leak = {**NORMAL_PARAMS, "ett_cuff_leak_fraction": 0.25}
+        r_leak = generate_breath_cycles(p_leak, n_cycles=3)
+        expected = r_normal["delivered_vt_ml"] * 0.75
+        assert abs(r_leak["delivered_vt_ml"] - expected) < 5.0
+
+    def test_larger_cuff_leak_produces_larger_vt_loss(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
+        p_small = {**NORMAL_PARAMS, "ett_cuff_leak_fraction": 0.10}
+        p_large = {**NORMAL_PARAMS, "ett_cuff_leak_fraction": 0.35}
+        r_small = generate_breath_cycles(p_small, n_cycles=3)
+        r_large = generate_breath_cycles(p_large, n_cycles=3)
+        gap_small = r_normal["delivered_vt_ml"] - r_small["delivered_vt_ml"]
+        gap_large = r_normal["delivered_vt_ml"] - r_large["delivered_vt_ml"]
+        assert gap_large > gap_small
+
+    def test_cuff_leak_does_not_change_ppeak(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
+        p_leak = {**NORMAL_PARAMS, "ett_cuff_leak_fraction": 0.30}
+        r_leak = generate_breath_cycles(p_leak, n_cycles=3)
+        assert r_leak["ppeak_cmH2O"] == pytest.approx(
+            r_normal["ppeak_cmH2O"], abs=0.5
+        )
+
+    def test_obstruction_reduces_delivered_vt(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
+        p_obs = {**NORMAL_PARAMS, "ett_obstruction_multiplier": 3.0}
+        r_obs = generate_breath_cycles(p_obs, n_cycles=3)
+        assert r_obs["delivered_vt_ml"] < r_normal["delivered_vt_ml"]
+
+    def test_obstruction_reduces_fill_fraction(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
+        p_obs = {**NORMAL_PARAMS, "ett_obstruction_multiplier": 3.0}
+        r_obs = generate_breath_cycles(p_obs, n_cycles=3)
+        assert r_obs["fill_fraction"] < r_normal["fill_fraction"]
+
+    def test_obstruction_does_not_change_ppeak(self):
+        """PPeak = PIP + PEEP in PCV, independent of resistance —
+        see test_ppeak_equals_pip in TestPCVWaveformShape."""
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
+        p_obs = {**NORMAL_PARAMS, "ett_obstruction_multiplier": 3.0}
+        r_obs = generate_breath_cycles(p_obs, n_cycles=3)
+        assert r_obs["ppeak_cmH2O"] == pytest.approx(
+            r_normal["ppeak_cmH2O"], abs=0.5
+        )
+
+    def test_no_complication_defaults_match_baseline(self):
+        r1 = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
+        p_explicit_default = {**NORMAL_PARAMS,
+                               "ett_obstruction_multiplier": 1.0,
+                               "ett_cuff_leak_fraction": 0.0}
+        r2 = generate_breath_cycles(p_explicit_default, n_cycles=3)
+        assert r1["delivered_vt_ml"] == pytest.approx(r2["delivered_vt_ml"], abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# Class 6 — Physiological directions
+# ---------------------------------------------------------------------------
+
+class TestPhysiologicalDirections:
+    """
+    Cross-parameter monotonicity checks specific to PCV's pressure-
+    prescribed / volume-dependent scheme. Ppeak is fixed by PIP+PEEP,
+    so directional effects show up in delivered_vt_ml / fill_fraction.
+    """
+
+    def test_higher_insp_pressure_increases_delivered_vt(self):
+        p_low = {**NORMAL_PARAMS, "insp_pressure_cmH2O": 8}
+        p_high = {**NORMAL_PARAMS, "insp_pressure_cmH2O": 20}
+        r_low = generate_breath_cycles(p_low, n_cycles=1)
+        r_high = generate_breath_cycles(p_high, n_cycles=1)
+        assert r_high["delivered_vt_ml"] > r_low["delivered_vt_ml"]
+
+    def test_higher_compliance_increases_delivered_vt(self):
+        p_stiff = {**NORMAL_PARAMS, "compliance_ml_per_cmH2O": 30.0}
+        p_compliant = {**NORMAL_PARAMS, "compliance_ml_per_cmH2O": 80.0}
+        r_stiff = generate_breath_cycles(p_stiff, n_cycles=1)
+        r_compliant = generate_breath_cycles(p_compliant, n_cycles=1)
+        assert r_compliant["delivered_vt_ml"] > r_stiff["delivered_vt_ml"]
+
+    def test_higher_resistance_reduces_fill_fraction(self):
+        p_low_r = {**NORMAL_PARAMS, "resistance_cmH2O_L_s": 5.0}
+        p_high_r = {**NORMAL_PARAMS, "resistance_cmH2O_L_s": 30.0}
+        r_low = generate_breath_cycles(p_low_r, n_cycles=1)
+        r_high = generate_breath_cycles(p_high_r, n_cycles=1)
+        assert r_high["fill_fraction"] <= r_low["fill_fraction"] + 0.02
+
+    def test_higher_peep_increases_mean_paw(self):
+        p_low = {**NORMAL_PARAMS, "peep_cmH2O": 0}
+        p_high = {**NORMAL_PARAMS, "peep_cmH2O": 15}
+        r_low = generate_breath_cycles(p_low, n_cycles=1)
+        r_high = generate_breath_cycles(p_high, n_cycles=1)
+        assert r_high["mean_paw_cmH2O"] > r_low["mean_paw_cmH2O"]
+
+    def test_longer_inspiratory_time_increases_fill_fraction(self):
+        p_short = {**NORMAL_PARAMS, "ie_ratio": 0.33}
+        p_long = {**NORMAL_PARAMS, "ie_ratio": 1.0}
+        r_short = generate_breath_cycles(p_short, n_cycles=1)
+        r_long = generate_breath_cycles(p_long, n_cycles=1)
+        assert r_long["fill_fraction"] >= r_short["fill_fraction"] - 0.02
+
+    def test_severe_ards_delivered_vt_below_normal_at_same_pip(self):
+        p_ards = {**NORMAL_PARAMS, "condition": "Severe ARDS"}
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1)
+        r_ards = generate_breath_cycles(p_ards, n_cycles=1)
+        assert r_ards["delivered_vt_ml"] < r_normal["delivered_vt_ml"]
+
+    def test_ppeak_independent_of_resistance(self):
+        p_low_r = {**NORMAL_PARAMS, "resistance_cmH2O_L_s": 5.0}
+        p_high_r = {**NORMAL_PARAMS, "resistance_cmH2O_L_s": 30.0}
+        r_low = generate_breath_cycles(p_low_r, n_cycles=1)
+        r_high = generate_breath_cycles(p_high_r, n_cycles=1)
+        assert r_low["ppeak_cmH2O"] == pytest.approx(r_high["ppeak_cmH2O"], abs=0.5)
+
+    def test_higher_respiratory_rate_raises_minute_ventilation(self):
+        p_slow = {**NORMAL_PARAMS, "respiratory_rate": 10}
+        p_fast = {**NORMAL_PARAMS, "respiratory_rate": 25}
+        r_slow = generate_breath_cycles(p_slow, n_cycles=1)
+        r_fast = generate_breath_cycles(p_fast, n_cycles=1)
+        assert r_fast["minute_vent_l"] > r_slow["minute_vent_l"]
+# ---------------------------------------------------------------------------
+# Class 7 — Validity filter
 # ---------------------------------------------------------------------------
 
 class TestValidityFilter:
@@ -555,7 +779,7 @@ class TestValidityFilter:
 
 
 # ---------------------------------------------------------------------------
-# Class 5 — Dataset generation
+# Class 8 — Dataset generation
 # ---------------------------------------------------------------------------
 
 class TestDatasetGeneration:
@@ -721,3 +945,62 @@ class TestDatasetGeneration:
                 assert "time_to_peak_flow_s" in scenario["metrics"], (
                     "time_to_peak_flow_s must be present in PCV metrics"
                 )
+# ---------------------------------------------------------------------------
+# Class 9 — Parameter grid
+# ---------------------------------------------------------------------------
+
+class TestParameterGrid:
+    """
+    PARAMETER_GRID must define every required PCV sweep dimension with
+    physiologically sensible ranges and produce the documented full-grid
+    combination count.
+    """
+
+    EXPECTED_KEYS = {
+        "insp_pressure_cmH2O", "respiratory_rate",
+        "peep_cmH2O", "ie_ratio", "rise_time_s",
+    }
+
+    def test_grid_has_all_required_keys(self):
+        missing = self.EXPECTED_KEYS - PARAMETER_GRID.keys()
+        assert not missing, f"PARAMETER_GRID missing: {missing}"
+
+    def test_all_grid_values_are_lists(self):
+        for key, values in PARAMETER_GRID.items():
+            assert isinstance(values, list), f"{key} is not a list"
+            assert len(values) >= 2, f"{key} needs >= 2 values for a real sweep"
+
+    def test_insp_pressure_range_covers_low_to_max(self):
+        ip = PARAMETER_GRID["insp_pressure_cmH2O"]
+        assert min(ip) <= 5
+        assert max(ip) == INSP_PRESSURE_MAX_CMHH2O
+
+    def test_respiratory_rate_range_covers_clinical_span(self):
+        rr = PARAMETER_GRID["respiratory_rate"]
+        assert min(rr) <= 8
+        assert max(rr) >= 30
+
+    def test_peep_range_covers_zero_to_high(self):
+        peep = PARAMETER_GRID["peep_cmH2O"]
+        assert min(peep) == 0
+        assert max(peep) >= 20
+
+    def test_ie_ratio_covers_all_three_clinical_ratios(self):
+        ie = set(PARAMETER_GRID["ie_ratio"])
+        assert {1.0, 0.5, 0.33}.issubset(ie)
+
+    def test_rise_time_includes_square_wave_and_ramped_options(self):
+        rt = PARAMETER_GRID["rise_time_s"]
+        assert 0.0 in rt, "Grid should include instantaneous rise (square wave)"
+        assert max(rt) >= 0.4
+
+    def test_full_grid_combination_count(self):
+        keys = ["insp_pressure_cmH2O", "respiratory_rate",
+                "peep_cmH2O", "ie_ratio", "rise_time_s"]
+        expected = 1
+        for k in keys:
+            expected *= len(PARAMETER_GRID[k])
+        assert expected == 3528, (
+            f"Full PCV grid should be 3,528 combinations/mechanics point "
+            f"(7x7x6x3x4), got {expected}"
+        )

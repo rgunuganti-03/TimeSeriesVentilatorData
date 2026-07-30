@@ -578,10 +578,66 @@ class TestMultiCompartmentMechanics:
             f"Moderate ARDS PEEP-sensitivity ({mod_delta:.1f}) should exceed "
             f"COPD's ({copd_delta:.1f}), given recruitment slopes 0.90 vs 0.0"
         )
+# ---------------------------------------------------------------------------
+# Class 8 — Physiological directions
+# ---------------------------------------------------------------------------
 
+class TestPhysiologicalDirections:
+    """
+    Cross-parameter monotonicity checks for the outer-loop-adapted
+    working pressure and its derived metrics. PRVC's driving pressure
+    isn't set directly — it's whatever the adaptive loop converges (or
+    clips) to — so these confirm the controller moves the right
+    direction as mechanics and settings change.
+    """
+
+    def test_higher_peep_increases_mean_paw(self):
+        p_low = {**NORMAL_PARAMS, "peep_cmH2O": 0}
+        p_high = {**NORMAL_PARAMS, "peep_cmH2O": 15}
+        r_low = generate_breath_cycles(p_low, n_cycles=10, seed=50)
+        r_high = generate_breath_cycles(p_high, n_cycles=10, seed=50)
+        assert r_high["mean_paw_cmH2O"] > r_low["mean_paw_cmH2O"]
+
+    def test_lower_compliance_requires_higher_driving_pressure(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=12, seed=51)
+        r_ards = generate_breath_cycles(SEVERE_ARDS_PARAMS, n_cycles=12, seed=51)
+        assert r_ards["driving_p_cmH2O"] > r_normal["driving_p_cmH2O"]
+
+    def test_higher_vt_target_requires_higher_driving_pressure(self):
+        p_low_vt = {**NORMAL_PARAMS, "vt_target_ml": 300.0}
+        p_high_vt = {**NORMAL_PARAMS, "vt_target_ml": 600.0}
+        r_low = generate_breath_cycles(p_low_vt, n_cycles=12, seed=52)
+        r_high = generate_breath_cycles(p_high_vt, n_cycles=12, seed=52)
+        assert r_high["driving_p_cmH2O"] >= r_low["driving_p_cmH2O"] - 0.5
+
+    def test_higher_resistance_increases_auto_peep(self):
+        p_low_r = {**COPD_PARAMS, "resistance_cmH2O_L_s": 15.0}
+        p_high_r = {**COPD_PARAMS, "resistance_cmH2O_L_s": 30.0}
+        r_low = generate_breath_cycles(p_low_r, n_cycles=15, seed=53)
+        r_high = generate_breath_cycles(p_high_r, n_cycles=15, seed=53)
+        assert r_high["auto_peep_cmH2O"] >= r_low["auto_peep_cmH2O"] - 0.1
+
+    def test_higher_ie_ratio_shortens_expiratory_time_raises_auto_peep(self):
+        p_long_exp = {**COPD_PARAMS, "ie_ratio": 0.33}
+        p_short_exp = {**COPD_PARAMS, "ie_ratio": 1.0}
+        r_long = generate_breath_cycles(p_long_exp, n_cycles=15, seed=57)
+        r_short = generate_breath_cycles(p_short_exp, n_cycles=15, seed=57)
+        assert r_short["auto_peep_cmH2O"] >= r_long["auto_peep_cmH2O"] - 0.1
+
+    def test_higher_respiratory_rate_raises_minute_ventilation(self):
+        p_slow = {**NORMAL_PARAMS, "respiratory_rate": 10}
+        p_fast = {**NORMAL_PARAMS, "respiratory_rate": 25}
+        r_slow = generate_breath_cycles(p_slow, n_cycles=10, seed=55)
+        r_fast = generate_breath_cycles(p_fast, n_cycles=10, seed=55)
+        assert r_fast["minute_vent_l"] > r_slow["minute_vent_l"]
+
+    def test_bronchospasm_ppeak_exceeds_normal(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=12, seed=56)
+        r_broncho = generate_breath_cycles(BRONCHOSPASM_PARAMS, n_cycles=12, seed=56)
+        assert r_broncho["ppeak_cmH2O"] > r_normal["ppeak_cmH2O"]
 
 # ---------------------------------------------------------------------------
-# Class 8 — Validity filter
+# Class 9 — Validity filter
 # ---------------------------------------------------------------------------
 
 class TestValidityFilter:
@@ -621,7 +677,7 @@ class TestValidityFilter:
 
 
 # ---------------------------------------------------------------------------
-# Class 9 — Dataset generation
+# Class 10 — Dataset generation
 # ---------------------------------------------------------------------------
 
 class TestDatasetGeneration:
@@ -721,6 +777,64 @@ class TestDatasetGeneration:
         for s in small_dataset:
             assert s["params"]["adaptation_step_cmH2O"] == PARAMETER_GRID["adaptation_step_cmH2O"][0]
             assert s["params"]["vt_tolerance_frac"] == PARAMETER_GRID["vt_tolerance_frac"][0]
+
+# ---------------------------------------------------------------------------
+# Class 11 — Parameter grid
+# ---------------------------------------------------------------------------
+
+class TestParameterGrid:
+    """
+    PARAMETER_GRID must sweep every ventilator-side dimension while
+    keeping the two uniform-device constants unswept, per project
+    decision (see PARAMETER_GRID note in prvc_generator.py).
+    """
+
+    EXPECTED_KEYS = {
+        "vt_target_ml_per_kg", "respiratory_rate", "peep_cmH2O",
+        "ie_ratio", "pressure_ceiling_cmH2O",
+        "adaptation_step_cmH2O", "vt_tolerance_frac",
+    }
+
+    def test_grid_has_all_required_keys(self):
+        missing = self.EXPECTED_KEYS - PARAMETER_GRID.keys()
+        assert not missing, f"PARAMETER_GRID missing: {missing}"
+
+    def test_all_grid_values_are_lists(self):
+        for key, values in PARAMETER_GRID.items():
+            assert isinstance(values, list), f"{key} is not a list"
+
+    def test_ventilator_side_dims_have_real_sweep_range(self):
+        sweep_keys = ["vt_target_ml_per_kg", "respiratory_rate",
+                      "peep_cmH2O", "ie_ratio", "pressure_ceiling_cmH2O"]
+        for k in sweep_keys:
+            assert len(PARAMETER_GRID[k]) >= 2, f"{k} needs >= 2 values"
+
+    def test_adaptation_step_and_tolerance_are_uniform_single_values(self):
+        """Per project decision, these represent one deployed-device
+        algorithm and are deliberately NOT swept per condition."""
+        assert len(PARAMETER_GRID["adaptation_step_cmH2O"]) == 1
+        assert len(PARAMETER_GRID["vt_tolerance_frac"]) == 1
+
+    def test_vt_target_range_spans_protective_to_standard(self):
+        vt = PARAMETER_GRID["vt_target_ml_per_kg"]
+        assert min(vt) <= 4
+        assert max(vt) >= 10
+
+    def test_pressure_ceiling_range_covers_conservative_to_permissive(self):
+        ceil = PARAMETER_GRID["pressure_ceiling_cmH2O"]
+        assert min(ceil) <= 15
+        assert max(ceil) >= 30
+
+    def test_full_ventilator_grid_combination_count(self):
+        keys = ["vt_target_ml_per_kg", "respiratory_rate", "peep_cmH2O",
+                "ie_ratio", "pressure_ceiling_cmH2O"]
+        expected = 1
+        for k in keys:
+            expected *= len(PARAMETER_GRID[k])
+        assert expected == 2520, (
+            f"Full PRVC ventilator-side grid should be 2,520 "
+            f"combinations/mechanics point (4x7x6x3x5), got {expected}"
+        )
 
 
 if __name__ == "__main__":
