@@ -595,10 +595,15 @@ def _validate_params(params: dict) -> None:
         raise ValueError("pressure_support_cmH2O out of range [1, 50]")
     if not (0.05 <= float(params["flow_cycle_threshold"])       <= 0.70):
         raise ValueError("flow_cycle_threshold out of range [0.05, 0.70]")
-    if not (5    <= float(params["compliance_ml_per_cmH2O"])    <= 200):
-        raise ValueError("compliance_ml_per_cmH2O out of range [5, 200]")
-    if not (0.5  <= float(params["resistance_cmH2O_L_s"])       <= 60):
-        raise ValueError("resistance_cmH2O_L_s out of range [0.5, 60]")
+    
+    population = params.get("population", "adult")
+    c_lo, c_hi = (0.3, 10)  if population == "neonate" else (5, 200)
+    r_lo, r_hi = (40, 200)  if population == "neonate" else (0.5, 60)
+
+    if not (c_lo <= float(params["compliance_ml_per_cmH2O"])    <= c_hi):
+        raise ValueError(f"compliance_ml_per_cmH2O out of range [{c_lo}, {c_hi}]")
+    if not (r_lo <= float(params["resistance_cmH2O_L_s"])       <= r_hi):
+        raise ValueError(f"resistance_cmH2O_L_s out of range [{r_lo}, {r_hi}]")
 
 
 # ---------------------------------------------------------------------------
