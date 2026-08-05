@@ -44,6 +44,7 @@ CONDITIONS = {
             "Standard tidal volume and respiratory rate."
         ),
         "condition":   "Normal",
+        "population":  "adult",
         "respiratory_rate":         15,
         "stress_index":             1.00, 
         "tidal_volume_ml":          500,
@@ -70,6 +71,7 @@ CONDITIONS = {
             "driving pressures in most VCV scenarios. Compliance 45 mL/cmH₂O."
         ),
         "condition":   "Mild ARDS",
+        "population":  "adult",
         "respiratory_rate":          20,
         "stress_index": 0.90, 
         "tidal_volume_ml":          420,
@@ -96,6 +98,7 @@ CONDITIONS = {
             "Compliance 30 mL/cmH₂O."
         ),
         "condition":   "Moderate ARDS",
+        "population":  "adult",
         "respiratory_rate":          24,
         "stress_index": 0.85,
         "tidal_volume_ml":          380,
@@ -122,6 +125,7 @@ CONDITIONS = {
             "permissive hypercapnia required. Compliance 18 mL/cmH₂O."
         ),
         "condition":   "Severe ARDS",
+        "population":  "adult",
         "respiratory_rate":          28,
         "stress_index": 0.80,
         "tidal_volume_ml":          300,
@@ -149,6 +153,7 @@ CONDITIONS = {
             "to prevent dynamic hyperinflation."
         ),
         "condition":   "COPD",
+        "population":  "adult",
         "respiratory_rate":          12,
         "stress_index": 1.20,
         "tidal_volume_ml":          550,
@@ -176,6 +181,7 @@ CONDITIONS = {
             "expiratory time and prevent air trapping."
         ),
         "condition":   "Bronchospasm",
+        "population":  "adult",
         "respiratory_rate":          10,
         "stress_index": 1.00,
         "tidal_volume_ml":          420,
@@ -202,6 +208,7 @@ CONDITIONS = {
             "Mildly elevated resistance from secretions and airway inflammation."
         ),
         "condition":   "Pneumonia",
+        "population":  "adult",
         "respiratory_rate":          22,
         "stress_index": 0.95,
         "tidal_volume_ml":          450,
@@ -218,6 +225,100 @@ CONDITIONS = {
         "effort_duration_s":        0.75,
         "pmus_cv":                  0.22,
         "pressure_ceiling_cmH2O":   26
+    },
+
+    "Normal Neonate": {
+    "label":       "Normal Neonate",
+    "description": (
+        "Healthy term neonate (~3 kg) on an uncuffed ETT. Small absolute "
+        "compliance and tidal volume, high absolute resistance from the "
+        "narrow tube, fast rate, short time constant. No lung pathology — "
+        "the neonatal analog of the adult Normal preset."
+    ),
+    "condition":                "Normal Neonate",
+    "population":               "neonate",          # NEW field — see Blocker 1/2
+    "weight_kg":                3.0,
+    "respiratory_rate":         50,
+    "stress_index":             1.00,
+    "tidal_volume_ml":          15,                  # ~5 mL/kg
+    "compliance_ml_per_cmH2O":  4.0,
+    "resistance_cmH2O_L_s":     80,
+    "ie_ratio":                 0.50,                # ~1:2, Ti ~0.4s @ RR50
+    "rise_time_s":              0.05,                # ASSUMPTION — not sourced
+    "peep_cmH2O":               5,
+    "pressure_support_cmH2O":   8,
+    "flow_cycle_threshold":     0.15,                # neonatal range is 5-20%, vs adult ~25%
+    "trigger_threshold_cmH2O":  0.5,                 # ASSUMPTION — weak effort, not sourced
+    "pmus_peak_cmH2O":          5,
+    "effort_rate_per_min":      50,
+    "effort_duration_s":        0.35,
+    "pmus_cv":                  0.20,
+    "pressure_ceiling_cmH2O":   20,
+    "ett_cuff_leak_fraction":   0.15,                # NEW field — see Open Decision 1
+    },
+
+    "RDS": {
+        "label":       "RDS (Respiratory Distress Syndrome)",
+        "description": (
+            "Preterm surfactant deficiency. Severely reduced compliance, "
+            "resistance at the neonatal baseline (not elevated by disease), "
+            "short time constant. Distinct from Severe ARDS: resistance stays "
+            "normal here, and compliance can improve rapidly post-surfactant."
+        ),
+        "condition":                "RDS",
+        "population":               "neonate",
+        "weight_kg":                1.5,                 # preterm — flag if you want a term RDS variant too
+        "respiratory_rate":         50,
+        "stress_index":             0.85,                # ASSUMPTION, ARDS-style recruitable tissue
+        "tidal_volume_ml":          6,                    # ~4 mL/kg floor, preterm
+        "compliance_ml_per_cmH2O":  0.75,                 # 0.5-1 mL/cmH2O, Kumar/PMC7874283
+        "resistance_cmH2O_L_s":     80,                   # NOT elevated — IJRC
+        "ie_ratio":                 0.33,                 # short Ti ~0.3s
+        "rise_time_s":              0.03,                 # ASSUMPTION
+        "peep_cmH2O":                6,
+        "pressure_support_cmH2O":   10,
+        "flow_cycle_threshold":     0.15,
+        "trigger_threshold_cmH2O":  0.5,                  # ASSUMPTION
+        "pmus_peak_cmH2O":          4,                    # weak preterm effort — ASSUMPTION
+        "effort_rate_per_min":      50,
+        "effort_duration_s":        0.30,
+        "pmus_cv":                  0.25,                 # ASSUMPTION
+        "pressure_ceiling_cmH2O":   20,
+        "cuff_leak_fraction":       0.15,
+        "ett_complication":         "cuff_leak",
+        "ett_cuff_leak_fraction":   0.15,  
+    },
+
+    "Meconium Aspiration Syndrome": {
+        "label":       "Meconium Aspiration Syndrome",
+        "description": (
+            "Term/post-term infant with heterogeneous lung: ball-valve "
+            "obstruction and gas trapping in some units, atelectatic/"
+            "surfactant-inactivated collapse in others. Requires a "
+            "two-compartment profile — NOT a rescaled COPD/Bronchospasm preset."
+        ),
+        "condition":                "Meconium Aspiration Syndrome",
+        "population":               "neonate",
+        "weight_kg":                3.2,
+        "respiratory_rate":         45,                   # <50 to protect exp. time — Dargaville
+        "stress_index":             1.10,                 # ASSUMPTION — heterogeneity proxy
+        "tidal_volume_ml":          18,                    # ~5.5 mL/kg — Dargaville
+        "compliance_ml_per_cmH2O":  2.5,                   # DIRECTION sourced, MAGNITUDE not — flag
+        "resistance_cmH2O_L_s":     130,                   # DIRECTION sourced, MAGNITUDE not — flag
+        "ie_ratio":                 0.80,                  # long Ti 0.5-0.7s — Goel & Nangia
+        "rise_time_s":              0.05,                  # ASSUMPTION
+        "peep_cmH2O":                5,
+        "pressure_support_cmH2O":  14,
+        "flow_cycle_threshold":     0.20,
+        "trigger_threshold_cmH2O":  0.5,                   # ASSUMPTION
+        "pmus_peak_cmH2O":          6,
+        "effort_rate_per_min":     45,
+        "effort_duration_s":        0.45,
+        "pmus_cv":                  0.25,                  # ASSUMPTION
+        "pressure_ceiling_cmH2O":  25,                     # PIP up to 30-40 reported — leaves headroom
+        "ett_leak_fraction":        0.15,
+        "cuff_leak_fraction":       0.15,
+        "ett_complication":         "cuff_leak",
     },
 }
 

@@ -219,12 +219,33 @@ DT: float                       = 0.01             # 100 Hz internal timestep
 INSPIRATORY_PAUSE_S: float      = 0.3              # VC mandatory only (Pplat)
 MAX_INSP_TIME_S: float          = 3.0              # spontaneous-breath safety cutoff
 
+VT_MIN_ML_PER_KG_ADULT:    float = 3.0    # existing behavior, unchanged
+VT_MAX_ML_PER_KG_ADULT:    float = 12.0
+VT_MIN_ML_PER_KG_NEONATE:  float = 4.0    # lung-protective floor — Spaeth 2022 / neonatal consensus
+VT_MAX_ML_PER_KG_NEONATE:  float = 8.0    # ceiling tighter than adult's 12x — ASSUMPTION, flag for review
+NEONATE_IBW_KG_DEFAULT:    float = 3.0    # fallback only if weight_kg is somehow absent
+
+
 CIRCUIT_COMPLIANCE_ML_PER_CMH2O: float = 2.5
 DEFAULT_CHEST_WALL_COMPLIANCE: float   = 250.0     # mL/cmH2O (~inert default)
 ETT_K1: float = 5.0   # cmH2O/L/s     — viscous ETT resistance
 ETT_K2: float = 3.0   # cmH2O/(L/s)^2 — turbulent ETT resistance
 
 AI_HIGH_ASYNCHRONY_THRESHOLD: float = 0.10   # Thille et al. 2006 — AI > 10%
+
+# ---------------------------------------------------------------------------
+# Section 2b — Neonatal population constants (only 3 — see CR0023)
+# ---------------------------------------------------------------------------
+NEONATE_PPEAK_MAX_CMHH2O:                float = 30.0  # neonatal barotrauma risk — MSD Manual PIP ranges
+NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE:   float = 12.0  # NOT ~inert — first-order term for this population
+NEONATE_CIRCUIT_COMPLIANCE_ML_PER_CMH2O: float = 0.6   # dedicated low-compliance neonatal circuit
+
+
+
+def _neonate_or_adult(population: str, neonate_val, adult_val):
+    """Return neonate_val if population == 'neonate', else adult_val.
+    Works for any type — floats, None, whatever a given constant needs."""
+    return neonate_val if population == "neonate" else adult_val
 
 
 # ---------------------------------------------------------------------------
@@ -276,6 +297,15 @@ COMPARTMENT_PROFILES: Dict = {
         {"fraction": 0.15, "C_frac": 0.07, "R_frac": 6.67,
          "R_exp_ratio": 2.0,  "tethering": 0.10},
     ],
+    "Normal Neonate": [
+    {"fraction": 1.00, "C_frac": 1.00, "R_frac": 1.00,
+     "R_exp_ratio": 1.2, "tethering": 0.80},   # identical shape to adult Normal
+    ],
+    "RDS": [
+        {"fraction": 1.00, "C_frac": 1.00, "R_frac": 1.00,
+        "R_exp_ratio": 1.3, "tethering": 0.30},   # single compartment — OPEN DECISION, see below
+    ],
+    
 }
 
 # PEEP-recruited compliance slopes — identical to psv_generator/prvc_generator.
@@ -287,6 +317,9 @@ RECRUITMENT_SLOPES: Dict = {
     "COPD":          0.00,
     "Bronchospasm":  0.00,
     "Pneumonia":     0.10,
+    "Normal Neonate":               0.30,   # ASSUMPTION — modest PEEP recruitment, like adult Normal
+    "RDS":                          0.60,   # higher than adult ARDS — RDS is the textbook recruitable lung
+    
 }
 
 # Condition-aware flow-cycle-threshold guidance (literature-refined defaults
@@ -371,25 +404,28 @@ def _check_trigger(pmus_at_onset: float, auto_peep: float, threshold: float) -> 
     must first overcome auto-PEEP before net effort can cross threshold.
     """
     return (pmus_at_onset - auto_peep) >= threshold
-
-def _advance_schedule(next_attempt_t: float, floor_t: float, interval: float) -> float:
+def _advance_schedule(rng: np.random.Generator, next_attempt_t: float,
+                       floor_t: float, interval_mean: float,
+                       interval_cv: float) -> float:
     """
     Advance a periodic patient-effort schedule to the first slot at or after
-    floor_t, preserving the schedule's original neural phase rather than
-    snapping it to floor_t.
+    floor_t, resampling a fresh jittered interval on every step rather than
+    reusing one fixed value.
 
-    Bug this fixes: previously, when a scheduled attempt fell inside a
-    mandatory breath's own inspiration/pause, the schedule was clamped to
-    the mandatory breath's end time exactly (`max(next_attempt_t, t_current)`),
-    producing a zero-gap re-trigger — a spontaneous breath firing in the
-    same instant the mandatory breath's inspiration ended, with no passive
-    expiratory time between them. Advancing by whole `interval` steps
-    instead guarantees the next attempt is strictly in the future and stays
-    on the patient's original neural timing.
+    Without per-step jitter, attempt_interval = 60/effort_rate_per_min is
+    perfectly deterministic, so whenever T_mand and attempt_interval land
+    in a near-rational ratio, the same specific attempt wins every macro-
+    cycle -- silently locking the *actual* mandatory rate to a different,
+    faster value than the configured respiratory_rate (confirmed by direct
+    simulation: 39/100 PARAMETER_GRID RR/effort-rate/f_window combinations
+    show a persistent >0.5s distortion, worst cases ~25% faster than
+    configured). Resampling each step breaks that phase lock.
     """
     while next_attempt_t <= floor_t + 1e-9:
-        next_attempt_t += interval
+        step = max(0.2, float(rng.normal(interval_mean, interval_cv * interval_mean)))
+        next_attempt_t += step
     return next_attempt_t
+
 
 
 def _pmus_waveform(t_elapsed: float, t_duration: float, pmus_peak: float) -> float:
@@ -868,9 +904,23 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
     R_global    = float(params["resistance_cmH2O_L_s"])
 
     condition        = params.get("condition", "Normal")
+    population       = params.get("population", "adult")
+    weight_kg  = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT if population == "neonate" else IBW_KG))
+    if population == "neonate":
+        weight = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT))
+        vt_min_ml = weight * VT_MIN_ML_PER_KG_NEONATE
+        vt_max_ml = weight * VT_MAX_ML_PER_KG_NEONATE
+    else:
+        vt_min_ml = IBW_KG * VT_MIN_ML_PER_KG_ADULT   # identical to current VT_MIN_ML
+        vt_max_ml = IBW_KG * VT_MAX_ML_PER_KG_ADULT
     stress_index     = float(params.get("stress_index", 1.0))
-    C_chest          = float(params.get("chest_wall_compliance_ml_per_cmH2O",
-                                         DEFAULT_CHEST_WALL_COMPLIANCE))
+    C_chest          = float(params.get(
+        "chest_wall_compliance_ml_per_cmH2O",
+        _neonate_or_adult(population, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, DEFAULT_CHEST_WALL_COMPLIANCE),
+    ))
+    ppeak_max = _neonate_or_adult(population, NEONATE_PPEAK_MAX_CMHH2O, PPEAK_MAX_CMHH2O)
+    circuit_c = _neonate_or_adult(population, NEONATE_CIRCUIT_COMPLIANCE_ML_PER_CMH2O, CIRCUIT_COMPLIANCE_ML_PER_CMH2O)
+    vt_min_ml = weight_kg * _neonate_or_adult(population, VT_MIN_ML_PER_KG_NEONATE, VT_MIN_ML_PER_KG_ADULT)
     circ_compensated = bool(params.get("circuit_compensated", True))
     peep_ref         = float(params.get("peep_reference_cmH2O", 5.0))
     rec_slope        = float(params.get("recruitment_slope",
@@ -965,7 +1015,8 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
             t_mand_start = t_current
             t_current = t_current + seg["duration"]
             mandatory_count += 1
-            next_attempt_t = _advance_schedule(next_attempt_t, t_current, attempt_interval)
+            next_attempt_t = _advance_schedule(rng, next_attempt_t, t_current, attempt_interval, pmus_cv)
+            
             continue
 
         # Advance passive/idle time up to the sooner of: next effort attempt,
@@ -1017,7 +1068,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
             t_mand_start = attempt_onset_t
             t_current = attempt_onset_t + seg["duration"]
             mandatory_count += 1
-            next_attempt_t = _advance_schedule(next_attempt_t, t_current, attempt_interval)
+            next_attempt_t = _advance_schedule(rng, next_attempt_t, t_current, attempt_interval, pmus_cv)
             continue
 
         if triggered and not in_window:
@@ -1043,7 +1094,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
             })
             V_comps = seg["V_comps"]
             t_current = attempt_onset_t + seg["duration"]
-            next_attempt_t = _advance_schedule(next_attempt_t, t_current, attempt_interval)
+            next_attempt_t = _advance_schedule(rng, next_attempt_t, t_current, attempt_interval, pmus_cv)
             continue
 
         # Ineffective attempt (failed trigger, either zone): small perturbation,
@@ -1074,7 +1125,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
             "duration_s": n_eff_steps * DT,
         })
         t_current = attempt_onset_t + n_eff_steps * DT
-        next_attempt_t = _advance_schedule(next_attempt_t, t_current, attempt_interval)
+        next_attempt_t = _advance_schedule(rng, next_attempt_t, t_current, attempt_interval, pmus_cv)
 
     # The while loop above always exits immediately after delivering the
     # n_cycles-th mandatory breath's INSPIRATION (mandatory_count reaches
@@ -1150,17 +1201,17 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
 
     if mode == "VC":
         mand_vt_corrected = _circuit_vt_correction(
-            mand_vt, mandatory_ppeak, peep, compensated=circ_compensated)
+            mand_vt, mandatory_ppeak, peep, C_circ=circuit_c, compensated=circ_compensated)
     else:
         mand_vt_corrected = mand_vt
 
     # ---- Validity filter ----------------------------------------------------
     is_valid = True
     invalid_reason = ""
-    if ppeak > PPEAK_MAX_CMHH2O:
+    if ppeak > ppeak_max:
         is_valid = False
-        invalid_reason = f"Ppeak {ppeak:.1f} cmH2O exceeds barotrauma threshold ({PPEAK_MAX_CMHH2O})"
-    elif mode == "VC" and driving_p > DRIVING_P_MAX_CMHH2O:
+        invalid_reason = f"Ppeak {ppeak:.1f} cmH2O exceeds barotrauma threshold ({ppeak_max})"
+    elif mode == "VC" and population != "neonate" and driving_p > DRIVING_P_MAX_CMHH2O:
         is_valid = False
         invalid_reason = f"Mandatory driving pressure {driving_p:.1f} cmH2O exceeds ARDS mortality threshold ({DRIVING_P_MAX_CMHH2O})"
     elif mode == "PC" and float(params["insp_pressure_cmH2O"]) > INSP_PRESSURE_MAX_CMHH2O:
@@ -1169,9 +1220,9 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
     elif ps_level > PS_MAX_CMHH2O:
         is_valid = False
         invalid_reason = f"Pressure support {ps_level} cmH2O exceeds clinical ceiling ({PS_MAX_CMHH2O})"
-    elif mandatory_records and mand_vt_corrected < VT_MIN_ML:
+    elif mandatory_records and mand_vt_corrected < vt_min_ml:
         is_valid = False
-        invalid_reason = f"Mandatory delivered VT {mand_vt_corrected:.0f} mL below minimum ({VT_MIN_ML:.0f} mL)"
+        invalid_reason = f"Mandatory delivered VT {mand_vt_corrected:.0f} mL below minimum ({vt_min_ml:.0f} mL)"
     elif mandatory_records and mand_vt_corrected > VT_MAX_ML:
         is_valid = False
         invalid_reason = f"Mandatory delivered VT {mand_vt_corrected:.0f} mL exceeds maximum ({VT_MAX_ML:.0f} mL)"
@@ -1210,7 +1261,7 @@ def _make_scenario_id(condition_name: str, params: dict) -> str:
         # encoded"); caught here by the thinned-dataset pipeline test
         # rather than this file's own smoke test, since the smoke test
         # only ever calls with one fixed (C, R) at a time.
-        f"C{params['compliance_ml_per_cmH2O']}",
+        f"_C{int(round(params['compliance_ml_per_cmH2O'] * (10 if params.get('population') == 'neonate' else 1))):03d}"
         f"R{params['resistance_cmH2O_L_s']}",
         f"RRm{int(params['respiratory_rate'])}",
         f"PEEP{int(params['peep_cmH2O'])}",

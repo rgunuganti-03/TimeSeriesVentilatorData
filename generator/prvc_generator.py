@@ -151,6 +151,13 @@ VT_MAX_ML: float          = IBW_KG * 12      # 840 mL
 PPEAK_MAX_CMHH2O: float   = 50.0
 DT: float                 = 0.01             # 100 Hz internal simulation timestep
 
+VT_MIN_ML_PER_KG_ADULT:    float = 3.0    # existing behavior, unchanged
+VT_MAX_ML_PER_KG_ADULT:    float = 12.0
+VT_MIN_ML_PER_KG_NEONATE:  float = 4.0    # lung-protective floor — Spaeth 2022 / neonatal consensus
+VT_MAX_ML_PER_KG_NEONATE:  float = 8.0    # ceiling tighter than adult's 12x — ASSUMPTION, flag for review
+NEONATE_IBW_KG_DEFAULT:    float = 3.0    # fallback only if weight_kg is somehow absent
+
+
 # Rise time is fixed, not swept, for PRVC (brief's parameter table does
 # not list rise time for PRVC -- see parameter grid doc section 1c).
 RISE_TIME_S: float = 0.10
@@ -183,7 +190,19 @@ DEFAULT_CHEST_WALL_COMPLIANCE: float = 250.0  # mL/cmH2O
 # Rohrer ETT contribution (7.5 mm ID tube) -- see refinement #3 note
 ETT_K1: float = 5.0   # cmH2O/L/s
 ETT_K2: float = 3.0   # cmH2O/(L/s)^2
+# ---------------------------------------------------------------------------
+# Section 2b — Neonatal population constants (only 3 — see CR0023)
+# ---------------------------------------------------------------------------
+NEONATE_PPEAK_MAX_CMHH2O:                float = 30.0  # neonatal barotrauma risk — MSD Manual PIP ranges
+NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE:   float = 12.0  # NOT ~inert — first-order term for this population
+NEONATE_CIRCUIT_COMPLIANCE_ML_PER_CMH2O: float = 0.6   # dedicated low-compliance neonatal circuit
 
+
+
+def _neonate_or_adult(population: str, neonate_val, adult_val):
+    """Return neonate_val if population == 'neonate', else adult_val.
+    Works for any type — floats, None, whatever a given constant needs."""
+    return neonate_val if population == "neonate" else adult_val
 # ---------------------------------------------------------------------------
 # Section 3 -- Condition-Specific Profiles
 # ---------------------------------------------------------------------------
@@ -235,6 +254,15 @@ COMPARTMENT_PROFILES: Dict = {
         {"fraction": 0.15, "C_frac": 0.07, "R_frac": 6.67,
          "R_exp_ratio": 2.0, "tethering": 0.10},
     ],
+    "Normal Neonate": [
+    {"fraction": 1.00, "C_frac": 1.00, "R_frac": 1.00,
+     "R_exp_ratio": 1.2, "tethering": 0.80},   # identical shape to adult Normal
+    ],
+    "RDS": [
+        {"fraction": 1.00, "C_frac": 1.00, "R_frac": 1.00,
+        "R_exp_ratio": 1.3, "tethering": 0.30},   # single compartment — OPEN DECISION, see below
+    ],
+    
 }
 
 RECRUITMENT_SLOPES: Dict = {
@@ -245,6 +273,8 @@ RECRUITMENT_SLOPES: Dict = {
     "COPD":          0.00,
     "Bronchospasm":  0.00,
     "Pneumonia":     0.10,
+    "Normal Neonate":               0.30,   # ASSUMPTION — modest PEEP recruitment, like adult Normal
+    "RDS":                          0.60,   # higher than adult ARDS — RDS is the textbook recruitable lung
 }
 
 # Condition tiers used by generate_dataset() / thinned-script style sweeps.
@@ -265,6 +295,11 @@ CONDITION_TIERS: List[Dict] = [
      "resistance_range": (25, 50),  "resistance_step": 5, "n_cycles": 25},
     {"name": "Pneumonia",      "compliance_range": (40, 65),  "compliance_step": 5,
      "resistance_range": (10, 16),  "resistance_step": 2, "n_cycles": 12},
+    {"name": "Normal Neonate",              "compliance_range": (3, 6),    "compliance_step": 0.5,
+    "resistance_range": (60, 100),  "resistance_step": 10, "n_cycles": 15},
+    {"name": "RDS",                         "compliance_range": (0.4, 1.2), "compliance_step": 0.1,
+    "resistance_range": (60, 100),  "resistance_step": 10, "n_cycles": 15},
+
 ]
 
 REQUIRED_PARAMS = [
@@ -584,6 +619,15 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     R_global = float(params["resistance_cmH2O_L_s"])
 
     condition = params.get("condition", "Normal")
+    population = params.get("population", "adult")
+    weight_kg  = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT if population == "neonate" else IBW_KG))
+    if population == "neonate":
+        weight = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT))
+        vt_min_ml = weight * VT_MIN_ML_PER_KG_NEONATE
+        vt_max_ml = weight * VT_MAX_ML_PER_KG_NEONATE
+    else:
+        vt_min_ml = IBW_KG * VT_MIN_ML_PER_KG_ADULT   # identical to current VT_MIN_ML
+        vt_max_ml = IBW_KG * VT_MAX_ML_PER_KG_ADULT
     adaptation_step = float(params.get("adaptation_step_cmH2O", ADAPTATION_STEP_CMH2O_DEFAULT))
     vt_tolerance_frac = float(params.get("vt_tolerance_frac", VT_TOLERANCE_FRAC_DEFAULT))
     rise_time = float(params.get("rise_time_s", RISE_TIME_S))
@@ -591,8 +635,13 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     use_vc_test_breath = bool(params.get("use_vc_test_breath", True))
 
     stress_index = float(params.get("stress_index", 1.0))
-    C_chest = float(params.get("chest_wall_compliance_ml_per_cmH2O",
-                                DEFAULT_CHEST_WALL_COMPLIANCE))
+    C_chest          = float(params.get(
+        "chest_wall_compliance_ml_per_cmH2O",
+        _neonate_or_adult(population, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, DEFAULT_CHEST_WALL_COMPLIANCE),
+    ))
+    ppeak_max = _neonate_or_adult(population, NEONATE_PPEAK_MAX_CMHH2O, PPEAK_MAX_CMHH2O)
+    circuit_c = _neonate_or_adult(population, NEONATE_CIRCUIT_COMPLIANCE_ML_PER_CMH2O, CIRCUIT_COMPLIANCE_ML_PER_CMH2O)
+    vt_min_ml = weight_kg * _neonate_or_adult(population, VT_MIN_ML_PER_KG_NEONATE, VT_MIN_ML_PER_KG_ADULT)
     peep_ref = float(params.get("peep_reference_cmH2O", 5.0))
     rec_slope = float(params.get("recruitment_slope", RECRUITMENT_SLOPES.get(condition, 0.5)))
     circ_compensated = bool(params.get("circuit_compensated", True))
@@ -731,20 +780,32 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     delivered_vt_final = float(delivered_vt_trajectory[-1])
     delivered_vt_final = _circuit_vt_correction(
         delivered_vt_final, ppeak_final_breath, peep,
-        compensated=circ_compensated,
+        C_circ=circuit_c, compensated=circ_compensated,
     )
+    cuff_leak_frac = float(params.get("ett_cuff_leak_fraction", 0.0))
+    delivered_vt_final = max(0.0, delivered_vt_final * (1.0 - cuff_leak_frac))
     auto_peep = float(np.mean(V_carry) / max(np.mean(comps["C_base"]), 0.5)) if n_cycles > 1 else 0.0
     minute_vent = delivered_vt_final * rr / 1000.0
     fill_fraction = float(np.clip(delivered_vt_final / max(vt_target, 1.0), 0.0, 1.5))
 
+    population = params.get("population", "adult")
+    weight_kg  = float(params.get("weight_kg",
+                     NEONATE_IBW_KG_DEFAULT if population == "neonate" else IBW_KG))
+    ppeak_max  = _neonate_or_adult(population, NEONATE_PPEAK_MAX_CMHH2O, PPEAK_MAX_CMHH2O)
+    vt_min_ml  = weight_kg * _neonate_or_adult(
+        population, VT_MIN_ML_PER_KG_NEONATE, VT_MIN_ML_PER_KG_ADULT)
+
     is_valid = True
     invalid_reason = None
-    if ppeak > PPEAK_MAX_CMHH2O:
+    if ppeak > ppeak_max:
         is_valid = False
-        invalid_reason = f"Ppeak {ppeak:.1f} exceeds barotrauma threshold {PPEAK_MAX_CMHH2O}"
-    elif converged and not (VT_MIN_ML <= delivered_vt_final <= VT_MAX_ML):
+        invalid_reason = f"Ppeak {ppeak:.1f} exceeds barotrauma threshold {ppeak_max}"
+    elif converged and delivered_vt_final < vt_min_ml:
         is_valid = False
-        invalid_reason = f"Converged delivered Vt {delivered_vt_final:.0f} mL outside safe range"
+        invalid_reason = f"Converged delivered Vt {delivered_vt_final:.0f} mL below minimum {vt_min_ml:.0f} mL"
+    elif converged and population != "neonate" and delivered_vt_final > VT_MAX_ML:
+        is_valid = False
+        invalid_reason = f"Converged delivered Vt {delivered_vt_final:.0f} mL exceeds maximum {VT_MAX_ML:.0f} mL"
     # Ceiling-limited non-convergence is retained as a valid, labeled scenario
     # (see parameter grid doc 1e) -- not hard-invalidated.
 

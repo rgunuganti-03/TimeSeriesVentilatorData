@@ -353,21 +353,45 @@ def render_sidebar():
         # whenever the condition or engine changes. Manual adjustments
         # within a session are preserved until a new condition is selected.
         preset = get_condition(condition_name)
+        is_neonatal = preset.get("population", "adult") == "neonate"
+
+        compliance = st.slider(
+            "Compliance (ml/cmH2O)",
+            0.1, 8.0, value=float(preset["compliance_ml_per_cmH2O"]), step=0.1,
+            key=f"compliance_{condition_name}_{engine_name}",
+        ) if is_neonatal else st.slider(
+            "Compliance (ml/cmH2O)", 5, 150, value=int(preset["compliance_ml_per_cmH2O"]), step=1,
+            key=f"compliance_{condition_name}_{engine_name}",
+        )
 
         # --- Shared parameters ------------------------------------------
 
-        compliance = st.slider(
-            "Compliance (ml/cmH\u2082O)", 5, 150,
-            value=int(preset["compliance_ml_per_cmH2O"]),
-            step=1,
-            key=f"compliance_{condition_name}_{engine_name}",
-        )
-        resistance = st.slider(
-            "Resistance (cmH\u2082O/L/s)", 1, 50,
-            value=int(preset["resistance_cmH2O_L_s"]),
-            step=1,
-            key=f"resistance_{condition_name}_{engine_name}",
-        )
+        if is_neonatal:
+            compliance = st.slider(
+                "Compliance (ml/cmH\u2082O)", 0.1, 8.0,
+                value=float(preset["compliance_ml_per_cmH2O"]),
+                step=0.1,
+                key=f"compliance_{condition_name}_{engine_name}",
+            )
+            resistance = st.slider(
+                "Resistance (cmH\u2082O/L/s)", 40, 200,
+                value=int(preset["resistance_cmH2O_L_s"]),
+                step=5,
+                key=f"resistance_{condition_name}_{engine_name}",
+            )
+        else:
+            compliance = st.slider(
+                "Compliance (ml/cmH\u2082O)", 5, 150,
+                value=int(preset["compliance_ml_per_cmH2O"]),
+                step=1,
+                key=f"compliance_{condition_name}_{engine_name}",
+            )
+            resistance = st.slider(
+                "Resistance (cmH\u2082O/L/s)", 1, 50,
+                value=int(preset["resistance_cmH2O_L_s"]),
+                step=1,
+                key=f"resistance_{condition_name}_{engine_name}",
+            )
         peep = st.slider(
             "PEEP (cmH\u2082O)", 0, 20,
             value=int(preset["peep_cmH2O"]),
@@ -438,13 +462,22 @@ def render_sidebar():
 
         # --- Tidal volume — VCV (its own setting) and PRVC (its target) --
         if engine_key in ("vcv", "prvc") or (engine_key == "simv" and mode == "VC"):
-            tv = st.slider(
-                "Tidal Volume (ml)", 100, 900,
-                value=int(preset["tidal_volume_ml"]),
-                step=10,
-                help="Target volume delivered per breath.",
-                key=f"tv_{condition_name}_{engine_name}",
-            )
+            if is_neonatal:
+                tv = st.slider(
+                    "Tidal Volume (ml)", 3, 40,
+                    value=int(preset["tidal_volume_ml"]),
+                    step=1,
+                    help="Target volume delivered per breath.",
+                    key=f"tv_{condition_name}_{engine_name}",
+                )
+            else:
+                tv = st.slider(
+                    "Tidal Volume (ml)", 100, 900,
+                    value=int(preset["tidal_volume_ml"]),
+                    step=10,
+                    help="Target volume delivered per breath.",
+                    key=f"tv_{condition_name}_{engine_name}",
+                )
 
         # --- PCV-specific: inspiratory pressure only -----------------------
         if engine_key == "pcv" or (engine_key == "simv" and mode == "PC"):
@@ -467,6 +500,20 @@ def render_sidebar():
 
         # --- Rise time — PCV and PRVC ---------------------------------------
         if engine_key in ("pcv", "prvc", "simv"):
+            if is_neonatal: 
+                rise_time = st.slider(
+                "Rise Time (s)",
+                min_value=0.0, max_value=0.4,
+                value=float(preset.get("rise_time_s", 0.05)) if engine_key == "pcv" else 0.10, step=0.01,
+                help=(
+                    "Time for pressure to ramp from PEEP to PIP. "
+                    "0.0 = square wave step (maximum initial flow). "
+                    "Longer rise times reduce peak flow and improve "
+                    "patient comfort in spontaneously breathing patients."
+                ),
+                key=f"rise_{condition_name}_{engine_name}",
+            )
+        else:
             rise_time = st.slider(
                 "Rise Time (s)",
                 min_value=0.0, max_value=0.4,
@@ -539,17 +586,31 @@ def render_sidebar():
                 'PSV — Patient Effort Model</div>',
                 unsafe_allow_html=True,
             )
-            effort_rate = st.slider(
-                "Effort Rate (breaths/min)", 8, 40,
+            if is_neonatal:
+                effort_rate = st.slider(
+                "Effort Rate (breaths/min)", 8, 70,
                 value=int(preset["effort_rate_per_min"]),
                 step=1,
                 help=(
-                    "Patient's neural respiratory rate — the rate at which "
-                    "the patient attempts to breathe regardless of whether "
-                    "each effort successfully triggers the ventilator."
-                ),
+                        "Patient's neural respiratory rate — the rate at which "
+                        "the patient attempts to breathe regardless of whether "
+                        "each effort successfully triggers the ventilator."
+                    ),
                 key=f"erate_{condition_name}_{engine_name}",
+                
             )
+            else:
+                effort_rate = st.slider(
+                    "Effort Rate (breaths/min)", 8, 40,
+                    value=int(preset["effort_rate_per_min"]),
+                    step=1,
+                    help=(
+                        "Patient's neural respiratory rate — the rate at which "
+                        "the patient attempts to breathe regardless of whether "
+                        "each effort successfully triggers the ventilator."
+                    ),
+                    key=f"erate_{condition_name}_{engine_name}",
+                )
             pmus = st.slider(
                 "Peak Effort (Pmus cmH\u2082O)", 2, 25,
                 value=int(preset["pmus_peak_cmH2O"]),
@@ -788,8 +849,12 @@ def render_sidebar():
                 params["flow_pattern"]    = flow_pattern                                     
             else:                                                                             
                 params["insp_pressure_cmH2O"] = insp_pressure 
+        params["population"] = preset.get("population", "adult")
+        params["weight_kg"]  = preset.get("weight_kg", 3.0 if is_neonatal else 70.0)
 
         return params, condition_name, engine_name, n_cycles
+
+        
 
 
 # ---------------------------------------------------------------------------
@@ -872,6 +937,27 @@ def render_metrics(result, params, engine_key):
     mean_paw  = float(np.mean(result["pressure"]))
     auto_peep = result["auto_peep_cmH2O"]
     
+
+    population = params.get("population", "adult")
+    if population == "neonate":
+        if "patient_vt_ml" in result and "delivered_vt_ml" in result:
+            # SIMV only — both volumes are separately reported, so read the
+            # REALIZED leak off this run's actual output rather than the
+            # configured input (captures synchronization/auto-PEEP effects
+            # on top of leak, which a flat input fraction wouldn't).
+            patient_vt   = result["patient_vt_ml"]
+            delivered_vt = result["delivered_vt_ml"]
+            if delivered_vt and delivered_vt > 0:
+                leak_pct = 100.0 * (1.0 - patient_vt / delivered_vt)
+                _metric_card(col, "Leak (measured)", f"{leak_pct:.0f}", "%")
+        else:
+            # vcv/pcv/psv/prvc — leak is a flat multiply folded directly
+            # into delivered_vt_ml, so the configured input fraction IS
+            # the leak; no separate pre-leak output key needed.
+            leak_frac = params.get("ett_cuff_leak_fraction",
+                                    params.get("cuff_leak_fraction", 0.0))
+            if leak_frac:
+                _metric_card(col, "Leak (configured)", f"{leak_frac * 100:.0f}", "%")
     
 
     if engine_key == "vcv":
@@ -1245,7 +1331,8 @@ def render():
 
     with st.spinner("Generating waveforms..."):
         result = _run_engine(engine_name, params, n_cycles)
-        
+
+    
 
     render_metrics(result, params, engine_key)
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
