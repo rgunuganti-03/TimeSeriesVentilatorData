@@ -1220,7 +1220,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
     elif ps_level > PS_MAX_CMHH2O:
         is_valid = False
         invalid_reason = f"Pressure support {ps_level} cmH2O exceeds clinical ceiling ({PS_MAX_CMHH2O})"
-    elif mandatory_records and mand_vt_corrected < vt_min_ml:
+    elif mandatory_records and population != "neonate" and mand_vt_corrected < vt_min_ml:
         is_valid = False
         invalid_reason = f"Mandatory delivered VT {mand_vt_corrected:.0f} mL below minimum ({vt_min_ml:.0f} mL)"
     elif mandatory_records and mand_vt_corrected > VT_MAX_ML:

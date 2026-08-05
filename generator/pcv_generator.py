@@ -379,17 +379,24 @@ _REQUIRED_PARAMS = [
 ]
 
 def _validate_params(params: dict) -> None:
+
     missing = [k for k in _REQUIRED_PARAMS if k not in params]
     if missing:
         raise ValueError(f"Missing required parameter(s): {missing}")
-    if not (5    <= float(params["respiratory_rate"])         <= 35):
-        raise ValueError("respiratory_rate must be 5–35 bpm")
+
+    population = params.get("population", "adult")
+    rr_lo, rr_hi = (20, 80)   if population == "neonate" else (5, 35)
+    c_lo,  c_hi  = (0.3, 10)  if population == "neonate" else (5, 150)
+    r_lo,  r_hi  = (40, 200)  if population == "neonate" else (0.5, 50)
+
+    if not (rr_lo <= float(params["respiratory_rate"]) <= rr_hi):
+        raise ValueError(f"respiratory_rate must be {rr_lo}–{rr_hi} bpm")
     if not (1    <= float(params["insp_pressure_cmH2O"])      <= 50):
         raise ValueError("insp_pressure_cmH2O must be 1–50 cmH2O")
-    if not (5    <= float(params["compliance_ml_per_cmH2O"])  <= 150):
-        raise ValueError("compliance_ml_per_cmH2O must be 5–150 mL/cmH2O")
-    if not (0.5  <= float(params["resistance_cmH2O_L_s"])     <= 50):
-        raise ValueError("resistance_cmH2O_L_s must be 0.5–50 cmH2O/L/s")
+    if not (c_lo <= float(params["compliance_ml_per_cmH2O"])  <= c_hi):
+        raise ValueError(f"compliance_ml_per_cmH2O must be {c_lo}–{c_hi} mL/cmH2O")
+    if not (r_lo <= float(params["resistance_cmH2O_L_s"])     <= r_hi):
+        raise ValueError(f"resistance_cmH2O_L_s must be {r_lo}–{r_hi} cmH2O/L/s")
     if not (0.2  <= float(params["ie_ratio"])                 <= 1.0):
         raise ValueError("ie_ratio must be 0.2–1.0")
     if not (0    <= float(params["peep_cmH2O"])               <= 20):
@@ -450,10 +457,8 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     if population == "neonate":
         weight = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT))
         vt_min_ml = weight * VT_MIN_ML_PER_KG_NEONATE
-        vt_max_ml = weight * VT_MAX_ML_PER_KG_NEONATE
     else:
         vt_min_ml = IBW_KG * VT_MIN_ML_PER_KG_ADULT   # identical to current VT_MIN_ML
-        vt_max_ml = IBW_KG * VT_MAX_ML_PER_KG_ADULT
 
     if condition not in COMPARTMENT_PROFILES:
         condition = "Normal"
@@ -673,8 +678,6 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
             f"PPeak {ppeak:.1f} cmH2O exceeds barotrauma threshold "
             f"({ppeak_max} cmH2O)"
         )
-    elif population != "neonate":
-        is_valid = False
     elif delivered_vt < vt_min_ml:
         is_valid = False
         invalid_reason = (

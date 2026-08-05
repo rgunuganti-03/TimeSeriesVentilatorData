@@ -444,6 +444,30 @@ def _validate_params(params: dict) -> None:
     missing = [k for k in _REQUIRED_PARAMS if k not in params]
     if missing:
         raise ValueError(f"Missing required parameter(s): {missing}")
+
+    population = params.get("population", "adult")
+    rr_lo, rr_hi = (20, 80)   if population == "neonate" else (5, 35)
+    c_lo,  c_hi  = (0.3, 10)  if population == "neonate" else (5, 150)
+    r_lo,  r_hi  = (40, 200)  if population == "neonate" else (0.5, 50)
+    v_lo,  v_hi  = (3, 50)  if population == "neonate" else (100, 1000)
+
+
+    if not (rr_lo <= float(params["respiratory_rate"]) <= rr_hi):
+        raise ValueError(f"respiratory_rate must be {rr_lo}–{rr_hi} bpm")
+    if not (v_lo  <= float(params["tidal_volume_ml"]) <= v_hi):
+        raise ValueError(f"tidal_volume_ml must be {v_lo}–{v_hi} mL")
+    if not (c_lo <= float(params["compliance_ml_per_cmH2O"])  <= c_hi):
+        raise ValueError(f"compliance_ml_per_cmH2O must be {c_lo}–{c_hi} mL/cmH2O")
+    if not (r_lo <= float(params["resistance_cmH2O_L_s"])     <= r_hi):
+        raise ValueError(f"resistance_cmH2O_L_s must be {r_lo}–{r_hi} cmH2O/L/s")
+    if not (0.2  <= float(params["ie_ratio"])                 <= 1.0):
+        raise ValueError("ie_ratio must be 0.2–1.0")
+    if not (0    <= float(params["peep_cmH2O"])               <= 20):
+        raise ValueError("peep_cmH2O must be 0–20 cmH2O")
+
+    missing = [k for k in _REQUIRED_PARAMS if k not in params]
+    if missing:
+        raise ValueError(f"Missing required parameter(s): {missing}")
     if params["flow_pattern"] not in ("square", "decelerating"):
         raise ValueError(
             f"flow_pattern must be 'square' or 'decelerating', "
@@ -554,10 +578,8 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     if population == "neonate":
         weight = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT))
         vt_min_ml = weight * VT_MIN_ML_PER_KG_NEONATE
-        vt_max_ml = weight * VT_MAX_ML_PER_KG_NEONATE
     else:
         vt_min_ml = IBW_KG * VT_MIN_ML_PER_KG_ADULT   # identical to current VT_MIN_ML
-        vt_max_ml = IBW_KG * VT_MAX_ML_PER_KG_ADULT
     if condition not in COMPARTMENT_PROFILES:
         condition = "Normal"
 
