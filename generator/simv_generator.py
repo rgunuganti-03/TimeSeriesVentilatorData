@@ -617,7 +617,7 @@ def _run_mandatory_vc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
                                    peep: float, t_insp: float, flow_pattern: str,
                                    vt_target_ml: float, K1_ett: float, K2_ett: float,
                                    stress_index: float, vt_ref_per_comp: np.ndarray,
-                                   vt_full_per_comp: np.ndarray) -> Dict:
+                                   vt_full_per_comp: np.ndarray, leak_frac: float = 0.0) -> Dict:
     """One VC mandatory breath: prescribed-flow inspiration + inspiratory
     pause, algebraic branch-point solve each step (vcv_generator physics)."""
     n_comps = comps["n_comps"]
@@ -676,14 +676,15 @@ def _run_mandatory_vc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
         "t_rel": t_rel, "pressure": Pao, "flow": Q_tot, "volume": V_tot,
         "V_comps": V_comps, "duration": t_insp + INSPIRATORY_PAUSE_S,
         "ppeak_cmH2O": float(Pao.max()), "pplat_cmH2O": float(Pao[-1]),
-        "delivered_vt_ml": float(V_tot[n_insp - 1]) - V_start,
+        "delivered_vt_ml": max(0.0, (float(V_tot[n_insp - 1]) - V_start) * (1.0 - leak_frac)),
+        
     }
 
 
 def _run_mandatory_pc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: float,
                                    peep: float, t_insp: float, t_rise: float,
                                    insp_pressure: float, K1_ett: float, K2_ett: float,
-                                   stress_index: float, vt_ref_per_comp: np.ndarray
+                                   stress_index: float, vt_ref_per_comp: np.ndarray, leak_frac: float = 0.0
                                    ) -> Dict:
     """One PC mandatory breath: 3-phase pressure profile (rise + plateau
     only; expiration handled generically), per-compartment ODE (pcv_generator
@@ -994,12 +995,12 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 seg = _run_mandatory_vc_inspiration(
                     V_comps, comps, C_chest, peep, t_insp_mand,
                     params["flow_pattern"], vt_target, K1_eff, K2_eff,
-                    stress_index, vt_ref_per_comp, vt_full_per_comp)
+                    stress_index, vt_ref_per_comp, vt_full_per_comp, leak_frac=leak_frac,)
             else:
                 insp_p = float(params["insp_pressure_cmH2O"])
                 seg = _run_mandatory_pc_inspiration(
                     V_comps, comps, C_chest, peep, t_insp_mand, rise_time,
-                    insp_p, K1_eff, K2_eff, stress_index, vt_ref_per_comp)
+                    insp_p, K1_eff, K2_eff, stress_index, vt_ref_per_comp,)
 
             delivered_vt = seg["delivered_vt_ml"] * (1.0 - leak_frac)
             _append(seg, t_current)
