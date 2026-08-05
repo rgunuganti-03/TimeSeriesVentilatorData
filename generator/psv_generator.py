@@ -1655,6 +1655,39 @@ if __name__ == "__main__":
     print(f"     outcome={sbt['outcome']} "
           f"windows={len(sbt['trial_windows'])} "
           f"baseline_RRSB={sbt['baseline_result']['rrsb']:.0f}")
+    
+    # ---- Test 6: Neonatal population branch ------------------------------
+    print("\n[6/6] Neonatal population branch — weight scaling, leak")
+    p_neo = {
+        "respiratory_rate":         50,
+        "pressure_support_cmH2O":   8.0,
+        "peep_cmH2O":               5.0,
+        "flow_cycle_threshold":     0.15,
+        "trigger_threshold_cmH2O":  0.5,
+        "rise_time_s":              0.05,
+        "compliance_ml_per_cmH2O":  4.0,
+        "resistance_cmH2O_L_s":     80,
+        "pmus_peak_cmH2O":          5.0,
+        "effort_rate_per_min":      50,
+        "effort_duration_s":        0.35,
+        "pmus_cv":                  0.20,
+        "condition":                "Normal Neonate",
+        "population":               "neonate",
+        "weight_kg":                3.0,
+    }
+    r_neo = generate_breath_cycles(p_neo, n_cycles=5, seed=50)
+    _check("neonate scenario returns dict", isinstance(r_neo, dict))
+    _check("neonate scenario is valid",     r_neo["is_valid"], r_neo.get("invalid_reason", ""))
+
+    p_underweight_vt = {**p_neo, "weight_kg": 10.0}
+    r_under = generate_breath_cycles(p_underweight_vt, n_cycles=5, seed=50)
+    _check("VT floor scales with weight_kg",
+           not r_under["is_valid"] and "minimum" in r_under.get("invalid_reason", "").lower())
+
+    p_leak = {**p_neo, "ett_complication": "cuff_leak", "cuff_leak_fraction": 0.15}
+    r_leak = generate_breath_cycles(p_leak, n_cycles=5, seed=50)
+    _check("patient_vt < delivered_vt with neonatal leak",
+           r_leak["patient_vt_ml"] < r_leak["delivered_vt_ml"])
 
     # ---- Summary --------------------------------------------------------
     n_pass = sum(_results)

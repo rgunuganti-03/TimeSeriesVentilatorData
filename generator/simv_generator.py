@@ -1490,6 +1490,44 @@ if __name__ == "__main__":
            any(s["params"]["mandatory_mode"] == "PC" for s in scenarios))
     print(f"     total={len(scenarios)}  example_id={ids[0] if ids else '—'}")
 
+    # ---- Test 5: Neonatal population branch ------------------------------
+    print("\n[5/5] Neonatal population branch — weight scaling, leak")
+    p_neo_vc = {
+        "mandatory_mode":          "VC",
+        "tidal_volume_ml":          15.0,
+        "flow_pattern":             "square",
+        "respiratory_rate":         25.0,      # mandatory backup rate
+        "peep_cmH2O":               5.0,
+        "ie_ratio":                 0.5,
+        "rise_time_s":              0.05,
+        "f_window":                 0.20,
+        "pressure_support_cmH2O":   8.0,
+        "flow_cycle_threshold":     0.15,
+        "trigger_threshold_cmH2O":  0.5,
+        "pmus_peak_cmH2O":          5.0,
+        "effort_rate_per_min":      50.0,
+        "effort_duration_s":        0.30,
+        "pmus_cv":                  0.20,
+        "compliance_ml_per_cmH2O":  4.0,
+        "resistance_cmH2O_L_s":     80.0,
+        "condition":                "Normal Neonate",
+        "population":               "neonate",
+        "weight_kg":                3.0,
+    }
+    r_neo = generate_breath_cycles(p_neo_vc, n_cycles=5)
+    _check("neonate scenario returns dict", isinstance(r_neo, dict))
+    _check("neonate scenario is valid",     r_neo["is_valid"], r_neo.get("invalid_reason", ""))
+
+    p_underweight_vt = {**p_neo_vc, "weight_kg": 10.0}
+    r_under = generate_breath_cycles(p_underweight_vt, n_cycles=5)
+    _check("mandatory VT floor scales with weight_kg",
+           not r_under["is_valid"] and "minimum" in r_under.get("invalid_reason", "").lower())
+
+    p_leak = {**p_neo_vc, "cuff_leak_fraction": 0.15, "ett_complication": "cuff_leak"}
+    r_leak = generate_breath_cycles(p_leak, n_cycles=5)
+    _check("patient_vt < delivered_vt with neonatal leak",
+           r_leak["patient_vt_ml"] < r_leak["delivered_vt_ml"])
+
     n_pass = sum(_results)
     n_total = len(_results)
     print(f"\n{'=' * 65}")
@@ -1498,3 +1536,4 @@ if __name__ == "__main__":
         print("  WARNING: some checks failed — review output above")
     print(f"{'=' * 65}\n")
     sys.exit(0 if n_pass == n_total else 1)
+

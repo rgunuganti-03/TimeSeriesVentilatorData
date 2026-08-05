@@ -1130,6 +1130,34 @@ if __name__ == "__main__":
     print(f"     example_metrics: Ppeak={scenarios[0]['metrics'].get('ppeak_cmH2O','—')}  "
           f"Pplat={scenarios[0]['metrics'].get('pplat_cmH2O','—')}  "
           f"ΔP={scenarios[0]['metrics'].get('driving_p_cmH2O','—')}")
+    
+    # ---- Test 5: Neonatal population branch ------------------------------
+    print("\n[5/5] Neonatal population branch — weight scaling, leak")
+    p_neo = {
+        "respiratory_rate":         50,
+        "tidal_volume_ml":          15,
+        "compliance_ml_per_cmH2O":  4.0,
+        "resistance_cmH2O_L_s":     80,
+        "ie_ratio":                 0.5,
+        "peep_cmH2O":               5,
+        "flow_pattern":             "square",
+        "condition":                "Normal Neonate",
+        "population":               "neonate",
+        "weight_kg":                3.0,
+    }
+    r_neo = generate_breath_cycles(p_neo, n_cycles=3)
+    _check("neonate scenario returns dict", isinstance(r_neo, dict))
+    _check("neonate scenario is valid",     r_neo["is_valid"], r_neo.get("invalid_reason", ""))
+
+    p_underweight_vt = {**p_neo, "weight_kg": 10.0}   # same 15 mL VT, floor scales to 40 mL
+    r_under = generate_breath_cycles(p_underweight_vt, n_cycles=3)
+    _check("VT floor scales with weight_kg",
+           not r_under["is_valid"] and "minimum" in r_under.get("invalid_reason", "").lower())
+
+    p_leak = {**p_neo, "ett_cuff_leak_fraction": 0.15}
+    r_leak = generate_breath_cycles(p_leak, n_cycles=3)
+    _check("leak reduces delivered_vt vs no-leak baseline",
+           r_leak["delivered_vt_ml"] < r_neo["delivered_vt_ml"])
 
     # ---- Summary --------------------------------------------------------
     n_pass = sum(_results)

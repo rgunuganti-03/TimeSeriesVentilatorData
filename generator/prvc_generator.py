@@ -1047,6 +1047,39 @@ if __name__ == "__main__":
     print(f"     auto_peep={r_copd['auto_peep_cmH2O']:.2f} "
           f"converged={r_copd['converged']} Ppeak={r_copd['ppeak_cmH2O']:.1f}")
 
+    # ---- [5/5] Neonatal population branch — weight scaling, leak ----
+    print("\n[5/5] Neonatal -- weight scaling, leak")
+    p_neo = {
+        "vt_target_ml":            15.0,
+        "respiratory_rate":        50.0,
+        "peep_cmH2O":              5.0,
+        "ie_ratio":                0.5,
+        "pressure_ceiling_cmH2O":  20.0,
+        "compliance_ml_per_cmH2O": 4.0,
+        "resistance_cmH2O_L_s":    80.0,
+        "rise_time_s":             0.05,
+        "condition":               "Normal Neonate",
+        "population":              "neonate",
+        "weight_kg":               3.0,
+    }
+    r_neo = generate_breath_cycles(p_neo, n_cycles=15)   # enough cycles to converge
+    all_pass = _check("neonate scenario returns dict", isinstance(r_neo, dict)) and all_pass
+    all_pass = _check("neonate scenario is valid", r_neo["is_valid"],
+                       r_neo.get("invalid_reason", "")) and all_pass
+    all_pass = _check("neonate scenario converged",
+                       r_neo.get("converged", False)) and all_pass  # precondition for the next check
+
+    p_underweight_vt = {**p_neo, "weight_kg": 10.0}
+    r_under = generate_breath_cycles(p_underweight_vt, n_cycles=15)
+    all_pass = _check("VT floor scales with weight_kg (once converged)",
+                       r_under.get("converged", False) and not r_under["is_valid"]
+                       and "minimum" in r_under.get("invalid_reason", "").lower()) and all_pass
+
+    p_leak = {**p_neo, "ett_cuff_leak_fraction": 0.15}
+    r_leak = generate_breath_cycles(p_leak, n_cycles=15)
+    all_pass = _check("leak reduces delivered_vt vs no-leak baseline",
+                       r_leak["delivered_vt_ml"] < r_neo["delivered_vt_ml"]) and all_pass
+
     # ---- Dataset sweep smoke check ----
     print("\n[dataset] generate_dataset() smoke check (capped sample, not full sweep)")
     full_combo_count = (len(PARAMETER_GRID["vt_target_ml_per_kg"]) *
