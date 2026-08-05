@@ -50,6 +50,9 @@ NORMAL_PARAMS_SQR = {
     "peep_cmH2O":                5,
     "flow_pattern":          "square",
     "condition":               "Normal",
+    "tidal_volume_ml":          15,       # ADD — VCV requires this, PCV/PSV/PRVC/SIMV don't
+    "flow_pattern":             "square", # ADD — same reason
+    "rise_time_s":              0.05,     
 }
 
 NORMAL_PARAMS_DEC = {**NORMAL_PARAMS_SQR, "flow_pattern": "decelerating"}
@@ -1159,15 +1162,20 @@ class TestPopulationBranching:
     def test_population_field_not_condition_name_drives_thresholds(self):
         """An adult-named condition forced into the neonatal population
         branch must get neonatal thresholds — confirms the branch is
-        genuinely keyed off `population`."""
-        p = {**NORMAL_PARAMS_SQR, "population": "neonate", "weight_kg": 3.0}
+        genuinely keyed off `population`, not condition="Normal"."""
+        p = {
+            **NORMAL_PARAMS_SQR,
+            "population": "neonate",
+            "weight_kg": 3.0,
+            "respiratory_rate": 50,
+            "compliance_ml_per_cmH2O": 4.0,
+            "resistance_cmH2O_L_s": 80,
+            "tidal_volume_ml": 15,
+        }
         result = generate_breath_cycles(p, n_cycles=3)
-        # A 15 mL breath is below the adult VT floor (210 mL) but above
-        # the neonatal floor (3.0 * 4.0 = 12 mL) — this only passes if
-        # the neonatal floor was actually applied.
-        p_small_vt = {**p, "tidal_volume_ml": 15} if "tidal_volume_ml" in p else p
-        # (Adjust the volume-setting key per engine — tidal_volume_ml for
-        # VCV/PRVC, insp_pressure_cmH2O-driven for PCV, etc.)
+        # 15 mL is below the adult VT floor (210 mL) but above the
+        # neonatal floor (3.0 * 4.0 = 12 mL) — only passes if the
+        # neonatal floor was actually applied, despite condition="Normal".
         assert result["is_valid"] is True or "VT" not in result.get("invalid_reason", "")
 
     def test_missing_population_defaults_to_adult(self):
@@ -1182,24 +1190,37 @@ class TestPopulationBranching:
 
     def test_neonate_vt_min_scales_with_weight_kg(self):
         """VT floor must scale with weight_kg, not be a second fixed number."""
-        p_1_5kg = {**NORMAL_PARAMS_SQR, "population": "neonate", "weight_kg": 1.5}
-        p_3_0kg = {**NORMAL_PARAMS_SQR, "population": "neonate", "weight_kg": 3.0}
-        r_1_5 = generate_breath_cycles(p_1_5kg, n_cycles=3)
-        r_3_0 = generate_breath_cycles(p_3_0kg, n_cycles=3)
-        # Same delivered VT should be valid for the heavier weight and
-        # invalid (too low) for the lighter one, if VT sits between the
-        # two floors (1.5*4=6 mL vs 3.0*4=12 mL) — construct delivered_vt
-        # accordingly per engine, or assert on the computed floor directly
+        # Fixed target VT of 8 mL sits between the two floors:
+        # 1.5 kg -> floor 6 mL (8 > 6, valid) and 3.0 kg -> floor 12 mL
+        # (8 < 12, invalid) — proves the floor scales with weight rather
+        # than being a flat neonatal constant.
+        base = {
+            **NORMAL_PARAMS_SQR,
+            "population": "neonate",
+            "respiratory_rate": 50,
+            "compliance_ml_per_cmH2O": 4.0,
+            "resistance_cmH2O_L_s": 80,
+            "tidal_volume_ml": 8,
+        }
+        r_1_5 = generate_breath_cycles({**base, "weight_kg": 1.5}, n_cycles=3)
+        r_3_0 = generate_breath_cycles({**base, "weight_kg": 3.0}, n_cycles=3)
+        assert r_1_5["is_valid"] is True, r_1_5.get("invalid_reason", "")
+        assert r_3_0["is_valid"] is False
+        assert "minimum" in r_3_0.get("invalid_reason", "").lower()
         # if your engine exposes it as a metric.
 
     def test_neonatal_vt_ceiling_and_driving_pressure_checks_skipped(self):
         """Confirms the VT-max and driving-pressure checks are genuinely
         absent for population='neonate', not silently always-false."""
-        # Construct params with population='neonate' and an enormous
-        # delivered volume relative to weight — must NOT be flagged for
-        # exceeding a VT ceiling (there isn't one for neonates), and must
-        # not be flagged for driving pressure either.
-        p = {**NORMAL_PARAMS_SQR, "population": "neonate", "weight_kg": 3.0}
+        p = {
+            **NORMAL_PARAMS_SQR,
+            "population": "neonate",
+            "weight_kg": 3.0,
+            "respiratory_rate": 50,
+            "compliance_ml_per_cmH2O": 4.0,
+            "resistance_cmH2O_L_s": 80,
+            "tidal_volume_ml": 45,  # 15 mL/kg — would trip an adult-style ceiling if one existed
+        }
         result = generate_breath_cycles(p, n_cycles=3)
         if not result["is_valid"]:
             assert "maximum" not in result["invalid_reason"].lower()
