@@ -1164,7 +1164,7 @@ def generate_breath_cycles(params: dict,
     patient_vt_ml = _circuit_vt_correction(
     delivered_vt_ml * (1.0 - leak_frac),   # ← apply leak first
     ppeak, peep_e,
-    CIRCUIT_COMPLIANCE_ML_PER_CMH2O, C_circ=circuit_c, compensated=circ_compensated
+    C_circ=circuit_c, compensated=circ_compensated
 )
     # Fill fraction: ratio of mean delivered Vt to theoretical maximum
     vt_max = (ps_level + pmus_mean) * C_lung_rec
@@ -1176,7 +1176,7 @@ def generate_breath_cycles(params: dict,
     # Circuit-corrected patient Vt
     patient_vt_corrected = _circuit_vt_correction(
         mean_vt, ppeak, peep_e,
-        CIRCUIT_COMPLIANCE_ML_PER_CMH2O, C_circ=circuit_c, compensated=circ_compensated
+        C_circ=circuit_c, compensated=circ_compensated
     )
 
     # Triggered breath rate

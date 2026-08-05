@@ -444,6 +444,11 @@ def _validate_params(params: dict) -> None:
     missing = [k for k in _REQUIRED_PARAMS if k not in params]
     if missing:
         raise ValueError(f"Missing required parameter(s): {missing}")
+    if params["flow_pattern"] not in ("square", "decelerating"):
+        raise ValueError(
+            f"flow_pattern must be 'square' or 'decelerating', "
+            f"got '{params['flow_pattern']}'"
+        )
 
     population = params.get("population", "adult")
     rr_lo, rr_hi = (20, 80)   if population == "neonate" else (5, 35)
@@ -463,27 +468,6 @@ def _validate_params(params: dict) -> None:
     if not (0.2  <= float(params["ie_ratio"])                 <= 1.0):
         raise ValueError("ie_ratio must be 0.2–1.0")
     if not (0    <= float(params["peep_cmH2O"])               <= 20):
-        raise ValueError("peep_cmH2O must be 0–20 cmH2O")
-
-    missing = [k for k in _REQUIRED_PARAMS if k not in params]
-    if missing:
-        raise ValueError(f"Missing required parameter(s): {missing}")
-    if params["flow_pattern"] not in ("square", "decelerating"):
-        raise ValueError(
-            f"flow_pattern must be 'square' or 'decelerating', "
-            f"got '{params['flow_pattern']}'"
-        )
-    if not (5    <= float(params["respiratory_rate"])         <= 35):
-        raise ValueError("respiratory_rate must be 5–35 bpm")
-    if not (100  <= float(params["tidal_volume_ml"])           <= 1000):
-        raise ValueError("tidal_volume_ml must be 100–1000 mL")
-    if not (5    <= float(params["compliance_ml_per_cmH2O"])   <= 150):
-        raise ValueError("compliance_ml_per_cmH2O must be 5–150 mL/cmH2O")
-    if not (0.5  <= float(params["resistance_cmH2O_L_s"])      <= 50):
-        raise ValueError("resistance_cmH2O_L_s must be 0.5–50 cmH2O/L/s")
-    if not (0.2  <= float(params["ie_ratio"])                  <= 1.0):
-        raise ValueError("ie_ratio must be 0.2–1.0")
-    if not (0    <= float(params["peep_cmH2O"])                <= 20):
         raise ValueError("peep_cmH2O must be 0–20 cmH2O")
 
 

@@ -629,7 +629,11 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
         vt_min_ml = weight * VT_MIN_ML_PER_KG_NEONATE
     else:
         vt_min_ml = IBW_KG * VT_MIN_ML_PER_KG_ADULT   # identical to current VT_MIN_ML
-    adaptation_step = float(params.get("adaptation_step_cmH2O", ADAPTATION_STEP_CMH2O_DEFAULT))
+    adaptation_step = float(params.get(
+        "adaptation_step_cmH2O",
+        _neonate_or_adult(population, NEONATE_ADAPTATION_STEP_CMH2O_DEFAULT, ADAPTATION_STEP_CMH2O_DEFAULT),
+    ))
+    pressure_floor = _neonate_or_adult(population, NEONATE_PRESSURE_FLOOR_ABOVE_PEEP, PRESSURE_FLOOR_ABOVE_PEEP)
     vt_tolerance_frac = float(params.get("vt_tolerance_frac", VT_TOLERANCE_FRAC_DEFAULT))
     rise_time = float(params.get("rise_time_s", RISE_TIME_S))
     vt_avg_window = int(params.get("vt_averaging_window", VT_AVERAGING_WINDOW_DEFAULT))
@@ -711,7 +715,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
             driving_plat = max(P_plat - peep, 0.0)
             P_work = peep + AUTOFLOW_TEST_BREATH_FRACTION * driving_plat
             
-            P_work = float(np.clip(P_work, peep + PRESSURE_FLOOR_ABOVE_PEEP,
+            P_work = float(np.clip(P_work, peep + pressure_floor,
                                     peep + pressure_ceiling))
 
         else:
@@ -760,7 +764,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
                 else:
                     P_work_next = P_work_this_breath
                 P_work_ceiling = peep + pressure_ceiling
-                P_work_floor = peep + PRESSURE_FLOOR_ABOVE_PEEP
+                P_work_floor = peep + pressure_floor
                 P_work = float(np.clip(P_work_next, P_work_floor, P_work_ceiling))
 
     if not converged:
