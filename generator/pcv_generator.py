@@ -984,7 +984,7 @@ if __name__ == "__main__":
     print("\n[3/4] Validity filter")
 
     # Invalid — insp_pressure > 35
-    p_hi_P = {**base, "insp_pressure_cmH2O": 40.0}
+    p_hi_P = {**base, "insp_pressure_cmH2O": 40.0, "compliance_ml_per_cmH2O": 15.0}
     r_hi_P_inv = generate_breath_cycles(p_hi_P, n_cycles=2)
     _check("insp_pressure > 35 flagged invalid",
            (not r_hi_P_inv["is_valid"]) and "ressure" in r_hi_P_inv["invalid_reason"].lower(),

@@ -196,6 +196,9 @@ ETT_K2: float = 3.0   # cmH2O/(L/s)^2
 NEONATE_PPEAK_MAX_CMHH2O:                float = 30.0  # neonatal barotrauma risk — MSD Manual PIP ranges
 NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE:   float = 12.0  # NOT ~inert — first-order term for this population
 NEONATE_CIRCUIT_COMPLIANCE_ML_PER_CMH2O: float = 0.6   # dedicated low-compliance neonatal circuit
+# Add to Section 2b:
+NEONATE_PRESSURE_FLOOR_ABOVE_PEEP: float = 1.0   # neonatal driving pressures legitimately run this low
+NEONATE_ADAPTATION_STEP_CMH2O_DEFAULT: float = 0.5
 
 
 
@@ -707,6 +710,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
             # standard step/tolerance rule, which only governs breaths >= 2).
             driving_plat = max(P_plat - peep, 0.0)
             P_work = peep + AUTOFLOW_TEST_BREATH_FRACTION * driving_plat
+            
             P_work = float(np.clip(P_work, peep + PRESSURE_FLOOR_ABOVE_PEEP,
                                     peep + pressure_ceiling))
 
