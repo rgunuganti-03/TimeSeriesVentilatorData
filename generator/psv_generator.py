@@ -699,22 +699,27 @@ def _validate_params(params: dict) -> None:
     R     = params["resistance_cmH2O_L_s"]
     cv    = params["pmus_cv"]
 
+    population = params.get("population", "adult")
+    rr_lo, rr_hi = (20, 80)  if population == "neonate" else (5, 45)
+    c_lo,  c_hi  = (0.3, 10) if population == "neonate" else (5, 200)
+    r_lo,  r_hi  = (40, 200) if population == "neonate" else (0.5, 60)
+
     if not (1 <= ps <= 50):
         raise ValueError(f"pressure_support_cmH2O {ps} out of range [1, {PS_MAX_CMHH2O}]")
     if not (0 <= peep <= 20):
         raise ValueError(f"peep_cmH2O {peep} out of range [0, 20]")
-    if not (5 <= rr <= 45):
-        raise ValueError(f"effort_rate_per_min {rr} out of range [5, 45]")
+    if not (rr_lo <= rr <= rr_hi):
+        raise ValueError(f"effort_rate_per_min {rr} out of range [{rr_lo}, {rr_hi}]")
     if not (1 <= pmus <= 35):
         raise ValueError(f"pmus_peak_cmH2O {pmus} out of range [1, 35]")
     if not (0.0 <= rt <= 0.5):
         raise ValueError(f"rise_time_s {rt} out of range [0, 0.5]")
     if not (0.05 <= fct <= 0.70):
         raise ValueError(f"flow_cycle_threshold {fct} out of range [0.05, 0.50]")
-    if not (5 <= C <= 200):
-        raise ValueError(f"compliance_ml_per_cmH2O {C} out of range [5, 200]")
-    if not (0.5 <= R <= 60):
-        raise ValueError(f"resistance_cmH2O_L_s {R} out of range [0.5, 60]")
+    if not (c_lo <= C <= c_hi):
+        raise ValueError(f"compliance_ml_per_cmH2O {C} out of range [{c_lo}, {c_hi}]")
+    if not (r_lo <= R <= r_hi):
+        raise ValueError(f"resistance_cmH2O_L_s {R} out of range [{r_lo}, {r_hi}]")
     if not (0.05 <= cv <= 0.60):
         raise ValueError(f"pmus_cv {cv} out of range [0.05, 0.60]")
 
@@ -792,13 +797,7 @@ def generate_breath_cycles(params: dict,
     condition       = params.get("condition", "Normal")
     population      = params.get("population", "adult")
     weight_kg  = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT if population == "neonate" else IBW_KG))
-    if population == "neonate":
-        weight = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT))
-        vt_min_ml = weight * VT_MIN_ML_PER_KG_NEONATE
-        vt_max_ml = weight * VT_MAX_ML_PER_KG_NEONATE
-    else:
-        vt_min_ml = IBW_KG * VT_MIN_ML_PER_KG_ADULT   # identical to current VT_MIN_ML
-        vt_max_ml = IBW_KG * VT_MAX_ML_PER_KG_ADULT
+
     stress_index    = float(params.get("stress_index", 1.0))
     C_chest          = float(params.get(
         "chest_wall_compliance_ml_per_cmH2O",

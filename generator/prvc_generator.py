@@ -624,11 +624,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     condition = params.get("condition", "Normal")
     population = params.get("population", "adult")
     weight_kg  = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT if population == "neonate" else IBW_KG))
-    if population == "neonate":
-        weight = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT))
-        vt_min_ml = weight * VT_MIN_ML_PER_KG_NEONATE
-    else:
-        vt_min_ml = IBW_KG * VT_MIN_ML_PER_KG_ADULT   # identical to current VT_MIN_ML
+    
     adaptation_step = float(params.get(
         "adaptation_step_cmH2O",
         _neonate_or_adult(population, NEONATE_ADAPTATION_STEP_CMH2O_DEFAULT, ADAPTATION_STEP_CMH2O_DEFAULT),

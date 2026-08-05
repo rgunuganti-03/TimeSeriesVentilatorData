@@ -906,13 +906,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
     condition        = params.get("condition", "Normal")
     population       = params.get("population", "adult")
     weight_kg  = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT if population == "neonate" else IBW_KG))
-    if population == "neonate":
-        weight = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT))
-        vt_min_ml = weight * VT_MIN_ML_PER_KG_NEONATE
-        vt_max_ml = weight * VT_MAX_ML_PER_KG_NEONATE
-    else:
-        vt_min_ml = IBW_KG * VT_MIN_ML_PER_KG_ADULT   # identical to current VT_MIN_ML
-        vt_max_ml = IBW_KG * VT_MAX_ML_PER_KG_ADULT
+    
     stress_index     = float(params.get("stress_index", 1.0))
     C_chest          = float(params.get(
         "chest_wall_compliance_ml_per_cmH2O",

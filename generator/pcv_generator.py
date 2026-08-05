@@ -454,12 +454,6 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     population = params.get("population", "adult")
     weight_kg  = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT if population == "neonate" else IBW_KG))
 
-    if population == "neonate":
-        weight = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT))
-        vt_min_ml = weight * VT_MIN_ML_PER_KG_NEONATE
-    else:
-        vt_min_ml = IBW_KG * VT_MIN_ML_PER_KG_ADULT   # identical to current VT_MIN_ML
-
     if condition not in COMPARTMENT_PROFILES:
         condition = "Normal"
 
