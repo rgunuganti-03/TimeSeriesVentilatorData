@@ -1219,10 +1219,10 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
     elif ps_level > PS_MAX_CMHH2O:
         is_valid = False
         invalid_reason = f"Pressure support {ps_level} cmH2O exceeds clinical ceiling ({PS_MAX_CMHH2O})"
-    elif mandatory_records and population != "neonate" and mand_vt_corrected < vt_min_ml:
+    elif mandatory_records and mand_vt_corrected < vt_min_ml:
         is_valid = False
         invalid_reason = f"Mandatory delivered VT {mand_vt_corrected:.0f} mL below minimum ({vt_min_ml:.0f} mL)"
-    elif mandatory_records and mand_vt_corrected > VT_MAX_ML:
+    elif mandatory_records and population != "neonate" and mand_vt_corrected > VT_MAX_ML:
         is_valid = False
         invalid_reason = f"Mandatory delivered VT {mand_vt_corrected:.0f} mL exceeds maximum ({VT_MAX_ML:.0f} mL)"
 
@@ -1522,10 +1522,12 @@ if __name__ == "__main__":
     _check("mandatory VT floor scales with weight_kg",
            not r_under["is_valid"] and "minimum" in r_under.get("invalid_reason", "").lower())
 
+    p_no_leak = {**p_neo_vc, "cuff_leak_fraction": 0.0, "ett_complication": None}
+    r_no_leak = generate_breath_cycles(p_no_leak, n_cycles=5)
     p_leak = {**p_neo_vc, "cuff_leak_fraction": 0.15, "ett_complication": "cuff_leak"}
     r_leak = generate_breath_cycles(p_leak, n_cycles=5)
-    _check("patient_vt < delivered_vt with neonatal leak",
-           r_leak["patient_vt_ml"] < r_leak["delivered_vt_ml"])
+    _check("leak reduces mandatory_delivered_vt_ml vs no-leak baseline",
+           r_leak["mandatory_delivered_vt_ml"] < r_no_leak["mandatory_delivered_vt_ml"])
 
     n_pass = sum(_results)
     n_total = len(_results)
