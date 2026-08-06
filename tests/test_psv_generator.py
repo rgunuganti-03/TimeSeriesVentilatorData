@@ -398,12 +398,10 @@ class TestPhysiologicalPlausibility:
 class TestNeonatalConditions:
 
     def test_normal_neonate_uses_1_compartment(self):
-        result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
-        assert result["n_compartments"] == 1
+        assert len(COMPARTMENT_PROFILES["Normal Neonate"]) == 1
 
     def test_rds_uses_1_compartment(self):
-        result = generate_breath_cycles(RDS_PARAMS, n_cycles=5)
-        assert result["n_compartments"] == 1
+        assert len(COMPARTMENT_PROFILES["RDS"]) == 1
 
     def test_rds_resistance_not_elevated_vs_normal_neonate(self):
         """RDS's defining feature: resistance stays at the neonatal

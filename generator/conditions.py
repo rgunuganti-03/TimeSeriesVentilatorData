@@ -288,38 +288,6 @@ CONDITIONS = {
         "ett_complication":         "cuff_leak",
         "ett_cuff_leak_fraction":   0.15,  
     },
-
-    "Meconium Aspiration Syndrome": {
-        "label":       "Meconium Aspiration Syndrome",
-        "description": (
-            "Term/post-term infant with heterogeneous lung: ball-valve "
-            "obstruction and gas trapping in some units, atelectatic/"
-            "surfactant-inactivated collapse in others. Requires a "
-            "two-compartment profile — NOT a rescaled COPD/Bronchospasm preset."
-        ),
-        "condition":                "Meconium Aspiration Syndrome",
-        "population":               "neonate",
-        "weight_kg":                3.2,
-        "respiratory_rate":         45,                   # <50 to protect exp. time — Dargaville
-        "stress_index":             1.10,                 # ASSUMPTION — heterogeneity proxy
-        "tidal_volume_ml":          18,                    # ~5.5 mL/kg — Dargaville
-        "compliance_ml_per_cmH2O":  2.5,                   # DIRECTION sourced, MAGNITUDE not — flag
-        "resistance_cmH2O_L_s":     130,                   # DIRECTION sourced, MAGNITUDE not — flag
-        "ie_ratio":                 0.80,                  # long Ti 0.5-0.7s — Goel & Nangia
-        "rise_time_s":              0.05,                  # ASSUMPTION
-        "peep_cmH2O":                5,
-        "pressure_support_cmH2O":  14,
-        "flow_cycle_threshold":     0.20,
-        "trigger_threshold_cmH2O":  0.5,                   # ASSUMPTION
-        "pmus_peak_cmH2O":          6,
-        "effort_rate_per_min":     45,
-        "effort_duration_s":        0.45,
-        "pmus_cv":                  0.25,                  # ASSUMPTION
-        "pressure_ceiling_cmH2O":  25,                     # PIP up to 30-40 reported — leaves headroom
-        "ett_leak_fraction":        0.15,
-        "cuff_leak_fraction":       0.15,
-        "ett_complication":         "cuff_leak",
-    },
 }
 
 

@@ -355,15 +355,6 @@ def render_sidebar():
         preset = get_condition(condition_name)
         is_neonatal = preset.get("population", "adult") == "neonate"
 
-        compliance = st.slider(
-            "Compliance (ml/cmH2O)",
-            0.1, 8.0, value=float(preset["compliance_ml_per_cmH2O"]), step=0.1,
-            key=f"compliance_{condition_name}_{engine_name}",
-        ) if is_neonatal else st.slider(
-            "Compliance (ml/cmH2O)", 5, 150, value=int(preset["compliance_ml_per_cmH2O"]), step=1,
-            key=f"compliance_{condition_name}_{engine_name}",
-        )
-
         # --- Shared parameters ------------------------------------------
 
         if is_neonatal:
