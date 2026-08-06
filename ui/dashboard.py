@@ -490,33 +490,36 @@ def render_sidebar():
             )
 
         # --- Rise time — PCV and PRVC ---------------------------------------
+        # --- Rise time — PCV and PRVC ---------------------------------------
         if engine_key in ("pcv", "prvc", "simv"):
-            if is_neonatal: 
+            if is_neonatal:
                 rise_time = st.slider(
-                "Rise Time (s)",
-                min_value=0.0, max_value=0.4,
-                value=float(preset.get("rise_time_s", 0.05)) if engine_key == "pcv" else 0.10, step=0.01,
-                help=(
-                    "Time for pressure to ramp from PEEP to PIP. "
-                    "0.0 = square wave step (maximum initial flow). "
-                    "Longer rise times reduce peak flow and improve "
-                    "patient comfort in spontaneously breathing patients."
-                ),
-                key=f"rise_{condition_name}_{engine_name}",
-            )
-        else:
-            rise_time = st.slider(
-                "Rise Time (s)",
-                min_value=0.0, max_value=0.4,
-                value=0.0 if engine_key == "pcv" else 0.10, step=0.1,
-                help=(
-                    "Time for pressure to ramp from PEEP to PIP. "
-                    "0.0 = square wave step (maximum initial flow). "
-                    "Longer rise times reduce peak flow and improve "
-                    "patient comfort in spontaneously breathing patients."
-                ),
-                key=f"rise_{condition_name}_{engine_name}",
-            )
+                    "Rise Time (s)",
+                    min_value=0.0, max_value=0.4,
+                    value=float(preset.get("rise_time_s", 0.05)) if engine_key == "pcv" else 0.10, step=0.01,
+                    help=(
+                        "Time for pressure to ramp from PEEP to PIP. "
+                        "0.0 = square wave step (maximum initial flow). "
+                        "Longer rise times reduce peak flow and improve "
+                        "patient comfort in spontaneously breathing patients."
+                    ),
+                    key=f"rise_{condition_name}_{engine_name}",
+                )
+            else:
+                rise_time = st.slider(
+                    "Rise Time (s)",
+                    min_value=0.0, max_value=0.4,
+                    value=0.0 if engine_key == "pcv" else 0.10, step=0.1,
+                    help=(
+                        "Time for pressure to ramp from PEEP to PIP. "
+                        "0.0 = square wave step (maximum initial flow). "
+                        "Longer rise times reduce peak flow and improve "
+                        "patient comfort in spontaneously breathing patients."
+                    ),
+                    key=f"rise_{condition_name}_{engine_name}",
+                )
+
+        
 
         # --- PSV-specific parameters ------------------------------------
         # (unchanged — this block is already correct, shown here only so
