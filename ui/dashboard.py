@@ -932,23 +932,18 @@ def render_metrics(result, params, engine_key):
     population = params.get("population", "adult")
     if population == "neonate":
         if "patient_vt_ml" in result and "delivered_vt_ml" in result:
-            # SIMV only — both volumes are separately reported, so read the
-            # REALIZED leak off this run's actual output rather than the
-            # configured input (captures synchronization/auto-PEEP effects
-            # on top of leak, which a flat input fraction wouldn't).
             patient_vt   = result["patient_vt_ml"]
             delivered_vt = result["delivered_vt_ml"]
             if delivered_vt and delivered_vt > 0:
                 leak_pct = 100.0 * (1.0 - patient_vt / delivered_vt)
-                _metric_card(col, "Leak (measured)", f"{leak_pct:.0f}", "%")
+                leak_col = st.columns(1)[0]
+                _metric_card(leak_col, "Leak (measured)", f"{leak_pct:.0f}", "%")
         else:
-            # vcv/pcv/psv/prvc — leak is a flat multiply folded directly
-            # into delivered_vt_ml, so the configured input fraction IS
-            # the leak; no separate pre-leak output key needed.
             leak_frac = params.get("ett_cuff_leak_fraction",
                                     params.get("cuff_leak_fraction", 0.0))
             if leak_frac:
-                _metric_card(col, "Leak (configured)", f"{leak_frac * 100:.0f}", "%")
+                leak_col = st.columns(1)[0]
+                _metric_card(leak_col, "Leak (configured)", f"{leak_frac * 100:.0f}", "%")
     
 
     if engine_key == "vcv":
