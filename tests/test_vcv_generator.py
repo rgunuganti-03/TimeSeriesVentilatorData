@@ -50,9 +50,8 @@ NORMAL_PARAMS_SQR = {
     "peep_cmH2O":                5,
     "flow_pattern":          "square",
     "condition":               "Normal",
-    "tidal_volume_ml":          15,       # ADD — VCV requires this, PCV/PSV/PRVC/SIMV don't
-    "flow_pattern":             "square", # ADD — same reason
-    "rise_time_s":              0.05,     
+   
+    
 }
 
 NORMAL_PARAMS_DEC = {**NORMAL_PARAMS_SQR, "flow_pattern": "decelerating"}
@@ -69,6 +68,8 @@ NORMAL_NEONATE_PARAMS = {
     "resistance_cmH2O_L_s":     80,
     "peep_cmH2O":               5,
     "ie_ratio":                 0.50,
+    "tidal_volume_ml":          15,
+    "flow_pattern":             "square",
     "rise_time_s":              0.05,
     # + whichever engine-specific keys your file's baseline fixture already
     # carries (tidal_volume_ml / flow_pattern for VCV; insp_pressure_cmH2O

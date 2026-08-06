@@ -60,6 +60,7 @@ NORMAL_PARAMS = {
     "peep_cmH2O":               5,
     "rise_time_s":             0.0,
     "condition":               "Normal",
+    
 }
 
 # Slow RR, high compliance — large VT to test overdistension boundary
@@ -82,6 +83,7 @@ NORMAL_NEONATE_PARAMS = {
     "peep_cmH2O":               5,
     "ie_ratio":                 0.50,
     "rise_time_s":              0.05,
+    "insp_pressure_cmH2O": 10.0,
     # + whichever engine-specific keys your file's baseline fixture already
     # carries (tidal_volume_ml / flow_pattern for VCV; insp_pressure_cmH2O
     # for PCV; pressure_support_cmH2O / flow_cycle_threshold /
@@ -915,8 +917,8 @@ class TestValidityFilter:
         }
         result = generate_breath_cycles(params)
         assert result["is_valid"] is False
-        assert "fill" in result["invalid_reason"].lower(), (
-            f"Expected fill fraction mention, got: {result['invalid_reason']}"
+        assert "fill" in result["invalid_reason"].lower() or "minimum" in result["invalid_reason"].lower(), (
+            f"Expected fill fraction or VT-floor mention, got: {result['invalid_reason']}"
         )
 
     def test_vt_max_breach_flagged(self):

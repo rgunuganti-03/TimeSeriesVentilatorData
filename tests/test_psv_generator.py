@@ -141,6 +141,13 @@ NORMAL_NEONATE_PARAMS = {
     "peep_cmH2O":               5,
     "ie_ratio":                 0.50,
     "rise_time_s":              0.05,
+    "pressure_support_cmH2O":   8.0,    # ADD
+    "flow_cycle_threshold":     0.15,   # ADD
+    "trigger_threshold_cmH2O":  0.5,    # ADD
+    "pmus_peak_cmH2O":          5.0,    # ADD
+    "effort_rate_per_min":      50,     # ADD
+    "effort_duration_s":        0.35,   # ADD
+    "pmus_cv":                  0.20,   # ADD
     # + whichever engine-specific keys your file's baseline fixture already
     # carries (tidal_volume_ml / flow_pattern for VCV; insp_pressure_cmH2O
     # for PCV; pressure_support_cmH2O / flow_cycle_threshold /
@@ -1440,14 +1447,12 @@ class TestPopulationBranching:
         """An adult-named condition forced into the neonatal population
         branch must get neonatal thresholds — confirms the branch is
         genuinely keyed off `population`."""
-        p = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0}
-        result = generate_breath_cycles(p, n_cycles=3)
-        # A 15 mL breath is below the adult VT floor (210 mL) but above
-        # the neonatal floor (3.0 * 4.0 = 12 mL) — this only passes if
-        # the neonatal floor was actually applied.
-        p_small_vt = {**p, "tidal_volume_ml": 15} if "tidal_volume_ml" in p else p
-        # (Adjust the volume-setting key per engine — tidal_volume_ml for
-        # VCV/PRVC, insp_pressure_cmH2O-driven for PCV, etc.)
+        p = {
+            **NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0,
+            "effort_rate_per_min": 50, "compliance_ml_per_cmH2O": 4.0,
+            "resistance_cmH2O_L_s": 80,
+        }
+        result = generate_breath_cycles(p, n_cycles=3, seed=42)
         assert result["is_valid"] is True or "VT" not in result.get("invalid_reason", "")
 
     def test_missing_population_defaults_to_adult(self):
@@ -1455,17 +1460,21 @@ class TestPopulationBranching:
         population='adult' — protects all seven existing conditions."""
         p_explicit = {**NORMAL_PARAMS, "population": "adult"}
         p_implicit = {k: v for k, v in NORMAL_PARAMS.items() if k != "population"}
-        r_explicit = generate_breath_cycles(p_explicit, n_cycles=5)
-        r_implicit = generate_breath_cycles(p_implicit, n_cycles=5)
+        r_explicit = generate_breath_cycles(p_explicit, n_cycles=5, seed=42)  # ADD shared seed
+        r_implicit = generate_breath_cycles(p_implicit, n_cycles=5, seed=42)  # ADD shared seed
         assert r_explicit["is_valid"] == r_implicit["is_valid"]
         assert r_explicit["delivered_vt_ml"] == pytest.approx(r_implicit["delivered_vt_ml"], abs=1e-6)
 
     def test_neonate_vt_min_scales_with_weight_kg(self):
         """VT floor must scale with weight_kg, not be a second fixed number."""
-        p_1_5kg = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 1.5}
-        p_3_0kg = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0}
-        r_1_5 = generate_breath_cycles(p_1_5kg, n_cycles=3)
-        r_3_0 = generate_breath_cycles(p_3_0kg, n_cycles=3)
+        p_1_5kg = {
+            **NORMAL_PARAMS, "population": "neonate", "weight_kg": 1.5,
+            "effort_rate_per_min": 50, "compliance_ml_per_cmH2O": 4.0,
+            "resistance_cmH2O_L_s": 80,
+        }
+        p_3_0kg = {**p_1_5kg, "weight_kg": 3.0}
+        r_1_5 = generate_breath_cycles(p_1_5kg, n_cycles=3, seed=42)
+        r_3_0 = generate_breath_cycles(p_3_0kg, n_cycles=3, seed=42)
         # Same delivered VT should be valid for the heavier weight and
         # invalid (too low) for the lighter one, if VT sits between the
         # two floors (1.5*4=6 mL vs 3.0*4=12 mL) — construct delivered_vt
@@ -1479,8 +1488,12 @@ class TestPopulationBranching:
         # delivered volume relative to weight — must NOT be flagged for
         # exceeding a VT ceiling (there isn't one for neonates), and must
         # not be flagged for driving pressure either.
-        p = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0}
-        result = generate_breath_cycles(p, n_cycles=3)
+        p = {
+            **NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0,
+            "effort_rate_per_min": 50, "compliance_ml_per_cmH2O": 4.0,
+            "resistance_cmH2O_L_s": 80,
+        }
+        result = generate_breath_cycles(p, n_cycles=3, seed=42)
         if not result["is_valid"]:
             assert "maximum" not in result["invalid_reason"].lower()
             assert "mortality" not in result["invalid_reason"].lower()

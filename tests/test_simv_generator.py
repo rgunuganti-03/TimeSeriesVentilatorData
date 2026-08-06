@@ -127,12 +127,23 @@ NORMAL_NEONATE_PARAMS = {
     "condition":                "Normal Neonate",
     "population":               "neonate",
     "weight_kg":                3.0,
-    "respiratory_rate":         50,
+    "respiratory_rate":         25,      # ADD — mand
     "compliance_ml_per_cmH2O":  4.0,
     "resistance_cmH2O_L_s":     80,
     "peep_cmH2O":               5,
     "ie_ratio":                 0.50,
     "rise_time_s":              0.05,
+    "mandatory_mode":           "VC",    # ADD
+    "tidal_volume_ml":          15.0,    # ADD — required when mandatory_mode="VC"
+    "flow_pattern":             "square",# ADD — required when mandatory_mode="VC"
+    "f_window":                 0.20,    # ADD
+    "pressure_support_cmH2O":   8.0,     # ADD
+    "flow_cycle_threshold":     0.15,    # ADD
+    "trigger_threshold_cmH2O":  0.5,     # ADD
+    "pmus_peak_cmH2O":          5.0,     # ADD
+    "effort_rate_per_min":      50,      # ADD — patient's own rate, separate from the mandatory backup rate above
+    "effort_duration_s":        0.30,    # ADD
+    "pmus_cv":                  0.20,    # ADD
     # + whichever engine-specific keys your file's baseline fixture already
     # carries (tidal_volume_ml / flow_pattern for VCV; insp_pressure_cmH2O
     # for PCV; pressure_support_cmH2O / flow_cycle_threshold /
@@ -1030,10 +1041,11 @@ class TestPopulationBranching:
         population='adult' — protects all seven existing conditions."""
         p_explicit = {**NORMAL_PARAMS_VC, "population": "adult"}
         p_implicit = {k: v for k, v in NORMAL_PARAMS_VC.items() if k != "population"}
-        r_explicit = generate_breath_cycles(p_explicit, n_cycles=5)
-        r_implicit = generate_breath_cycles(p_implicit, n_cycles=5)
+        r_explicit = generate_breath_cycles(p_explicit, n_cycles=5, seed=42)  # ADD shared seed — stochastic
+        r_implicit = generate_breath_cycles(p_implicit, n_cycles=5, seed=42)  # ADD shared seed
         assert r_explicit["is_valid"] == r_implicit["is_valid"]
-        assert r_explicit["delivered_vt_ml"] == pytest.approx(r_implicit["delivered_vt_ml"], abs=1e-6)
+        assert r_explicit["mandatory_delivered_vt_ml"] == pytest.approx(   # FIX key name
+            r_implicit["mandatory_delivered_vt_ml"], abs=1e-6)
 
     def test_neonate_vt_min_scales_with_weight_kg(self):
         """VT floor must scale with weight_kg, not be a second fixed number."""
