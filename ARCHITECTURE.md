@@ -1,6 +1,6 @@
 # Architecture — Ventilator Waveform Simulator
 
-**Project:** TimeSeriesVentilatorData — Aiden Medical Internship
+**Project:** TimeSeriesVentilatorData — Aiden Medical
 **Version:** 0.6 (Five adult modes complete · Neonatal/pediatric extension in progress — CR0023)
 **Date:** August 2026
 
