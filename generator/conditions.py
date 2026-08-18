@@ -255,6 +255,8 @@ CONDITIONS = {
     "pmus_cv":                  0.20,
     "pressure_ceiling_cmH2O":   20,
     "ett_cuff_leak_fraction":   0.15,                # NEW field — see Open Decision 1
+    "cuff_leak_fraction":     0.15,     # ADD — PSV/SIMV convention
+    "ett_complication":       "cuff_leak",  # ADD — PSV/SIMV convention
     },
 
     "RDS": {

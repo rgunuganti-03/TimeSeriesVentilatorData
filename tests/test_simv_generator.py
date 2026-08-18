@@ -199,7 +199,7 @@ class TestThresholdConstants:
         assert 40.0 <= PPEAK_MAX_CMHH2O <= 60.0
 
     def test_driving_p_max_matches_ardsnet_scale(self):
-        assert 15.0 <= DRIVING_P_MAX_CMHH2O <= 25.0
+        assert 13.0 <= DRIVING_P_MAX_CMHH2O <= 15.0
 
     def test_insp_pressure_max_exceeds_driving_p_max(self):
         # PC's own driving-pressure-above-PEEP ceiling is allowed higher

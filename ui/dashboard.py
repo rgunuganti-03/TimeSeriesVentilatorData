@@ -359,7 +359,7 @@ def render_sidebar():
 
         if is_neonatal:
             compliance = st.slider(
-                "Compliance (ml/cmH\u2082O)", 0.1, 8.0,
+                "Compliance (ml/cmH\u2082O)", 0.3, 10.0,
                 value=float(preset["compliance_ml_per_cmH2O"]),
                 step=0.1,
                 key=f"compliance_{condition_name}_{engine_name}",
@@ -369,6 +369,25 @@ def render_sidebar():
                 value=int(preset["resistance_cmH2O_L_s"]),
                 step=5,
                 key=f"resistance_{condition_name}_{engine_name}",
+            )
+            leak_enabled = st.checkbox(
+                "ETT Leak (uncuffed tube)",
+                value=bool(preset.get("ett_cuff_leak_fraction", 0.0)
+                            or preset.get("cuff_leak_fraction", 0.0)),
+                help=(
+                    "Neonatal ETTs are usually uncuffed, so gas escapes around "
+                    "the tube during inspiration (VTi > VTe). Uncheck to model "
+                    "a sealed/cuffed tube."
+                ),
+                key=f"leak_on_{condition_name}_{engine_name}",
+            )
+            leak_frac = st.slider(
+                "Leak Fraction", 0.0, 0.40,
+                value=float(preset.get("ett_cuff_leak_fraction",
+                                        preset.get("cuff_leak_fraction", 0.15))),
+                step=0.01,
+                disabled=not leak_enabled,
+                key=f"leak_frac_{condition_name}_{engine_name}",
             )
         else:
             compliance = st.slider(
@@ -383,6 +402,8 @@ def render_sidebar():
                 step=1,
                 key=f"resistance_{condition_name}_{engine_name}",
             )
+            leak_enabled = False
+            leak_frac = 0.0
         peep = st.slider(
             "PEEP (cmH\u2082O)", 0, 20,
             value=int(preset["peep_cmH2O"]),
@@ -415,13 +436,21 @@ def render_sidebar():
         if engine_key in ("vcv", "pcv", "prvc", "simv"):
             _rr_default = int(preset["respiratory_rate"])                                  
             if engine_key == "simv":                                                       
-                _rr_default = max(4, round(_rr_default * 0.5))    
-            rr = st.slider(
-                "Respiratory Rate (bpm)", 5, 40,
-                value=_rr_default,
-                step=1,
-                key=f"rr_{condition_name}_{engine_name}",
-            )
+                _rr_default = max(4, round(_rr_default * 0.5)) 
+
+            if is_neonatal:
+                rr = st.slider(
+                    "Respiratory Rate (bpm)", 20, 80,
+                    value=_rr_default, step=1,
+                    key=f"rr_{condition_name}_{engine_name}",
+                )
+            else: 
+                rr = st.slider(
+                    "Respiratory Rate (bpm)", 5, 40,
+                    value=_rr_default,
+                    step=1,
+                    key=f"rr_{condition_name}_{engine_name}",
+                )
             ie_label = st.selectbox(
                 "I:E Ratio",
                 options=list(IE_OPTIONS.keys()),
@@ -702,13 +731,21 @@ def render_sidebar():
                     "a spontaneous breath (outside it)."                                   
                 ),                                                                          
                 key=f"simv_thr_{condition_name}_{engine_name}",                            
-            )                                                                              
-            effort_rate = st.slider(                                                       
-                "Effort Rate (breaths/min)", 8, 40,                                        
-                value=int(preset["effort_rate_per_min"]), step=1,                          
-                help="Patient's own neural respiratory rate.",                             
-                key=f"simv_erate_{condition_name}_{engine_name}",                          
-            )                                                                              
+            )     
+            if is_neonatal:
+                effort_rate = st.slider(
+                    "Effort Rate (breaths/min)", 8, 70,
+                    value=int(preset["effort_rate_per_min"]), step=1,
+                    help="Patient's own neural respiratory rate.",
+                    key=f"simv_erate_{condition_name}_{engine_name}",
+                )
+            else:
+                effort_rate = st.slider(
+                    "Effort Rate (breaths/min)", 8, 40,
+                    value=int(preset["effort_rate_per_min"]), step=1,
+                    help="Patient's own neural respiratory rate.",
+                    key=f"simv_erate_{condition_name}_{engine_name}",
+                )                                                                                                                                                 
             pmus = st.slider(                                                               
                 "Peak Effort (Pmus cmH\u2082O)", 2, 25,                                    
                 value=int(preset["pmus_peak_cmH2O"]), step=1,                              
@@ -765,6 +802,16 @@ def render_sidebar():
         )
 
         # --- Assemble params dict ---------------------------------------
+        # --- ETT leak (neonatal only) ----------------------------------------
+        if is_neonatal and leak_enabled:
+            if engine_key in ("vcv", "pcv", "prvc"):
+                params["ett_cuff_leak_fraction"] = leak_frac
+            else:  # psv, simv
+                params["ett_complication"]  = "cuff_leak"
+                params["cuff_leak_fraction"] = leak_frac
+
+        params["population"] = preset.get("population", "adult")
+        params["weight_kg"]  = preset.get("weight_kg", 3.0 if is_neonatal else 70.0)
         if engine_key == "vcv":
             params = {
                 "respiratory_rate":        rr,

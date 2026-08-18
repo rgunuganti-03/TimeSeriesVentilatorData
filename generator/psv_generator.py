@@ -188,8 +188,8 @@ CIRCUIT_COMPLIANCE_ML_PER_CMH2O: float = 2.5
 DEFAULT_CHEST_WALL_COMPLIANCE: float = 250.0  # mL/cmH2O
 
 # Rohrer ETT contribution (7.5 mm ID tube)
-ETT_K1: float = 5.0   # cmH2O/L/s  — viscous ETT resistance
-ETT_K2: float = 3.0   # cmH2O/(L/s)^2 — turbulent ETT resistance
+ETT_K1: float = 0.92   # cmH2O/L/s  — viscous ETT resistance
+ETT_K2: float = 6.01   # cmH2O/(L/s)^2 — turbulent ETT resistance
 
 # ---------------------------------------------------------------------------
 # Section 2b — Neonatal population constants (only 3 — see CR0023)
@@ -205,6 +205,25 @@ def _neonate_or_adult(population: str, neonate_val, adult_val):
     Works for any type — floats, None, whatever a given constant needs."""
     return neonate_val if population == "neonate" else adult_val
 
+def _resolve_ett_leak_fraction(params: dict) -> Tuple[float, bool]:
+    """Leak fraction regardless of which convention the caller used:
+    direct `ett_cuff_leak_fraction`, or `ett_complication='cuff_leak'`
+    + `cuff_leak_fraction`. Either is sufficient.
+
+    Returns (leak_fraction, came_from_direct_key). `came_from_direct_key`
+    tells the caller whether this came from the VCV/PCV/PRVC-style key,
+    so it can decide whether `ett_complication` still needs to be
+    normalized to "cuff_leak" -- see call site. This exists so a leak
+    fraction set via `ett_cuff_leak_fraction` never silently overrides
+    an `ett_complication` the caller explicitly set to something else
+    (e.g. "partial_obstruction").
+    """
+    direct = float(params.get("ett_cuff_leak_fraction", 0.0))
+    if direct > 0.0:
+        return direct, True
+    if params.get("ett_complication") == "cuff_leak":
+        return float(params.get("cuff_leak_fraction", 0.0)), False
+    return 0.0, False
 # ---------------------------------------------------------------------------
 # Section 3 — Condition-Specific Profiles
 # ---------------------------------------------------------------------------
@@ -278,8 +297,8 @@ COMPARTMENT_PROFILES: Dict = {
 RECRUITMENT_SLOPES: Dict = {
     "Normal":        0.00,
     "Mild ARDS":     0.50,
-    "Moderate ARDS": 0.90,
-    "Severe ARDS":   0.60,
+    "Moderate ARDS": 0.60,
+    "Severe ARDS":   0.90,
     "COPD":          0.00,
     "Bronchospasm":  0.00,
     "Pneumonia":     0.10,
@@ -812,9 +831,16 @@ def generate_breath_cycles(params: dict,
                                         RECRUITMENT_SLOPES.get(condition, 0.5)))
 
     # ETT complications
-    ett_complication = params.get("ett_complication", None)
-    cuff_leak_frac   = float(params.get("cuff_leak_fraction", 0.0))
+   
     obs_multiplier   = float(params.get("obstruction_R_multiplier", 1.0))
+
+    ett_complication = params.get("ett_complication", None)
+    cuff_leak_frac, leak_from_direct_key = _resolve_ett_leak_fraction(params)
+    if leak_from_direct_key and ett_complication is None:
+        # Only auto-promote to "cuff_leak" when the caller didn't already
+        # request a different complication. Prevents ett_cuff_leak_fraction
+        # from silently overriding an explicit "partial_obstruction" setting.
+        ett_complication = "cuff_leak"
 
     # Rohrer base coefficients (derive from total R; ETT contributes ~50%)
     K1_intrinsic = R_global * 0.60

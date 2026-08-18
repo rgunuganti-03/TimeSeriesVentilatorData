@@ -212,8 +212,9 @@ IBW_KG: float                  = 70.0
 VT_MIN_ML: float                = IBW_KG * 3       # 210 mL — inadequate ventilation
 VT_MAX_ML: float                = IBW_KG * 12      # 840 mL — overdistension
 PPEAK_MAX_CMHH2O: float         = 50.0             # barotrauma risk
-DRIVING_P_MAX_CMHH2O: float     = 20.0             # ARDS mortality threshold (VC mandatory)
+DRIVING_P_MAX_CMHH2O: float     = 15.0             # ARDS mortality threshold (VC mandatory)
 INSP_PRESSURE_MAX_CMHH2O: float = 35.0             # max driving above PEEP (PC mandatory)
+PPLAT_MAX_CMHH2O: float = 30.0
 PS_MAX_CMHH2O: float            = 20.0             # clinical PS ceiling
 DT: float                       = 0.01             # 100 Hz internal timestep
 INSPIRATORY_PAUSE_S: float      = 0.3              # VC mandatory only (Pplat)
@@ -228,8 +229,8 @@ NEONATE_IBW_KG_DEFAULT:    float = 3.0    # fallback only if weight_kg is someho
 
 CIRCUIT_COMPLIANCE_ML_PER_CMH2O: float = 2.5
 DEFAULT_CHEST_WALL_COMPLIANCE: float   = 250.0     # mL/cmH2O (~inert default)
-ETT_K1: float = 5.0   # cmH2O/L/s     — viscous ETT resistance
-ETT_K2: float = 3.0   # cmH2O/(L/s)^2 — turbulent ETT resistance
+ETT_K1: float = 0.92  # cmH2O/L/s     — viscous ETT resistance
+ETT_K2: float = 6.01   # cmH2O/(L/s)^2 — turbulent ETT resistance
 
 AI_HIGH_ASYNCHRONY_THRESHOLD: float = 0.10   # Thille et al. 2006 — AI > 10%
 
@@ -246,6 +247,26 @@ def _neonate_or_adult(population: str, neonate_val, adult_val):
     """Return neonate_val if population == 'neonate', else adult_val.
     Works for any type — floats, None, whatever a given constant needs."""
     return neonate_val if population == "neonate" else adult_val
+
+def _resolve_ett_leak_fraction(params: dict) -> Tuple[float, bool]:
+    """Leak fraction regardless of which convention the caller used:
+    direct `ett_cuff_leak_fraction`, or `ett_complication='cuff_leak'`
+    + `cuff_leak_fraction`. Either is sufficient.
+
+    Returns (leak_fraction, came_from_direct_key). `came_from_direct_key`
+    tells the caller whether this came from the VCV/PCV/PRVC-style key,
+    so it can decide whether `ett_complication` still needs to be
+    normalized to "cuff_leak" -- see call site. This exists so a leak
+    fraction set via `ett_cuff_leak_fraction` never silently overrides
+    an `ett_complication` the caller explicitly set to something else
+    (e.g. "partial_obstruction").
+    """
+    direct = float(params.get("ett_cuff_leak_fraction", 0.0))
+    if direct > 0.0:
+        return direct, True
+    if params.get("ett_complication") == "cuff_leak":
+        return float(params.get("cuff_leak_fraction", 0.0)), False
+    return 0.0, False
 
 
 # ---------------------------------------------------------------------------
@@ -312,8 +333,8 @@ COMPARTMENT_PROFILES: Dict = {
 RECRUITMENT_SLOPES: Dict = {
     "Normal":        0.00,
     "Mild ARDS":     0.50,
-    "Moderate ARDS": 0.90,
-    "Severe ARDS":   0.60,
+    "Moderate ARDS": 0.60,
+    "Severe ARDS":   0.90,
     "COPD":          0.00,
     "Bronchospasm":  0.00,
     "Pneumonia":     0.10,
@@ -927,7 +948,12 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                                          RECRUITMENT_SLOPES.get(condition, 0.5)))
 
     ett_complication = params.get("ett_complication", None)
-    cuff_leak_frac   = float(params.get("cuff_leak_fraction", 0.0))
+    cuff_leak_frac, leak_from_direct_key = _resolve_ett_leak_fraction(params)
+    if leak_from_direct_key and ett_complication is None:
+        # Only auto-promote to "cuff_leak" when the caller didn't already
+        # request a different complication. Prevents ett_cuff_leak_fraction
+        # from silently overriding an explicit "partial_obstruction" setting.
+        ett_complication = "cuff_leak"
     obs_multiplier   = float(params.get("obstruction_R_multiplier", 1.0))
 
     K1_intrinsic = R_global * 0.60
@@ -1010,6 +1036,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 "delivered_vt_ml": delivered_vt,
                 "ppeak_cmH2O": seg["ppeak_cmH2O"], "t_start_s": t_current,
                 "duration_s": seg["duration"],
+                "pplat_cmH2O": seg["pplat_cmH2O"],
             })
             V_comps = seg["V_comps"]
             t_mand_start = t_current
@@ -1063,6 +1090,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 "delivered_vt_ml": delivered_vt,
                 "ppeak_cmH2O": seg["ppeak_cmH2O"], "t_start_s": t_current,
                 "duration_s": seg["duration"],
+                "pplat_cmH2O": seg["pplat_cmH2O"],
             })
             V_comps = seg["V_comps"]
             t_mand_start = attempt_onset_t
@@ -1193,6 +1221,8 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
     ineffective_fraction = (len(ineffective_records) / n_effort_attempts) \
         if n_effort_attempts else 0.0
 
+    mandatory_pplat = float(np.mean([b["pplat_cmH2O"] for b in mandatory_records])) if mandatory_records else peep
+
     mandatory_ppeak = float(np.mean([b["ppeak_cmH2O"] for b in mandatory_records])) \
         if mandatory_records else peep
     driving_p = (mandatory_ppeak - peep) if mode == "PC" else \
@@ -1226,6 +1256,9 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
     elif mandatory_records and population != "neonate" and mand_vt_corrected > VT_MAX_ML:
         is_valid = False
         invalid_reason = f"Mandatory delivered VT {mand_vt_corrected:.0f} mL exceeds maximum ({VT_MAX_ML:.0f} mL)"
+    elif population != "neonate" and mandatory_pplat > PPLAT_MAX_CMHH2O:
+       is_valid = False
+       invalid_reason = f"Mandatory plateau pressure {mandatory_pplat:.1f} cmH2O exceeds ARDSNet limit ({PPLAT_MAX_CMHH2O})"
 
     return {
         "time": time_arr, "pressure": pressure_arr, "flow": flow_arr, "volume": volume_arr,

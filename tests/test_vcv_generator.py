@@ -973,7 +973,7 @@ class TestValidityFilter:
 
     def test_driving_pressure_threshold_value(self):
         # Confirm the threshold constant matches the documented value
-        assert DRIVING_P_MAX_CMHH2O == 20.0
+        assert DRIVING_P_MAX_CMHH2O == 15.0
 
     def test_ppeak_threshold_value(self):
         assert PPEAK_MAX_CMHH2O == 50.0

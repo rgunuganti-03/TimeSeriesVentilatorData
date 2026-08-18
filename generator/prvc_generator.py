@@ -148,6 +148,7 @@ PARAMETER_GRID: Dict = {
 IBW_KG: float             = 70.0
 VT_MIN_ML: float          = IBW_KG * 3       # 210 mL
 VT_MAX_ML: float          = IBW_KG * 12      # 840 mL
+PPLAT_MAX_CMHH2O: float = 30.0 
 PPEAK_MAX_CMHH2O: float   = 50.0
 DT: float                 = 0.01             # 100 Hz internal simulation timestep
 
@@ -188,8 +189,8 @@ CIRCUIT_COMPLIANCE_ML_PER_CMH2O: float = 2.5
 DEFAULT_CHEST_WALL_COMPLIANCE: float = 250.0  # mL/cmH2O
 
 # Rohrer ETT contribution (7.5 mm ID tube) -- see refinement #3 note
-ETT_K1: float = 5.0   # cmH2O/L/s
-ETT_K2: float = 3.0   # cmH2O/(L/s)^2
+ETT_K1: float = 0.92   # cmH2O/L/s
+ETT_K2: float = 6.01   # cmH2O/(L/s)^2
 # ---------------------------------------------------------------------------
 # Section 2b — Neonatal population constants (only 3 — see CR0023)
 # ---------------------------------------------------------------------------
@@ -206,6 +207,26 @@ def _neonate_or_adult(population: str, neonate_val, adult_val):
     """Return neonate_val if population == 'neonate', else adult_val.
     Works for any type — floats, None, whatever a given constant needs."""
     return neonate_val if population == "neonate" else adult_val
+
+def _resolve_ett_leak_fraction(params: dict) -> Tuple[float, bool]:
+    """Leak fraction regardless of which convention the caller used:
+    direct `ett_cuff_leak_fraction`, or `ett_complication='cuff_leak'`
+    + `cuff_leak_fraction`. Either is sufficient.
+
+    Returns (leak_fraction, came_from_direct_key). `came_from_direct_key`
+    tells the caller whether this came from the VCV/PCV/PRVC-style key,
+    so it can decide whether `ett_complication` still needs to be
+    normalized to "cuff_leak" -- see call site. This exists so a leak
+    fraction set via `ett_cuff_leak_fraction` never silently overrides
+    an `ett_complication` the caller explicitly set to something else
+    (e.g. "partial_obstruction").
+    """
+    direct = float(params.get("ett_cuff_leak_fraction", 0.0))
+    if direct > 0.0:
+        return direct, True
+    if params.get("ett_complication") == "cuff_leak":
+        return float(params.get("cuff_leak_fraction", 0.0)), False
+    return 0.0, False
 # ---------------------------------------------------------------------------
 # Section 3 -- Condition-Specific Profiles
 # ---------------------------------------------------------------------------
@@ -271,8 +292,8 @@ COMPARTMENT_PROFILES: Dict = {
 RECRUITMENT_SLOPES: Dict = {
     "Normal":        0.00,
     "Mild ARDS":     0.50,
-    "Moderate ARDS": 0.90,
-    "Severe ARDS":   0.60,
+    "Moderate ARDS": 0.60,
+    "Severe ARDS":   0.90,
     "COPD":          0.00,
     "Bronchospasm":  0.00,
     "Pneumonia":     0.10,
@@ -784,7 +805,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
         delivered_vt_final, ppeak_final_breath, peep,
         C_circ=circuit_c, compensated=circ_compensated,
     )
-    cuff_leak_frac = float(params.get("ett_cuff_leak_fraction", 0.0))
+    cuff_leak_frac, _ = _resolve_ett_leak_fraction(params)
     delivered_vt_final = max(0.0, delivered_vt_final * (1.0 - cuff_leak_frac))
     auto_peep = float(np.mean(V_carry) / max(np.mean(comps["C_base"]), 0.5)) if n_cycles > 1 else 0.0
     minute_vent = delivered_vt_final * rr / 1000.0
@@ -808,6 +829,9 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     elif converged and population != "neonate" and delivered_vt_final > VT_MAX_ML:
         is_valid = False
         invalid_reason = f"Converged delivered Vt {delivered_vt_final:.0f} mL exceeds maximum {VT_MAX_ML:.0f} mL"
+    elif ppeak > PPLAT_MAX_CMHH2O:
+        is_valid = False
+        invalid_reason = f"Plateau pressure {ppeak:.1f} cmH2O exceeds ARDSNet limit ({PPLAT_MAX_CMHH2O} cmH2O)"
     # Ceiling-limited non-convergence is retained as a valid, labeled scenario
     # (see parameter grid doc 1e) -- not hard-invalidated.
 
