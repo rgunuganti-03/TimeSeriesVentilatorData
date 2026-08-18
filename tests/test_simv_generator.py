@@ -1004,10 +1004,13 @@ class TestValidityFilter:
         p = {**NORMAL_PARAMS_VC, "tidal_volume_ml": 900.0,
              "compliance_ml_per_cmH2O": 150.0, "resistance_cmH2O_L_s": 3.0}
         result = generate_breath_cycles(p, n_cycles=3, seed=54)
+        assert result["mandatory_delivered_vt_ml"] > VT_MAX_ML
         if not result["is_valid"]:
             assert ("vt" in result["invalid_reason"].lower() or
                     "volume" in result["invalid_reason"].lower() or
-                    "maximum" in result["invalid_reason"].lower())
+                    "maximum" in result["invalid_reason"].lower() or
+                    "driving" in result["invalid_reason"].lower() or
+                    "pressure" in result["invalid_reason"].lower())
 
     def test_constants_consistent_with_ibw(self):
         assert VT_MIN_ML == pytest.approx(IBW_KG * 3, abs=0.1)

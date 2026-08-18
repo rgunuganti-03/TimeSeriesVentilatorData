@@ -803,15 +803,7 @@ def render_sidebar():
 
         # --- Assemble params dict ---------------------------------------
         # --- ETT leak (neonatal only) ----------------------------------------
-        if is_neonatal and leak_enabled:
-            if engine_key in ("vcv", "pcv", "prvc"):
-                params["ett_cuff_leak_fraction"] = leak_frac
-            else:  # psv, simv
-                params["ett_complication"]  = "cuff_leak"
-                params["cuff_leak_fraction"] = leak_frac
-
-        params["population"] = preset.get("population", "adult")
-        params["weight_kg"]  = preset.get("weight_kg", 3.0 if is_neonatal else 70.0)
+        
         if engine_key == "vcv":
             params = {
                 "respiratory_rate":        rr,
@@ -890,6 +882,13 @@ def render_sidebar():
                 params["flow_pattern"]    = flow_pattern                                     
             else:                                                                             
                 params["insp_pressure_cmH2O"] = insp_pressure 
+         # --- ETT leak (neonatal only) ------------------------------------
+        if is_neonatal and leak_enabled:
+            if engine_key in ("vcv", "pcv", "prvc"):
+                params["ett_cuff_leak_fraction"] = leak_frac
+            else:  # psv, simv
+                params["ett_complication"]  = "cuff_leak"
+                params["cuff_leak_fraction"] = leak_frac
         params["population"] = preset.get("population", "adult")
         params["weight_kg"]  = preset.get("weight_kg", 3.0 if is_neonatal else 70.0)
 
