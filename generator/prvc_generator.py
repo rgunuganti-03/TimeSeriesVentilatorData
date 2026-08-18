@@ -829,9 +829,9 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     elif converged and population != "neonate" and delivered_vt_final > VT_MAX_ML:
         is_valid = False
         invalid_reason = f"Converged delivered Vt {delivered_vt_final:.0f} mL exceeds maximum {VT_MAX_ML:.0f} mL"
-    elif ppeak > PPLAT_MAX_CMHH2O:
+    elif ppeak_final_breath > PPLAT_MAX_CMHH2O:
         is_valid = False
-        invalid_reason = f"Plateau pressure {ppeak:.1f} cmH2O exceeds ARDSNet limit ({PPLAT_MAX_CMHH2O} cmH2O)"
+        invalid_reason = f"Plateau pressure {ppeak_final_breath:.1f} cmH2O exceeds ARDSNet limit ({PPLAT_MAX_CMHH2O} cmH2O)"
     # Ceiling-limited non-convergence is retained as a valid, labeled scenario
     # (see parameter grid doc 1e) -- not hard-invalidated.
 
