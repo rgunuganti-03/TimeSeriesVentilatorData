@@ -40,8 +40,7 @@ time-series-ventilator-data/
 │   ├── pcv_generator.py             # PCV — pressure-controlled, mandatory
 │   ├── psv_generator.py             # PSV — pressure support, patient-triggered
 │   ├── prvc_generator.py            # PRVC — dual-loop pressure-regulated volume control
-│   ├── simv_generator.py            # SIMV — hybrid mandatory + spontaneous
-│   └── dataset_io_helpers.py        # Shared manifest/export helpers used by all dataset scripts
+│   └── simv_generator.py            # SIMV — hybrid mandatory + spontaneous
 │
 ├── generate_vcv_dataset_thinned.py  # Full-grid thinned dataset generation, one per mode
 ├── generate_pcv_dataset_thinned.py
@@ -54,7 +53,7 @@ time-series-ventilator-data/
 │   │   ├── vcv/                     # Manifest CSV + generation log JSON
 │   │   ├── pcv/
 │   │   ├── psv/
-│   │   ├── prvc/                    # 78,912 scenarios, 96.9% valid (CR0017)
+│   │   ├── prvc/                    
 │   │   └── simv/
 │   └── scenarios/                   # Individual JSON scenario configs
 │
@@ -67,17 +66,14 @@ time-series-ventilator-data/
 │   ├── test_pcv_generator.py
 │   ├── test_psv_generator.py
 │   ├── test_prvc_generator.py
-│   └── test_simv_generator.py       # 154 tests across the suite as of SIMV completion
+│   └── test_simv_generator.py       
 │
 ├── Docs/
-│   ├── control_loops/               # Per-mode control loop specs (written before implementation)
-│   │   ├── PRVC_CONTROL_LOOP.md
-│   │   └── SIMV_CONTROL_LOOP.md
 │   └── crs/                         # Numbered, sequential change request documents
 │       ├── CR0001_PROJECT_STRUCTURE_REVIEW.md
 │       ├── CR0002_DOCUMENTATION_REVIEW.md
 │       ├── ...
-│       └── CR0023_...                # Neonatal/pediatric extension (in progress)
+│       └── CR0023_NEONATAL_CONDITIONS_IMPLEMENTATION_PLAN.md                # Neonatal/pediatric extension (in progress)
 │
 └── requirements.txt                  # Python dependencies
 ```
@@ -246,7 +242,7 @@ Work is broken into small, numbered, sequentially-tracked CR documents under `Do
 | VCV | ✅ | ✅ | ✅ | ✅ | ✅ |
 | PCV | ✅ | ✅ | ✅ | ✅ | ✅ |
 | PSV | ✅ | ✅ | ✅ | ✅ | ✅ |
-| PRVC | ✅ | ✅ | ✅ | ✅ (78,912 scenarios) | ✅ |
+| PRVC | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SIMV | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Neonatal/Pediatric (CR0023) | 🔶 partial | 🔶 partial | 🔶 in progress | ❌ not started | 🔶 sliders gated |
 
@@ -257,9 +253,7 @@ Work is broken into small, numbered, sequentially-tracked CR documents under `Do
 - **MAS (Meconium Aspiration Syndrome):** deferred — requires a genuine two-compartment model (obstructive/air-trapping + atelectatic/surfactant-inactivated), distinct from a single-compartment preset
 - **PRVC — COPD compliance:** currently set at 100 mL/cmH₂O; correction to 65–80 mL/cmH₂O identified but not applied
 - **PRVC — `pressure_ceiling_cmH2O` preset misalignment** for Mild ARDS and Pneumonia, not yet resolved
-- **PRVC — missing 30 cmH₂O ARDSnet plateau pressure check**, separate from the existing 50 cmH₂O barotrauma filter
 - **PRVC — unresolved terminal state:** ~20% of scenarios (up to 31% in Normal) are neither converged nor ceiling-limited when `n_cycles` runs out; not yet distinguished empirically between genuine oscillation and an insufficient cycle budget
-- **K1/K2 Rohrer resistance recalibration:** deferred pending access to the primary Flevari et al. (2011) source, due to flow-unit ambiguity (L/s vs. L/min) in secondary sources
 - **`VALIDATION.md`** has not yet been produced — no formal document yet defines what "physiologically plausible" means for this project across all modes
 - **Shared `generator/lung_physics.py` refactor:** flagged as an open architecture question (would deduplicate physics logic currently copied across all five generator files) but not undertaken
 
@@ -270,9 +264,7 @@ Work is broken into small, numbered, sequentially-tracked CR documents under `Do
 - **Physiological correctness over rescaling.** RDS is a compliance-collapse disease with near-normal resistance — not a rescaled Severe ARDS. MAS is genuinely heterogeneous and two-compartment — not a rescaled COPD preset. Condition identity is grounded in distinct pathophysiology, not parameter scaling.
 - **Neonatal physiology is not scaled-down adult physiology** — different absolute magnitudes, different dominant mechanisms (ETT resistance vs. airway resistance), and an entirely new phenomenon (leak) with no adult analogue.
 - **Hardcoded safety/validity constants must be population-gated**, not just parameter-gated — an adult-only constant will silently reject valid neonatal input rather than erroring loudly.
-- **Literature citations require primary-source verification.** Two separate incidents (the Tokioka et al. 2001 inversion, the K1/K2 unit ambiguity) demonstrate the risk of relying on secondary sources.
 - **`t_cursor` running-sum time tracking** replaces the nominal-clock formula (`t0 = cycle * t_cycle`) to prevent time-monotonicity failures from independently-rounded sample counts.
-- **HDF5 was abandoned** as a redundancy-detection strategy — derived metrics proved too algebraically correlated in metric space. Redundancy is instead addressed at the parameter-grid level, via the thinned generation scripts.
 - **Condition switching alone does not reduce multi-compartment compliance capacity** — normalization in `C_comps_base` preserves the sum across compartments, so explicit mechanics parameters must be supplied rather than relying on condition switching to imply a mechanics change.
 
 ---
