@@ -633,6 +633,18 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
             vol_per_comp[idx] = V_comps.copy()
         t_cursor = t0 + t_insp + n_exp * DT
 
+        # --- DIAGNOSTIC: auto-PEEP convergence check (delete after use) ---
+        C_rs_diag = np.array([
+            _C_rs(_compliance_nonlinear(V_comps[i], C_comps_base[i],
+                                          vt_ref_per_comp[i], stress_index),
+                  C_chest)
+            for i in range(n_comps)
+        ])
+        auto_peep_diag = max(0.0, float(V_comps.sum()) / max(float(C_rs_diag.sum()), 0.1))
+        print(f"  cycle {cycle:2d}: auto_peep={auto_peep_diag:.4f}  "
+              f"V_comps={np.round(V_comps, 2)}")
+        # --- END DIAGNOSTIC ---
+
     # ---- Derived metrics from the LAST cycle ----------------------------
     last_s   = (n_cycles - 1) * n_per
     last_e   = last_s + n_per
