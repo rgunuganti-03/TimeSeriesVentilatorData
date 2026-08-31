@@ -106,7 +106,6 @@ time-series-ventilator-data/
 ├── ui/dashboard.py                  # Streamlit dashboard
 ├── tests/                           # One test file per mode
 ├── Docs/
-│   ├── control_loops/               # Per-mode control loop specifications
 │   └── crs/                         # Numbered change request (CR) documents
 └── EXPERIMENT_LOG.md                # Chronological build log
 ```
@@ -120,7 +119,6 @@ Full layer-by-layer detail lives in `ARCHITECTURE.md`.
 - **`ARCHITECTURE.md`** — technical architecture, interface contracts, per-mode status, open items
 - **`PROBLEM_STATEMENT.md`** — problem framing
 - **`EXPERIMENT_LOG.md`** — chronological record of what was built, what broke, and why
-- **`Docs/control_loops/`** — one document per mode, written before implementation, describing the control loop mechanistically
 - **`Docs/crs/`** — sequential CR documents (CR0001+), each with problem, current state, proposed change, acceptance criteria, and status
 
 ---
@@ -136,7 +134,6 @@ New work is broken into small, numbered CRs before implementation. Each ventilat
 - ✅ All five adult ventilation modes complete, tested, and dataset-generated
 - 🔶 Neonatal/pediatric extension (CR0023) in progress — Normal Neonate and RDS implemented, MAS deferred, neonatal dataset generation not yet run
 - ⏳ Open PRVC refinements (COPD compliance correction, pressure ceiling preset alignment, ARDSnet plateau check)
-- ⏳ K1/K2 Rohrer resistance recalibration pending primary-source access (Flevari et al. 2011)
 - ⏳ `VALIDATION.md` not yet produced
 - ⏳ Additional regression test categories (scenario-ID completeness, cross-generator constant consistency) identified but not yet implemented
 
