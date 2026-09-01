@@ -1,3 +1,22 @@
 
-=== COPD ===
-params keys: ['compliance_ml_per_cmH2O', 'condition', 'effort_duration_s', 'effort_rate_per_min', 'flow_cycle_threshold', 'ie_ratio', 'insp_pressure_cmH2O', 'peep_cmH2O', 'pmus_cv', 'pmus_peak_cmH2O', 'population', 'pressure_ceiling_cmH2O', 'pressure_support_cmH2O', 'resistance_cmH2O_L_s', 'respiratory_rate', 'rise_time_s', 'stress_index', 'tidal_volume_ml', 'trigger_threshold_cmH2O']
+=== COPD (SIMV) ===
+  [COPD] macro-cycle end, t=  9.20s  auto_peep=3.1406
+  [COPD] macro-cycle end, t= 57.07s  auto_peep=2.9836
+  [COPD] macro-cycle end, t= 62.07s  auto_peep=3.7234
+  [COPD] macro-cycle end, t= 75.41s  auto_peep=2.6285
+
+=== Bronchospasm (SIMV) ===
+  [Bronchospasm] macro-cycle end, t= 17.65s  auto_peep=2.3707
+  [Bronchospasm] macro-cycle end, t= 23.65s  auto_peep=6.0743
+  [Bronchospasm] macro-cycle end, t= 29.65s  auto_peep=2.9785
+  [Bronchospasm] macro-cycle end, t= 35.65s  auto_peep=2.3169
+  [Bronchospasm] macro-cycle end, t= 41.65s  auto_peep=0.6179
+  [Bronchospasm] macro-cycle end, t= 47.65s  auto_peep=0.5199
+  [Bronchospasm] macro-cycle end, t= 58.77s  auto_peep=4.5380
+  [Bronchospasm] macro-cycle end, t= 64.77s  auto_peep=2.3374
+  [Bronchospasm] macro-cycle end, t= 70.77s  auto_peep=0.6745
+  [Bronchospasm] macro-cycle end, t= 76.77s  auto_peep=0.6651
+  [Bronchospasm] macro-cycle end, t= 82.77s  auto_peep=0.6282
+  [Bronchospasm] macro-cycle end, t= 99.77s  auto_peep=3.9993
+  [Bronchospasm] macro-cycle end, t=105.77s  auto_peep=0.6483
+  [Bronchospasm] macro-cycle end, t=111.77s  auto_peep=0.5207
