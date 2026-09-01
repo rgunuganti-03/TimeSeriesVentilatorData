@@ -1,4 +1,4 @@
-from generator.pcv_generator import generate_breath_cycles
+from generator.simv_generator import generate_breath_cycles
 from generator.conditions import CONDITIONS
 
 N_CYCLES_TO_CHECK = 20
