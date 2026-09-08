@@ -807,7 +807,14 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     )
     cuff_leak_frac, _ = _resolve_ett_leak_fraction(params)
     delivered_vt_final = max(0.0, delivered_vt_final * (1.0 - cuff_leak_frac))
-    auto_peep = float(np.mean(V_carry) / max(np.mean(comps["C_base"]), 0.5)) if n_cycles > 1 else 0.0
+    C_rs_end = np.array([
+        _C_rs(_compliance_nonlinear(V_carry[i], comps["C_base"][i],
+                                      vt_target * comps["fractions"][i] * 0.6,
+                                      stress_index),
+              C_chest)
+        for i in range(comps["n_comps"])
+    ])
+    auto_peep = max(0.0, float(V_carry.sum()) / max(float(C_rs_end.sum()), 0.1)) if n_cycles > 1 else 0.0
     minute_vent = delivered_vt_final * rr / 1000.0
     fill_fraction = float(np.clip(delivered_vt_final / max(vt_target, 1.0), 0.0, 1.5))
 

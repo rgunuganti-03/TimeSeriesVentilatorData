@@ -48,10 +48,10 @@ CONDITIONS = {
         "respiratory_rate":         15,
         "stress_index":             1.00, 
         "tidal_volume_ml":          500,
-        "compliance_ml_per_cmH2O":  70,
+        "compliance_ml_per_cmH2O":  60,
         "resistance_cmH2O_L_s":     10,
         "ie_ratio":                 0.5,
-        "rise_time_s":              0.10,
+        "rise_time_s":              0.15,
         "peep_cmH2O":               5,
         "pressure_support_cmH2O":   10,
         "flow_cycle_threshold":     0.25,
@@ -59,7 +59,7 @@ CONDITIONS = {
         "pmus_peak_cmH2O":          8,
         "effort_rate_per_min":      15,
         "effort_duration_s":        0.8,
-        "pmus_cv":                  0.20,
+        "pmus_cv":                  0.25,
         "pressure_ceiling_cmH2O":   25
     },
 
@@ -76,9 +76,9 @@ CONDITIONS = {
         "stress_index": 0.90, 
         "tidal_volume_ml":          420,
         "compliance_ml_per_cmH2O":   45,
-        "resistance_cmH2O_L_s":      12,
+        "resistance_cmH2O_L_s":      10,
         "ie_ratio":                 0.5,
-        "rise_time_s":              0.10,
+        "rise_time_s":              0.15,
         "peep_cmH2O":                 8,
         "pressure_support_cmH2O":  12,
         "flow_cycle_threshold":     0.20,
@@ -86,7 +86,7 @@ CONDITIONS = {
         "pmus_peak_cmH2O":         11,
         "effort_rate_per_min":     24,
         "effort_duration_s":        0.7,
-        "pmus_cv":                  0.25,
+        "pmus_cv":                  0.18,
         "pressure_ceiling_cmH2O":   28
     },
 
@@ -102,9 +102,9 @@ CONDITIONS = {
         "respiratory_rate":          24,
         "stress_index": 0.85,
         "tidal_volume_ml":          380,
-        "compliance_ml_per_cmH2O":   30,
-        "resistance_cmH2O_L_s":      14,
-        "rise_time_s":              0.10,
+        "compliance_ml_per_cmH2O":   35,
+        "resistance_cmH2O_L_s":      12,
+        "rise_time_s":              0.15,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                12,
         "pressure_support_cmH2O":  12,
@@ -113,7 +113,7 @@ CONDITIONS = {
         "pmus_peak_cmH2O":         13,
         "effort_rate_per_min":     30,
         "effort_duration_s":        0.60,
-        "pmus_cv":                  0.25,
+        "pmus_cv":                  0.16,
         "pressure_ceiling_cmH2O":   30
     },
 
@@ -129,9 +129,9 @@ CONDITIONS = {
         "respiratory_rate":          28,
         "stress_index": 0.80,
         "tidal_volume_ml":          300,
-        "compliance_ml_per_cmH2O":   18,
-        "resistance_cmH2O_L_s":      16,
-        "rise_time_s":              0.10,
+        "compliance_ml_per_cmH2O":   25,
+        "resistance_cmH2O_L_s":      14,
+        "rise_time_s":              0.15,
         "ie_ratio":                 0.5,
         "peep_cmH2O":                16,
         "pressure_support_cmH2O":  8,
@@ -157,7 +157,7 @@ CONDITIONS = {
         "respiratory_rate":          12,
         "stress_index": 1.20,
         "tidal_volume_ml":          550,
-        "compliance_ml_per_cmH2O":  100,
+        "compliance_ml_per_cmH2O":  70,
         "resistance_cmH2O_L_s":      22,
         "ie_ratio":                 0.25,
         "rise_time_s":              0.10,
@@ -167,9 +167,13 @@ CONDITIONS = {
         "trigger_threshold_cmH2O":  1.0,
         "pmus_peak_cmH2O":         15,
         "effort_rate_per_min":     24,
-        "effort_duration_s":        0.75,
-        "pmus_cv":                  0.28,
-        "pressure_ceiling_cmH2O":   30
+        "effort_duration_s":        0.60,
+        "pmus_cv":                  0.30,
+        "pressure_ceiling_cmH2O":   30,
+        "mode_overrides": {
+            "simv": {"peep_cmH2O": 7},
+            "psv":  {"peep_cmH2O": 7},
+        },
     },
 
     "Bronchospasm": {
@@ -186,18 +190,22 @@ CONDITIONS = {
         "stress_index": 1.00,
         "tidal_volume_ml":          420,
         "compliance_ml_per_cmH2O":   70,
-        "resistance_cmH2O_L_s":      35,
+        "resistance_cmH2O_L_s":      33,
         "rise_time_s":              0.10,
         "ie_ratio":                 0.20,
         "peep_cmH2O":                 3,
         "pressure_support_cmH2O":  14,
         "flow_cycle_threshold":     0.65,
-        "trigger_threshold_cmH2O":  1.5,
-        "pmus_peak_cmH2O":         8,
-        "effort_rate_per_min":     12,
-        "effort_duration_s":        0.85,
-        "pmus_cv":                  0.15,
-        "pressure_ceiling_cmH2O":   30
+        "trigger_threshold_cmH2O":  1.0,
+        "pmus_peak_cmH2O":         16,
+        "effort_rate_per_min":     28,
+        "effort_duration_s":        0.45,
+        "pmus_cv":                  0.35,
+        "pressure_ceiling_cmH2O":   30,
+        "mode_overrides": {
+            "simv": {"peep_cmH2O": 1, "respiratory_rate": 6},
+            "psv":  {"peep_cmH2O": 3},
+        },
     },
 
     "Pneumonia": {
@@ -215,7 +223,7 @@ CONDITIONS = {
         "compliance_ml_per_cmH2O":   50,
         "resistance_cmH2O_L_s":      12,
         "ie_ratio":                 0.5,
-        "rise_time_s":              0.10,
+        "rise_time_s":              0.15,
         "peep_cmH2O":                 8,
         "pressure_support_cmH2O":  12,
         "flow_cycle_threshold":     0.25,
@@ -223,7 +231,7 @@ CONDITIONS = {
         "pmus_peak_cmH2O":         11,
         "effort_rate_per_min":     24,
         "effort_duration_s":        0.75,
-        "pmus_cv":                  0.22,
+        "pmus_cv":                  0.19,
         "pressure_ceiling_cmH2O":   26
     },
 
@@ -281,7 +289,7 @@ CONDITIONS = {
         "pressure_support_cmH2O":   10,
         "flow_cycle_threshold":     0.15,
         "trigger_threshold_cmH2O":  0.5,                  # ASSUMPTION
-        "pmus_peak_cmH2O":          4,                    # weak preterm effort — ASSUMPTION
+        "pmus_peak_cmH2O":          7,                    # weak preterm effort — ASSUMPTION
         "effort_rate_per_min":      50,
         "effort_duration_s":        0.30,
         "pmus_cv":                  0.25,                 # ASSUMPTION
@@ -320,7 +328,8 @@ def get_condition(name: str) -> dict:
     key = _resolve_key(name)
     raw = CONDITIONS[key]
     # Strip metadata keys — return only waveform parameters
-    return {k: v for k, v in raw.items() if k not in ("label", "description")}
+    return {k: v for k, v in raw.items()
+            if k not in ("label", "description", "mode_overrides")}
 
 
 def get_condition_meta(name: str) -> dict:
@@ -353,7 +362,29 @@ def get_all_meta() -> dict:
         for name, v in CONDITIONS.items()
     }
 
+def get_condition_for_mode(name: str, mode: str) -> dict:
+    """
+    Return the parameter dict for a named condition, with any per-mode
+    overrides applied on top of the paralyzed/base values.
 
+    Use this from PSV and SIMV instead of get_condition(). VCV, PCV, and
+    PRVC should keep calling get_condition() directly — they always get
+    the base (paralyzed) values, since only PSV/SIMV currently define
+    overrides for any condition.
+
+    Parameters
+    ----------
+    name : str
+        Condition name. Case-insensitive.
+    mode : str
+        Generator mode: "psv" or "simv" (case-insensitive). Any other
+        value, or a condition with no mode_overrides entry, returns the
+        same result as get_condition(name).
+    """
+    base = get_condition(name)
+    key = _resolve_key(name)
+    overrides = CONDITIONS[key].get("mode_overrides", {}).get(mode.lower(), {})
+    return {**base, **overrides}
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
