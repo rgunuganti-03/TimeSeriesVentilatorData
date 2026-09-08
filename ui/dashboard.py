@@ -39,7 +39,8 @@ from plotly.subplots import make_subplots
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from generator.conditions    import get_condition, get_condition_meta, list_conditions
+
+from generator.conditions    import get_condition, get_condition_for_mode, get_condition_meta, list_conditions
 from generator.vcv_generator import generate_breath_cycles as _gen_vcv
 from generator.pcv_generator import generate_breath_cycles as _gen_pcv
 from generator.psv_generator import generate_breath_cycles as _gen_psv
@@ -352,7 +353,8 @@ def render_sidebar():
         # engine_name so Streamlit reinitialises the slider from value=
         # whenever the condition or engine changes. Manual adjustments
         # within a session are preserved until a new condition is selected.
-        preset = get_condition(condition_name)
+        
+        preset = get_condition_for_mode(condition_name, engine_key)
         is_neonatal = preset.get("population", "adult") == "neonate"
 
         # --- Shared parameters ------------------------------------------

@@ -1,510 +1,440 @@
-  [Bronchospasm] macro-cycle end, t= 11.20s  auto_peep=4.3094
-  [Bronchospasm] macro-cycle end, t= 17.68s  auto_peep=3.9775
-  [Bronchospasm] macro-cycle end, t= 29.03s  auto_peep=2.2832
-  [Bronchospasm] macro-cycle end, t= 35.03s  auto_peep=4.0087
-  [Bronchospasm] macro-cycle end, t= 41.03s  auto_peep=4.2016
-  [Bronchospasm] macro-cycle end, t= 47.03s  auto_peep=3.3715
-  [Bronchospasm] macro-cycle end, t= 53.10s  auto_peep=4.3508
-  [Bronchospasm] macro-cycle end, t= 59.10s  auto_peep=3.8144
-  [Bronchospasm] macro-cycle end, t= 65.10s  auto_peep=5.5296
-  [Bronchospasm] macro-cycle end, t= 75.70s  auto_peep=2.2661
-  [Bronchospasm] macro-cycle end, t= 81.70s  auto_peep=4.1453
-  [Bronchospasm] macro-cycle end, t= 87.70s  auto_peep=3.5732
-  [Bronchospasm] macro-cycle end, t= 93.70s  auto_peep=4.0106
-  [Bronchospasm] macro-cycle end, t= 99.70s  auto_peep=2.9073
-  [Bronchospasm] macro-cycle end, t=105.70s  auto_peep=3.6333
-  [Bronchospasm] macro-cycle end, t=116.67s  auto_peep=3.2884
-  [Bronchospasm] macro-cycle end, t= 10.54s  auto_peep=2.5940
-  [Bronchospasm] macro-cycle end, t= 16.54s  auto_peep=3.3600
-  [Bronchospasm] macro-cycle end, t= 22.54s  auto_peep=3.0918
-  [Bronchospasm] macro-cycle end, t= 33.89s  auto_peep=4.5581
-  [Bronchospasm] macro-cycle end, t= 39.89s  auto_peep=3.6376
-  [Bronchospasm] macro-cycle end, t= 45.89s  auto_peep=2.0937
-  [Bronchospasm] macro-cycle end, t= 51.89s  auto_peep=2.6926
-  [Bronchospasm] macro-cycle end, t= 58.29s  auto_peep=3.3759
-  [Bronchospasm] macro-cycle end, t= 64.82s  auto_peep=4.0848
-  [Bronchospasm] macro-cycle end, t= 70.82s  auto_peep=3.2238
-  [Bronchospasm] macro-cycle end, t= 76.82s  auto_peep=3.5113
-  [Bronchospasm] macro-cycle end, t= 83.51s  auto_peep=4.3987
-  [Bronchospasm] macro-cycle end, t= 89.51s  auto_peep=3.9424
-  [Bronchospasm] macro-cycle end, t= 95.51s  auto_peep=2.7303
-  [Bronchospasm] macro-cycle end, t=102.15s  auto_peep=3.4028
-  [Bronchospasm] macro-cycle end, t=108.15s  auto_peep=3.7113
-  [Bronchospasm] macro-cycle end, t=114.15s  auto_peep=3.6026
-  [Bronchospasm] macro-cycle end, t=120.15s  auto_peep=3.6320
-  [Bronchospasm] macro-cycle end, t= 10.52s  auto_peep=2.5170
-  [Bronchospasm] macro-cycle end, t= 16.52s  auto_peep=3.3627
-  [Bronchospasm] macro-cycle end, t= 22.52s  auto_peep=3.8467
-  [Bronchospasm] macro-cycle end, t= 28.66s  auto_peep=4.5667
-  [Bronchospasm] macro-cycle end, t= 35.24s  auto_peep=4.7478
-  [Bronchospasm] macro-cycle end, t= 41.89s  auto_peep=3.6444
-  [Bronchospasm] macro-cycle end, t= 48.47s  auto_peep=2.6098
-  [Bronchospasm] macro-cycle end, t= 54.73s  auto_peep=3.6410
-  [Bronchospasm] macro-cycle end, t= 61.16s  auto_peep=4.3835
-  [Bronchospasm] macro-cycle end, t= 67.16s  auto_peep=3.8766
-  [Bronchospasm] macro-cycle end, t= 73.16s  auto_peep=2.4130
-  [Bronchospasm] macro-cycle end, t= 79.16s  auto_peep=2.5117
-  [Bronchospasm] macro-cycle end, t= 85.58s  auto_peep=4.9682
-  [Bronchospasm] macro-cycle end, t= 91.58s  auto_peep=3.8100
-  [Bronchospasm] macro-cycle end, t= 97.58s  auto_peep=4.4432
-  [Bronchospasm] macro-cycle end, t=103.92s  auto_peep=3.8386
-  [Bronchospasm] macro-cycle end, t=110.60s  auto_peep=4.2229
-  [Bronchospasm] macro-cycle end, t=117.38s  auto_peep=3.2060
-  [Bronchospasm] macro-cycle end, t=123.40s  auto_peep=3.8169
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=4.5986
-  [Bronchospasm] macro-cycle end, t= 12.20s  auto_peep=4.2101
-  [Bronchospasm] macro-cycle end, t= 18.20s  auto_peep=3.9254
-  [Bronchospasm] macro-cycle end, t= 29.22s  auto_peep=2.3294
-  [Bronchospasm] macro-cycle end, t= 35.22s  auto_peep=5.1699
-  [Bronchospasm] macro-cycle end, t= 46.19s  auto_peep=2.5337
-  [Bronchospasm] macro-cycle end, t= 52.19s  auto_peep=1.6003
-  [Bronchospasm] macro-cycle end, t= 58.76s  auto_peep=2.6956
-  [Bronchospasm] macro-cycle end, t= 64.84s  auto_peep=4.4788
-  [Bronchospasm] macro-cycle end, t= 70.84s  auto_peep=2.6082
-  [Bronchospasm] macro-cycle end, t= 76.84s  auto_peep=2.3559
-  [Bronchospasm] macro-cycle end, t= 87.72s  auto_peep=2.3152
-  [Bronchospasm] macro-cycle end, t= 93.81s  auto_peep=4.1916
-  [Bronchospasm] macro-cycle end, t= 99.81s  auto_peep=3.7826
-  [Bronchospasm] macro-cycle end, t=106.35s  auto_peep=4.0189
-  [Bronchospasm] macro-cycle end, t=112.89s  auto_peep=4.1881
-  [Bronchospasm] macro-cycle end, t=119.34s  auto_peep=4.8741
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=2.9196
-  [Bronchospasm] macro-cycle end, t= 12.00s  auto_peep=3.3352
-  [Bronchospasm] macro-cycle end, t= 18.58s  auto_peep=4.0856
-  [Bronchospasm] macro-cycle end, t= 24.91s  auto_peep=3.4010
-  [Bronchospasm] macro-cycle end, t= 30.91s  auto_peep=4.2728
-  [Bronchospasm] macro-cycle end, t= 36.91s  auto_peep=2.9258
-  [Bronchospasm] macro-cycle end, t= 42.91s  auto_peep=3.2977
-  [Bronchospasm] macro-cycle end, t= 49.41s  auto_peep=3.1131
-  [Bronchospasm] macro-cycle end, t= 55.73s  auto_peep=4.9026
-  [Bronchospasm] macro-cycle end, t= 61.73s  auto_peep=3.4783
-  [Bronchospasm] macro-cycle end, t= 67.73s  auto_peep=2.4968
-  [Bronchospasm] macro-cycle end, t= 73.73s  auto_peep=3.5170
-  [Bronchospasm] macro-cycle end, t= 79.73s  auto_peep=3.8429
-  [Bronchospasm] macro-cycle end, t= 85.73s  auto_peep=3.6236
-  [Bronchospasm] macro-cycle end, t= 92.37s  auto_peep=3.8736
-  [Bronchospasm] macro-cycle end, t= 98.75s  auto_peep=4.6156
-  [Bronchospasm] macro-cycle end, t=104.75s  auto_peep=3.3620
-  [Bronchospasm] macro-cycle end, t=111.14s  auto_peep=3.8273
-  [Bronchospasm] macro-cycle end, t=117.57s  auto_peep=4.2073
-  [Bronchospasm] macro-cycle end, t=123.57s  auto_peep=4.7896
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=4.3948
-  [Bronchospasm] macro-cycle end, t= 12.01s  auto_peep=4.1537
-  [Bronchospasm] macro-cycle end, t= 22.82s  auto_peep=2.4283
-  [Bronchospasm] macro-cycle end, t= 33.39s  auto_peep=4.9900
-  [Bronchospasm] macro-cycle end, t= 39.39s  auto_peep=3.7780
-  [Bronchospasm] macro-cycle end, t= 45.39s  auto_peep=2.5383
-  [Bronchospasm] macro-cycle end, t= 51.95s  auto_peep=4.7286
-  [Bronchospasm] macro-cycle end, t= 58.19s  auto_peep=4.1516
-  [Bronchospasm] macro-cycle end, t= 75.88s  auto_peep=2.2328
-  [Bronchospasm] macro-cycle end, t= 82.13s  auto_peep=3.7951
-  [Bronchospasm] macro-cycle end, t= 92.72s  auto_peep=2.5260
-  [Bronchospasm] macro-cycle end, t= 98.72s  auto_peep=3.9830
-  [Bronchospasm] macro-cycle end, t=104.72s  auto_peep=2.7939
-  [Bronchospasm] macro-cycle end, t=111.22s  auto_peep=3.4910
-  [Bronchospasm] macro-cycle end, t=117.22s  auto_peep=4.9488
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=5.2447
-  [Bronchospasm] macro-cycle end, t= 12.00s  auto_peep=2.4212
-  [Bronchospasm] macro-cycle end, t= 18.00s  auto_peep=3.7480
-  [Bronchospasm] macro-cycle end, t= 24.00s  auto_peep=3.4620
-  [Bronchospasm] macro-cycle end, t= 30.00s  auto_peep=2.9910
-  [Bronchospasm] macro-cycle end, t= 36.00s  auto_peep=3.7568
-  [Bronchospasm] macro-cycle end, t= 42.73s  auto_peep=3.7601
-  [Bronchospasm] macro-cycle end, t= 48.73s  auto_peep=4.2885
-  [Bronchospasm] macro-cycle end, t= 54.73s  auto_peep=4.5440
-  [Bronchospasm] macro-cycle end, t= 60.73s  auto_peep=3.1980
-  [Bronchospasm] macro-cycle end, t= 66.73s  auto_peep=3.3957
-  [Bronchospasm] macro-cycle end, t= 72.73s  auto_peep=3.6981
-  [Bronchospasm] macro-cycle end, t= 79.02s  auto_peep=3.7404
-  [Bronchospasm] macro-cycle end, t= 85.75s  auto_peep=3.7712
-  [Bronchospasm] macro-cycle end, t= 91.75s  auto_peep=3.6072
-  [Bronchospasm] macro-cycle end, t=102.50s  auto_peep=2.0313
-  [Bronchospasm] macro-cycle end, t=108.50s  auto_peep=3.5846
-  [Bronchospasm] macro-cycle end, t=114.50s  auto_peep=3.4904
-  [Bronchospasm] macro-cycle end, t=121.16s  auto_peep=4.3555
-  [Bronchospasm] macro-cycle end, t=  6.77s  auto_peep=5.0971
-  [Bronchospasm] macro-cycle end, t= 12.94s  auto_peep=3.9101
-  [Bronchospasm] macro-cycle end, t= 35.81s  auto_peep=2.9324
-  [Bronchospasm] macro-cycle end, t= 42.41s  auto_peep=4.0009
-  [Bronchospasm] macro-cycle end, t= 48.52s  auto_peep=3.8891
-  [Bronchospasm] macro-cycle end, t= 55.09s  auto_peep=4.8467
-  [Bronchospasm] macro-cycle end, t= 61.73s  auto_peep=4.7082
-  [Bronchospasm] macro-cycle end, t= 67.73s  auto_peep=4.9494
-  [Bronchospasm] macro-cycle end, t= 73.73s  auto_peep=4.1854
-  [Bronchospasm] macro-cycle end, t= 79.73s  auto_peep=2.6081
-  [Bronchospasm] macro-cycle end, t= 86.40s  auto_peep=2.8636
-  [Bronchospasm] macro-cycle end, t= 92.43s  auto_peep=3.7529
-  [Bronchospasm] macro-cycle end, t= 98.81s  auto_peep=5.4391
-  [Bronchospasm] macro-cycle end, t=104.81s  auto_peep=3.6942
-  [Bronchospasm] macro-cycle end, t=111.10s  auto_peep=4.4568
-  [Bronchospasm] macro-cycle end, t=122.97s  auto_peep=1.9954
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=4.1750
-  [Bronchospasm] macro-cycle end, t= 12.02s  auto_peep=3.8788
-  [Bronchospasm] macro-cycle end, t= 18.59s  auto_peep=4.1186
-  [Bronchospasm] macro-cycle end, t= 29.87s  auto_peep=3.1436
-  [Bronchospasm] macro-cycle end, t= 40.66s  auto_peep=3.5568
-  [Bronchospasm] macro-cycle end, t= 46.91s  auto_peep=4.7505
-  [Bronchospasm] macro-cycle end, t= 53.54s  auto_peep=4.2541
-  [Bronchospasm] macro-cycle end, t= 59.54s  auto_peep=5.6053
-  [Bronchospasm] macro-cycle end, t= 65.77s  auto_peep=4.3661
-  [Bronchospasm] macro-cycle end, t= 71.77s  auto_peep=5.0151
-  [Bronchospasm] macro-cycle end, t= 77.77s  auto_peep=4.2668
-  [Bronchospasm] macro-cycle end, t= 83.77s  auto_peep=3.8337
-  [Bronchospasm] macro-cycle end, t= 94.80s  auto_peep=4.9048
-  [Bronchospasm] macro-cycle end, t=100.83s  auto_peep=3.8533
-  [Bronchospasm] macro-cycle end, t=107.25s  auto_peep=3.8886
-  [Bronchospasm] macro-cycle end, t=113.25s  auto_peep=4.8488
-  [Bronchospasm] macro-cycle end, t=  6.21s  auto_peep=4.7716
-  [Bronchospasm] macro-cycle end, t= 12.21s  auto_peep=4.9890
-  [Bronchospasm] macro-cycle end, t= 24.51s  auto_peep=2.9146
-  [Bronchospasm] macro-cycle end, t= 30.51s  auto_peep=3.9827
-  [Bronchospasm] macro-cycle end, t= 36.51s  auto_peep=6.1059
-  [Bronchospasm] macro-cycle end, t= 42.51s  auto_peep=4.0503
-  [Bronchospasm] macro-cycle end, t= 59.56s  auto_peep=5.2705
-  [Bronchospasm] macro-cycle end, t= 66.00s  auto_peep=5.6947
-  [Bronchospasm] macro-cycle end, t= 72.00s  auto_peep=4.8819
-  [Bronchospasm] macro-cycle end, t= 78.00s  auto_peep=2.3960
-  [Bronchospasm] macro-cycle end, t= 84.31s  auto_peep=4.3623
-  [Bronchospasm] macro-cycle end, t=101.19s  auto_peep=2.6268
-  [Bronchospasm] macro-cycle end, t=107.30s  auto_peep=4.8902
-  [Bronchospasm] macro-cycle end, t=113.70s  auto_peep=2.9370
-  [Bronchospasm] macro-cycle end, t=119.70s  auto_peep=3.8541
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=5.1744
-  [Bronchospasm] macro-cycle end, t= 12.00s  auto_peep=4.5915
-  [Bronchospasm] macro-cycle end, t= 29.37s  auto_peep=4.3029
-  [Bronchospasm] macro-cycle end, t= 35.91s  auto_peep=4.4713
-  [Bronchospasm] macro-cycle end, t= 47.07s  auto_peep=2.5691
-  [Bronchospasm] macro-cycle end, t= 53.67s  auto_peep=3.6274
-  [Bronchospasm] macro-cycle end, t= 59.93s  auto_peep=4.4076
-  [Bronchospasm] macro-cycle end, t= 71.86s  auto_peep=6.1462
-  [Bronchospasm] macro-cycle end, t= 77.86s  auto_peep=3.0060
-  [Bronchospasm] macro-cycle end, t= 84.18s  auto_peep=4.2185
-  [Bronchospasm] macro-cycle end, t= 90.56s  auto_peep=5.3115
-  [Bronchospasm] macro-cycle end, t=101.15s  auto_peep=5.2248
-  [Bronchospasm] macro-cycle end, t=107.15s  auto_peep=2.5653
-  [Bronchospasm] macro-cycle end, t=113.15s  auto_peep=2.1687
-  [Bronchospasm] macro-cycle end, t=119.15s  auto_peep=3.2859
-  [Bronchospasm] macro-cycle end, t= 10.51s  auto_peep=5.4535
-  [Bronchospasm] macro-cycle end, t= 16.51s  auto_peep=3.3142
-  [Bronchospasm] macro-cycle end, t= 22.51s  auto_peep=2.3922
-  [Bronchospasm] macro-cycle end, t= 28.51s  auto_peep=2.9984
-  [Bronchospasm] macro-cycle end, t= 34.51s  auto_peep=3.3823
-  [Bronchospasm] macro-cycle end, t= 45.87s  auto_peep=3.2628
-  [Bronchospasm] macro-cycle end, t= 52.00s  auto_peep=4.1825
-  [Bronchospasm] macro-cycle end, t= 58.67s  auto_peep=4.7457
-  [Bronchospasm] macro-cycle end, t= 64.67s  auto_peep=3.8970
-  [Bronchospasm] macro-cycle end, t= 70.67s  auto_peep=2.7228
-  [Bronchospasm] macro-cycle end, t= 76.67s  auto_peep=3.2639
-  [Bronchospasm] macro-cycle end, t= 82.91s  auto_peep=3.7326
-  [Bronchospasm] macro-cycle end, t= 88.91s  auto_peep=3.3422
-  [Bronchospasm] macro-cycle end, t= 94.91s  auto_peep=3.7606
-  [Bronchospasm] macro-cycle end, t=101.88s  auto_peep=4.0138
-  [Bronchospasm] macro-cycle end, t=113.68s  auto_peep=2.9397
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=1.1612
-  [Bronchospasm] macro-cycle end, t= 12.00s  auto_peep=2.9583
-  [Bronchospasm] macro-cycle end, t= 18.53s  auto_peep=3.9423
-  [Bronchospasm] macro-cycle end, t= 25.00s  auto_peep=3.5177
-  [Bronchospasm] macro-cycle end, t= 36.02s  auto_peep=2.6830
-  [Bronchospasm] macro-cycle end, t= 42.02s  auto_peep=2.5428
-  [Bronchospasm] macro-cycle end, t= 48.02s  auto_peep=4.5312
-  [Bronchospasm] macro-cycle end, t= 54.02s  auto_peep=3.3957
-  [Bronchospasm] macro-cycle end, t= 60.02s  auto_peep=2.7004
-  [Bronchospasm] macro-cycle end, t= 66.02s  auto_peep=2.6450
-  [Bronchospasm] macro-cycle end, t= 72.02s  auto_peep=3.2778
-  [Bronchospasm] macro-cycle end, t= 78.89s  auto_peep=2.6765
-  [Bronchospasm] macro-cycle end, t= 84.90s  auto_peep=3.9707
-  [Bronchospasm] macro-cycle end, t= 91.49s  auto_peep=4.6270
-  [Bronchospasm] macro-cycle end, t= 97.49s  auto_peep=4.1147
-  [Bronchospasm] macro-cycle end, t=108.99s  auto_peep=3.3058
-  [Bronchospasm] macro-cycle end, t=115.28s  auto_peep=4.6928
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=3.2151
-  [Bronchospasm] macro-cycle end, t= 12.03s  auto_peep=4.2542
-  [Bronchospasm] macro-cycle end, t= 18.03s  auto_peep=4.3649
-  [Bronchospasm] macro-cycle end, t= 24.43s  auto_peep=3.8396
-  [Bronchospasm] macro-cycle end, t= 30.43s  auto_peep=3.7860
-  [Bronchospasm] macro-cycle end, t= 36.50s  auto_peep=3.9904
-  [Bronchospasm] macro-cycle end, t= 42.66s  auto_peep=4.9372
-  [Bronchospasm] macro-cycle end, t= 49.53s  auto_peep=4.4656
-  [Bronchospasm] macro-cycle end, t= 55.59s  auto_peep=3.5104
-  [Bronchospasm] macro-cycle end, t= 61.84s  auto_peep=4.2677
-  [Bronchospasm] macro-cycle end, t= 68.28s  auto_peep=4.6225
-  [Bronchospasm] macro-cycle end, t= 74.28s  auto_peep=4.2127
-  [Bronchospasm] macro-cycle end, t= 80.28s  auto_peep=5.9204
-  [Bronchospasm] macro-cycle end, t= 91.83s  auto_peep=2.5661
-  [Bronchospasm] macro-cycle end, t= 97.83s  auto_peep=4.5484
-  [Bronchospasm] macro-cycle end, t=103.83s  auto_peep=2.3911
-  [Bronchospasm] macro-cycle end, t=115.58s  auto_peep=3.0703
-  [Bronchospasm] macro-cycle end, t=121.99s  auto_peep=3.7024
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=5.0015
-  [Bronchospasm] macro-cycle end, t= 17.52s  auto_peep=4.5100
-  [Bronchospasm] macro-cycle end, t= 23.63s  auto_peep=3.6947
-  [Bronchospasm] macro-cycle end, t= 29.63s  auto_peep=3.3483
-  [Bronchospasm] macro-cycle end, t= 35.63s  auto_peep=2.8075
-  [Bronchospasm] macro-cycle end, t= 41.63s  auto_peep=4.0220
-  [Bronchospasm] macro-cycle end, t= 53.36s  auto_peep=2.5901
-  [Bronchospasm] macro-cycle end, t= 59.36s  auto_peep=3.2643
-  [Bronchospasm] macro-cycle end, t= 65.36s  auto_peep=4.0336
-  [Bronchospasm] macro-cycle end, t= 71.36s  auto_peep=3.7834
-  [Bronchospasm] macro-cycle end, t= 77.36s  auto_peep=2.4349
-  [Bronchospasm] macro-cycle end, t= 83.36s  auto_peep=3.2330
-  [Bronchospasm] macro-cycle end, t= 89.82s  auto_peep=4.3568
-  [Bronchospasm] macro-cycle end, t= 95.82s  auto_peep=2.9807
-  [Bronchospasm] macro-cycle end, t=102.20s  auto_peep=5.1829
-  [Bronchospasm] macro-cycle end, t=108.69s  auto_peep=5.0255
-  [Bronchospasm] macro-cycle end, t=114.84s  auto_peep=4.3453
-  [Bronchospasm] macro-cycle end, t=120.84s  auto_peep=3.7985
-  [Bronchospasm] macro-cycle end, t= 10.67s  auto_peep=2.6265
-  [Bronchospasm] macro-cycle end, t= 16.67s  auto_peep=3.6704
-  [Bronchospasm] macro-cycle end, t= 22.67s  auto_peep=3.9938
-  [Bronchospasm] macro-cycle end, t= 28.67s  auto_peep=2.6013
-  [Bronchospasm] macro-cycle end, t= 34.67s  auto_peep=3.1280
-  [Bronchospasm] macro-cycle end, t= 40.87s  auto_peep=4.5000
-  [Bronchospasm] macro-cycle end, t= 47.51s  auto_peep=3.3229
-  [Bronchospasm] macro-cycle end, t= 54.23s  auto_peep=3.6371
-  [Bronchospasm] macro-cycle end, t= 60.23s  auto_peep=2.7120
-  [Bronchospasm] macro-cycle end, t= 66.23s  auto_peep=3.6276
-  [Bronchospasm] macro-cycle end, t= 72.56s  auto_peep=4.6754
-  [Bronchospasm] macro-cycle end, t= 78.56s  auto_peep=2.3771
-  [Bronchospasm] macro-cycle end, t= 84.56s  auto_peep=3.3903
-  [Bronchospasm] macro-cycle end, t= 90.68s  auto_peep=4.6372
-  [Bronchospasm] macro-cycle end, t= 96.68s  auto_peep=5.0257
-  [Bronchospasm] macro-cycle end, t=103.47s  auto_peep=2.9000
-  [Bronchospasm] macro-cycle end, t=110.06s  auto_peep=4.0077
-  [Bronchospasm] macro-cycle end, t=116.22s  auto_peep=4.3097
-  [Bronchospasm] macro-cycle end, t=122.52s  auto_peep=3.6283
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=5.5094
-  [Bronchospasm] macro-cycle end, t= 12.00s  auto_peep=5.2683
-  [Bronchospasm] macro-cycle end, t= 18.10s  auto_peep=3.0121
-  [Bronchospasm] macro-cycle end, t= 24.76s  auto_peep=3.4113
-  [Bronchospasm] macro-cycle end, t= 31.01s  auto_peep=3.4962
-  [Bronchospasm] macro-cycle end, t= 37.01s  auto_peep=4.0592
-  [Bronchospasm] macro-cycle end, t= 43.01s  auto_peep=3.6192
-  [Bronchospasm] macro-cycle end, t= 49.01s  auto_peep=4.0879
-  [Bronchospasm] macro-cycle end, t= 59.87s  auto_peep=5.2340
-  [Bronchospasm] macro-cycle end, t= 65.87s  auto_peep=3.0806
-  [Bronchospasm] macro-cycle end, t= 71.87s  auto_peep=2.5061
-  [Bronchospasm] macro-cycle end, t= 78.52s  auto_peep=4.1419
-  [Bronchospasm] macro-cycle end, t= 85.17s  auto_peep=3.8553
-  [Bronchospasm] macro-cycle end, t= 91.17s  auto_peep=2.8935
-  [Bronchospasm] macro-cycle end, t= 97.17s  auto_peep=3.7221
-  [Bronchospasm] macro-cycle end, t=103.67s  auto_peep=5.0297
-  [Bronchospasm] macro-cycle end, t=109.67s  auto_peep=3.3210
-  [Bronchospasm] macro-cycle end, t=116.06s  auto_peep=3.9544
-  [Bronchospasm] macro-cycle end, t=122.12s  auto_peep=4.4233
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=4.1366
-  [Bronchospasm] macro-cycle end, t= 12.65s  auto_peep=5.1306
-  [Bronchospasm] macro-cycle end, t= 18.65s  auto_peep=3.9876
-  [Bronchospasm] macro-cycle end, t= 24.65s  auto_peep=0.7818
-  [Bronchospasm] macro-cycle end, t= 30.65s  auto_peep=3.3359
-  [Bronchospasm] macro-cycle end, t= 36.75s  auto_peep=3.1140
-  [Bronchospasm] macro-cycle end, t= 42.75s  auto_peep=3.3517
-  [Bronchospasm] macro-cycle end, t= 48.75s  auto_peep=2.4773
-  [Bronchospasm] macro-cycle end, t= 55.07s  auto_peep=3.5449
-  [Bronchospasm] macro-cycle end, t= 61.14s  auto_peep=5.2892
-  [Bronchospasm] macro-cycle end, t= 67.14s  auto_peep=5.4422
-  [Bronchospasm] macro-cycle end, t= 73.14s  auto_peep=4.1895
-  [Bronchospasm] macro-cycle end, t= 79.14s  auto_peep=2.7850
-  [Bronchospasm] macro-cycle end, t= 85.20s  auto_peep=5.2381
-  [Bronchospasm] macro-cycle end, t= 91.63s  auto_peep=4.2889
-  [Bronchospasm] macro-cycle end, t= 97.65s  auto_peep=6.0812
-  [Bronchospasm] macro-cycle end, t=103.65s  auto_peep=4.1560
-  [Bronchospasm] macro-cycle end, t=109.90s  auto_peep=4.9226
-  [Bronchospasm] macro-cycle end, t=115.90s  auto_peep=5.5224
-  [Bronchospasm] macro-cycle end, t=122.22s  auto_peep=3.4343
-  [Bronchospasm] macro-cycle end, t= 10.80s  auto_peep=3.5441
-  [Bronchospasm] macro-cycle end, t= 17.31s  auto_peep=4.3267
-  [Bronchospasm] macro-cycle end, t= 24.11s  auto_peep=3.6195
-  [Bronchospasm] macro-cycle end, t= 30.64s  auto_peep=4.4535
-  [Bronchospasm] macro-cycle end, t= 36.64s  auto_peep=3.1855
-  [Bronchospasm] macro-cycle end, t= 42.64s  auto_peep=2.6746
-  [Bronchospasm] macro-cycle end, t= 48.64s  auto_peep=2.6863
-  [Bronchospasm] macro-cycle end, t= 54.64s  auto_peep=5.6694
-  [Bronchospasm] macro-cycle end, t= 60.64s  auto_peep=5.3542
-  [Bronchospasm] macro-cycle end, t= 66.64s  auto_peep=2.5441
-  [Bronchospasm] macro-cycle end, t= 72.64s  auto_peep=3.5550
-  [Bronchospasm] macro-cycle end, t= 78.64s  auto_peep=2.7498
-  [Bronchospasm] macro-cycle end, t= 84.92s  auto_peep=3.7485
-  [Bronchospasm] macro-cycle end, t= 90.92s  auto_peep=4.3408
-  [Bronchospasm] macro-cycle end, t= 96.92s  auto_peep=6.0994
-  [Bronchospasm] macro-cycle end, t=102.92s  auto_peep=5.0380
-  [Bronchospasm] macro-cycle end, t=108.92s  auto_peep=4.5807
-  [Bronchospasm] macro-cycle end, t=114.92s  auto_peep=4.0057
-  [Bronchospasm] macro-cycle end, t=120.92s  auto_peep=5.0101
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=4.3088
-  [Bronchospasm] macro-cycle end, t= 16.84s  auto_peep=2.2329
-  [Bronchospasm] macro-cycle end, t= 22.84s  auto_peep=3.4761
-  [Bronchospasm] macro-cycle end, t= 28.84s  auto_peep=3.5069
-  [Bronchospasm] macro-cycle end, t= 35.00s  auto_peep=4.2679
-  [Bronchospasm] macro-cycle end, t= 41.03s  auto_peep=4.4915
-  [Bronchospasm] macro-cycle end, t= 47.50s  auto_peep=4.3823
-  [Bronchospasm] macro-cycle end, t= 54.14s  auto_peep=5.2130
-  [Bronchospasm] macro-cycle end, t= 60.53s  auto_peep=5.7284
-  [Bronchospasm] macro-cycle end, t= 71.91s  auto_peep=2.4466
-  [Bronchospasm] macro-cycle end, t= 77.98s  auto_peep=3.6536
-  [Bronchospasm] macro-cycle end, t= 83.98s  auto_peep=4.8007
-  [Bronchospasm] macro-cycle end, t= 90.23s  auto_peep=4.8839
-  [Bronchospasm] macro-cycle end, t= 96.52s  auto_peep=3.3061
-  [Bronchospasm] macro-cycle end, t=102.94s  auto_peep=2.7582
-  [Bronchospasm] macro-cycle end, t=108.94s  auto_peep=3.5659
-  [Bronchospasm] macro-cycle end, t=115.70s  auto_peep=3.8593
-  [Bronchospasm] macro-cycle end, t=121.70s  auto_peep=3.5157
-  [Bronchospasm] macro-cycle end, t= 11.27s  auto_peep=2.2656
-  [Bronchospasm] macro-cycle end, t= 22.74s  auto_peep=4.0571
-  [Bronchospasm] macro-cycle end, t= 28.74s  auto_peep=0.7061
-  [Bronchospasm] macro-cycle end, t= 39.50s  auto_peep=4.8687
-  [Bronchospasm] macro-cycle end, t= 45.50s  auto_peep=2.7099
-  [Bronchospasm] macro-cycle end, t= 51.50s  auto_peep=2.0216
-  [Bronchospasm] macro-cycle end, t= 57.50s  auto_peep=3.4318
-  [Bronchospasm] macro-cycle end, t= 63.50s  auto_peep=3.4630
-  [Bronchospasm] macro-cycle end, t= 74.29s  auto_peep=3.3824
-  [Bronchospasm] macro-cycle end, t= 80.29s  auto_peep=4.1598
-  [Bronchospasm] macro-cycle end, t= 91.34s  auto_peep=4.1541
-  [Bronchospasm] macro-cycle end, t=103.05s  auto_peep=2.3618
-  [Bronchospasm] macro-cycle end, t=109.05s  auto_peep=4.4375
-  [Bronchospasm] macro-cycle end, t=115.21s  auto_peep=4.1265
-  [Bronchospasm] macro-cycle end, t= 16.52s  auto_peep=3.0285
-  [Bronchospasm] macro-cycle end, t= 22.75s  auto_peep=3.9419
-  [Bronchospasm] macro-cycle end, t= 28.96s  auto_peep=3.9485
-  [Bronchospasm] macro-cycle end, t= 35.29s  auto_peep=3.6466
-  [Bronchospasm] macro-cycle end, t= 41.29s  auto_peep=3.3147
-  [Bronchospasm] macro-cycle end, t= 47.29s  auto_peep=2.9665
-  [Bronchospasm] macro-cycle end, t= 53.29s  auto_peep=3.3888
-  [Bronchospasm] macro-cycle end, t= 59.70s  auto_peep=3.6301
-  [Bronchospasm] macro-cycle end, t= 65.70s  auto_peep=4.1878
-  [Bronchospasm] macro-cycle end, t= 71.70s  auto_peep=2.9737
-  [Bronchospasm] macro-cycle end, t= 77.70s  auto_peep=2.8698
-  [Bronchospasm] macro-cycle end, t= 83.70s  auto_peep=2.6315
-  [Bronchospasm] macro-cycle end, t= 89.70s  auto_peep=3.4987
-  [Bronchospasm] macro-cycle end, t= 95.70s  auto_peep=3.0962
-  [Bronchospasm] macro-cycle end, t=101.70s  auto_peep=3.5750
-  [Bronchospasm] macro-cycle end, t=108.16s  auto_peep=3.7598
-  [Bronchospasm] macro-cycle end, t=114.16s  auto_peep=4.9667
-  [Bronchospasm] macro-cycle end, t=120.16s  auto_peep=2.8398
-  [Bronchospasm] macro-cycle end, t=  6.29s  auto_peep=5.2308
-  [Bronchospasm] macro-cycle end, t= 12.96s  auto_peep=2.5204
-  [Bronchospasm] macro-cycle end, t= 18.96s  auto_peep=3.2407
-  [Bronchospasm] macro-cycle end, t= 34.87s  auto_peep=2.9557
-  [Bronchospasm] macro-cycle end, t= 41.59s  auto_peep=4.8829
-  [Bronchospasm] macro-cycle end, t= 47.59s  auto_peep=3.4515
-  [Bronchospasm] macro-cycle end, t= 58.53s  auto_peep=2.9503
-  [Bronchospasm] macro-cycle end, t= 64.82s  auto_peep=3.9137
-  [Bronchospasm] macro-cycle end, t= 71.25s  auto_peep=2.8962
-  [Bronchospasm] macro-cycle end, t= 77.32s  auto_peep=5.6910
-  [Bronchospasm] macro-cycle end, t= 83.81s  auto_peep=3.8015
-  [Bronchospasm] macro-cycle end, t= 94.47s  auto_peep=2.1642
-  [Bronchospasm] macro-cycle end, t=100.47s  auto_peep=3.8988
-  [Bronchospasm] macro-cycle end, t=106.86s  auto_peep=4.8218
-  [Bronchospasm] macro-cycle end, t=112.86s  auto_peep=5.2487
-  [Bronchospasm] macro-cycle end, t=118.86s  auto_peep=3.0904
-  [Bronchospasm] macro-cycle end, t=  6.88s  auto_peep=4.2818
-  [Bronchospasm] macro-cycle end, t= 17.90s  auto_peep=2.1476
-  [Bronchospasm] macro-cycle end, t= 23.90s  auto_peep=3.6901
-  [Bronchospasm] macro-cycle end, t= 29.90s  auto_peep=4.3525
-  [Bronchospasm] macro-cycle end, t= 35.90s  auto_peep=3.8194
-  [Bronchospasm] macro-cycle end, t= 42.75s  auto_peep=3.0966
-  [Bronchospasm] macro-cycle end, t= 48.75s  auto_peep=3.3098
-  [Bronchospasm] macro-cycle end, t= 54.75s  auto_peep=2.5256
-  [Bronchospasm] macro-cycle end, t= 60.75s  auto_peep=2.0910
-  [Bronchospasm] macro-cycle end, t= 66.80s  auto_peep=3.5425
-  [Bronchospasm] macro-cycle end, t= 73.11s  auto_peep=5.3701
-  [Bronchospasm] macro-cycle end, t= 79.11s  auto_peep=2.8674
-  [Bronchospasm] macro-cycle end, t= 89.99s  auto_peep=1.9501
-  [Bronchospasm] macro-cycle end, t= 95.99s  auto_peep=4.4204
-  [Bronchospasm] macro-cycle end, t=101.99s  auto_peep=4.8541
-  [Bronchospasm] macro-cycle end, t=108.93s  auto_peep=4.1232
-  [Bronchospasm] macro-cycle end, t=120.80s  auto_peep=2.6079
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=3.7954
-  [Bronchospasm] macro-cycle end, t= 12.00s  auto_peep=5.9389
-  [Bronchospasm] macro-cycle end, t= 18.00s  auto_peep=2.9498
-  [Bronchospasm] macro-cycle end, t= 24.00s  auto_peep=3.5649
-  [Bronchospasm] macro-cycle end, t= 30.30s  auto_peep=5.3523
-  [Bronchospasm] macro-cycle end, t= 36.30s  auto_peep=4.9537
-  [Bronchospasm] macro-cycle end, t= 42.30s  auto_peep=2.9214
-  [Bronchospasm] macro-cycle end, t= 48.30s  auto_peep=2.7432
-  [Bronchospasm] macro-cycle end, t= 54.92s  auto_peep=4.2711
-  [Bronchospasm] macro-cycle end, t= 61.34s  auto_peep=3.8417
-  [Bronchospasm] macro-cycle end, t= 67.34s  auto_peep=4.2812
-  [Bronchospasm] macro-cycle end, t= 73.54s  auto_peep=4.1090
-  [Bronchospasm] macro-cycle end, t= 84.55s  auto_peep=8.1281
-  [Bronchospasm] macro-cycle end, t= 90.55s  auto_peep=5.2074
-  [Bronchospasm] macro-cycle end, t= 96.67s  auto_peep=3.5753
-  [Bronchospasm] macro-cycle end, t=102.67s  auto_peep=4.4390
-  [Bronchospasm] macro-cycle end, t=109.35s  auto_peep=4.0271
-  [Bronchospasm] macro-cycle end, t=120.55s  auto_peep=2.1425
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=5.2556
-  [Bronchospasm] macro-cycle end, t= 12.58s  auto_peep=4.1537
-  [Bronchospasm] macro-cycle end, t= 18.67s  auto_peep=4.0453
-  [Bronchospasm] macro-cycle end, t= 29.44s  auto_peep=3.0743
-  [Bronchospasm] macro-cycle end, t= 35.71s  auto_peep=3.7183
-  [Bronchospasm] macro-cycle end, t= 42.67s  auto_peep=4.0917
-  [Bronchospasm] macro-cycle end, t= 48.67s  auto_peep=4.6494
-  [Bronchospasm] macro-cycle end, t= 55.39s  auto_peep=2.3103
-  [Bronchospasm] macro-cycle end, t= 61.39s  auto_peep=3.4329
-  [Bronchospasm] macro-cycle end, t= 67.67s  auto_peep=4.2108
-  [Bronchospasm] macro-cycle end, t= 73.67s  auto_peep=0.7363
-  [Bronchospasm] macro-cycle end, t= 79.67s  auto_peep=3.1356
-  [Bronchospasm] macro-cycle end, t= 86.25s  auto_peep=3.6616
-  [Bronchospasm] macro-cycle end, t= 92.25s  auto_peep=3.4099
-  [Bronchospasm] macro-cycle end, t=113.06s  auto_peep=2.5536
-  [Bronchospasm] macro-cycle end, t=119.68s  auto_peep=2.6579
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=3.3754
-  [Bronchospasm] macro-cycle end, t= 12.07s  auto_peep=5.3893
-  [Bronchospasm] macro-cycle end, t= 18.07s  auto_peep=2.6247
-  [Bronchospasm] macro-cycle end, t= 24.07s  auto_peep=3.6434
-  [Bronchospasm] macro-cycle end, t= 30.07s  auto_peep=6.2103
-  [Bronchospasm] macro-cycle end, t= 40.94s  auto_peep=3.9894
-  [Bronchospasm] macro-cycle end, t= 56.57s  auto_peep=2.4929
-  [Bronchospasm] macro-cycle end, t= 62.57s  auto_peep=4.5232
-  [Bronchospasm] macro-cycle end, t= 69.20s  auto_peep=4.6056
-  [Bronchospasm] macro-cycle end, t= 75.20s  auto_peep=3.4631
-  [Bronchospasm] macro-cycle end, t= 81.20s  auto_peep=4.8022
-  [Bronchospasm] macro-cycle end, t= 87.20s  auto_peep=4.2264
-  [Bronchospasm] macro-cycle end, t= 93.20s  auto_peep=2.7151
-  [Bronchospasm] macro-cycle end, t= 99.20s  auto_peep=3.9460
-  [Bronchospasm] macro-cycle end, t=115.57s  auto_peep=6.7701
-  [Bronchospasm] macro-cycle end, t= 10.54s  auto_peep=3.5578
-  [Bronchospasm] macro-cycle end, t= 16.99s  auto_peep=3.9082
-  [Bronchospasm] macro-cycle end, t= 23.57s  auto_peep=4.1621
-  [Bronchospasm] macro-cycle end, t= 29.57s  auto_peep=4.7733
-  [Bronchospasm] macro-cycle end, t= 40.18s  auto_peep=3.6306
-  [Bronchospasm] macro-cycle end, t= 46.22s  auto_peep=5.1059
-  [Bronchospasm] macro-cycle end, t= 52.22s  auto_peep=3.3145
-  [Bronchospasm] macro-cycle end, t= 58.22s  auto_peep=3.7309
-  [Bronchospasm] macro-cycle end, t= 64.22s  auto_peep=4.7973
-  [Bronchospasm] macro-cycle end, t= 70.22s  auto_peep=3.8025
-  [Bronchospasm] macro-cycle end, t= 76.22s  auto_peep=3.3699
-  [Bronchospasm] macro-cycle end, t= 82.22s  auto_peep=3.2237
-  [Bronchospasm] macro-cycle end, t= 88.22s  auto_peep=3.1901
-  [Bronchospasm] macro-cycle end, t= 94.22s  auto_peep=4.3948
-  [Bronchospasm] macro-cycle end, t=104.90s  auto_peep=4.3054
-  [Bronchospasm] macro-cycle end, t=110.90s  auto_peep=4.4078
-  [Bronchospasm] macro-cycle end, t=116.90s  auto_peep=3.4315
-  [Bronchospasm] macro-cycle end, t= 10.51s  auto_peep=2.5070
-  [Bronchospasm] macro-cycle end, t= 16.95s  auto_peep=4.5101
-  [Bronchospasm] macro-cycle end, t= 28.23s  auto_peep=4.7389
-  [Bronchospasm] macro-cycle end, t= 34.23s  auto_peep=2.1367
-  [Bronchospasm] macro-cycle end, t= 40.23s  auto_peep=2.4591
-  [Bronchospasm] macro-cycle end, t= 51.07s  auto_peep=2.6005
-  [Bronchospasm] macro-cycle end, t= 57.07s  auto_peep=3.2544
-  [Bronchospasm] macro-cycle end, t= 63.74s  auto_peep=3.9935
-  [Bronchospasm] macro-cycle end, t= 70.23s  auto_peep=4.4568
-  [Bronchospasm] macro-cycle end, t= 76.23s  auto_peep=4.8680
-  [Bronchospasm] macro-cycle end, t= 82.30s  auto_peep=4.6519
-  [Bronchospasm] macro-cycle end, t= 97.53s  auto_peep=2.2432
-  [Bronchospasm] macro-cycle end, t=103.53s  auto_peep=2.3553
-  [Bronchospasm] macro-cycle end, t=109.53s  auto_peep=3.0870
-  [Bronchospasm] macro-cycle end, t=115.53s  auto_peep=4.1845
-  [Bronchospasm] macro-cycle end, t=  6.00s  auto_peep=4.8365
-  [Bronchospasm] macro-cycle end, t= 34.16s  auto_peep=2.7792
-  [Bronchospasm] macro-cycle end, t= 40.75s  auto_peep=5.0044
-  [Bronchospasm] macro-cycle end, t= 47.28s  auto_peep=4.8659
-  [Bronchospasm] macro-cycle end, t= 53.28s  auto_peep=5.3057
-  [Bronchospasm] macro-cycle end, t= 63.79s  auto_peep=2.7130
-  [Bronchospasm] macro-cycle end, t= 69.79s  auto_peep=4.7756
-  [Bronchospasm] macro-cycle end, t= 75.79s  auto_peep=2.5521
-  [Bronchospasm] macro-cycle end, t= 81.79s  auto_peep=3.3300
-  [Bronchospasm] macro-cycle end, t= 88.11s  auto_peep=3.9093
-  [Bronchospasm] macro-cycle end, t= 99.81s  auto_peep=2.8461
-  [Bronchospasm] macro-cycle end, t=105.81s  auto_peep=3.7728
-  [Bronchospasm] macro-cycle end, t=116.64s  auto_peep=2.9105
-SIMV Bronchospasm (effort_rate=28): mean=0.6668  std=0.0579
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=2.5313
+  [COPD] macro-cycle end, t= 18.49s  auto_peep=3.0015
+  [COPD] macro-cycle end, t= 28.00s  auto_peep=3.9207
+  [COPD] macro-cycle end, t= 33.00s  auto_peep=4.2289
+  [COPD] macro-cycle end, t= 38.00s  auto_peep=1.8763
+  [COPD] macro-cycle end, t= 43.00s  auto_peep=3.8902
+  [COPD] macro-cycle end, t= 48.00s  auto_peep=3.6472
+  [COPD] macro-cycle end, t= 53.00s  auto_peep=3.0181
+  [COPD] macro-cycle end, t= 62.34s  auto_peep=1.5480
+  [COPD] macro-cycle end, t= 67.34s  auto_peep=2.7043
+  [COPD] macro-cycle end, t= 72.34s  auto_peep=2.3658
+  [COPD] macro-cycle end, t= 86.11s  auto_peep=1.4802
+  [COPD] macro-cycle end, t= 91.11s  auto_peep=3.0972
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=2.2617
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=2.8005
+  [COPD] macro-cycle end, t= 15.00s  auto_peep=2.6217
+  [COPD] macro-cycle end, t= 24.72s  auto_peep=2.5150
+  [COPD] macro-cycle end, t= 29.72s  auto_peep=3.6510
+  [COPD] macro-cycle end, t= 34.72s  auto_peep=1.8611
+  [COPD] macro-cycle end, t= 39.72s  auto_peep=3.6331
+  [COPD] macro-cycle end, t= 44.72s  auto_peep=3.3621
+  [COPD] macro-cycle end, t= 53.91s  auto_peep=1.9220
+  [COPD] macro-cycle end, t= 58.91s  auto_peep=3.6387
+  [COPD] macro-cycle end, t= 63.91s  auto_peep=3.7649
+  [COPD] macro-cycle end, t= 68.91s  auto_peep=1.5232
+  [COPD] macro-cycle end, t= 73.91s  auto_peep=2.1255
+  [COPD] macro-cycle end, t= 78.91s  auto_peep=2.2150
+  [COPD] macro-cycle end, t= 83.91s  auto_peep=4.1563
+  [COPD] macro-cycle end, t= 93.90s  auto_peep=2.3188
+  [COPD] macro-cycle end, t= 98.90s  auto_peep=3.3825
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=1.5153
+  [COPD] macro-cycle end, t= 19.57s  auto_peep=2.2485
+  [COPD] macro-cycle end, t= 24.57s  auto_peep=2.4231
+  [COPD] macro-cycle end, t= 34.44s  auto_peep=2.4616
+  [COPD] macro-cycle end, t= 39.44s  auto_peep=2.1669
+  [COPD] macro-cycle end, t= 44.44s  auto_peep=4.0353
+  [COPD] macro-cycle end, t= 49.44s  auto_peep=1.6015
+  [COPD] macro-cycle end, t= 58.60s  auto_peep=2.1096
+  [COPD] macro-cycle end, t= 63.60s  auto_peep=2.6928
+  [COPD] macro-cycle end, t= 68.60s  auto_peep=2.1986
+  [COPD] macro-cycle end, t= 73.60s  auto_peep=2.4256
+  [COPD] macro-cycle end, t= 87.11s  auto_peep=2.5145
+  [COPD] macro-cycle end, t= 92.11s  auto_peep=3.1260
+  [COPD] macro-cycle end, t= 97.11s  auto_peep=4.1645
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=2.0751
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=1.3993
+  [COPD] macro-cycle end, t= 15.00s  auto_peep=2.8770
+  [COPD] macro-cycle end, t= 20.00s  auto_peep=3.8171
+  [COPD] macro-cycle end, t= 25.00s  auto_peep=4.6757
+  [COPD] macro-cycle end, t= 30.00s  auto_peep=3.5741
+  [COPD] macro-cycle end, t= 39.74s  auto_peep=1.5155
+  [COPD] macro-cycle end, t= 44.74s  auto_peep=1.9285
+  [COPD] macro-cycle end, t= 49.74s  auto_peep=2.1828
+  [COPD] macro-cycle end, t= 58.56s  auto_peep=2.6419
+  [COPD] macro-cycle end, t= 63.56s  auto_peep=2.2669
+  [COPD] macro-cycle end, t= 69.01s  auto_peep=4.9453
+  [COPD] macro-cycle end, t= 74.01s  auto_peep=1.7411
+  [COPD] macro-cycle end, t= 79.01s  auto_peep=2.2959
+  [COPD] macro-cycle end, t= 88.14s  auto_peep=3.7886
+  [COPD] macro-cycle end, t= 93.14s  auto_peep=2.1029
+  [COPD] macro-cycle end, t= 98.14s  auto_peep=4.2491
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=2.9895
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=2.8058
+  [COPD] macro-cycle end, t= 15.00s  auto_peep=2.6489
+  [COPD] macro-cycle end, t= 20.00s  auto_peep=2.4158
+  [COPD] macro-cycle end, t= 29.09s  auto_peep=2.0963
+  [COPD] macro-cycle end, t= 34.09s  auto_peep=2.3961
+  [COPD] macro-cycle end, t= 39.09s  auto_peep=2.8442
+  [COPD] macro-cycle end, t= 56.37s  auto_peep=2.6197
+  [COPD] macro-cycle end, t= 61.37s  auto_peep=3.4536
+  [COPD] macro-cycle end, t= 79.23s  auto_peep=1.9793
+  [COPD] macro-cycle end, t= 88.75s  auto_peep=2.3283
+  [COPD] macro-cycle end, t= 93.75s  auto_peep=3.2604
+  [COPD] macro-cycle end, t= 10.42s  auto_peep=4.7793
+  [COPD] macro-cycle end, t= 15.42s  auto_peep=3.1357
+  [COPD] macro-cycle end, t= 20.42s  auto_peep=2.8662
+  [COPD] macro-cycle end, t= 34.29s  auto_peep=2.0395
+  [COPD] macro-cycle end, t= 39.29s  auto_peep=1.8669
+  [COPD] macro-cycle end, t= 49.23s  auto_peep=5.5518
+  [COPD] macro-cycle end, t= 54.23s  auto_peep=5.0486
+  [COPD] macro-cycle end, t= 59.23s  auto_peep=3.7722
+  [COPD] macro-cycle end, t= 72.98s  auto_peep=1.8125
+  [COPD] macro-cycle end, t= 13.51s  auto_peep=2.8402
+  [COPD] macro-cycle end, t= 18.51s  auto_peep=3.5078
+  [COPD] macro-cycle end, t= 27.56s  auto_peep=3.8236
+  [COPD] macro-cycle end, t= 45.58s  auto_peep=3.6213
+  [COPD] macro-cycle end, t= 50.58s  auto_peep=2.2094
+  [COPD] macro-cycle end, t= 55.58s  auto_peep=3.3739
+  [COPD] macro-cycle end, t= 65.57s  auto_peep=1.8374
+  [COPD] macro-cycle end, t= 70.57s  auto_peep=1.6867
+  [COPD] macro-cycle end, t= 75.57s  auto_peep=3.7753
+  [COPD] macro-cycle end, t= 84.64s  auto_peep=2.5833
+  [COPD] macro-cycle end, t= 89.64s  auto_peep=3.4175
+  [COPD] macro-cycle end, t= 39.79s  auto_peep=2.4467
+  [COPD] macro-cycle end, t= 52.95s  auto_peep=2.4186
+  [COPD] macro-cycle end, t= 61.72s  auto_peep=1.9133
+  [COPD] macro-cycle end, t= 66.72s  auto_peep=2.8526
+  [COPD] macro-cycle end, t= 71.72s  auto_peep=2.2173
+  [COPD] macro-cycle end, t= 76.72s  auto_peep=3.6559
+  [COPD] macro-cycle end, t= 85.60s  auto_peep=1.3998
+  [COPD] macro-cycle end, t= 90.60s  auto_peep=4.5267
+  [COPD] macro-cycle end, t=  8.84s  auto_peep=4.3777
+  [COPD] macro-cycle end, t= 22.49s  auto_peep=2.0141
+  [COPD] macro-cycle end, t= 27.73s  auto_peep=7.2724
+  [COPD] macro-cycle end, t= 32.73s  auto_peep=1.9422
+  [COPD] macro-cycle end, t= 37.73s  auto_peep=2.9681
+  [COPD] macro-cycle end, t= 42.73s  auto_peep=3.4036
+  [COPD] macro-cycle end, t= 52.48s  auto_peep=1.9886
+  [COPD] macro-cycle end, t= 57.48s  auto_peep=3.4984
+  [COPD] macro-cycle end, t= 62.48s  auto_peep=2.5264
+  [COPD] macro-cycle end, t= 67.48s  auto_peep=3.6379
+  [COPD] macro-cycle end, t= 72.48s  auto_peep=4.4334
+  [COPD] macro-cycle end, t= 82.14s  auto_peep=2.3048
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=4.2848
+  [COPD] macro-cycle end, t= 19.77s  auto_peep=2.1567
+  [COPD] macro-cycle end, t= 24.77s  auto_peep=2.0473
+  [COPD] macro-cycle end, t= 29.77s  auto_peep=2.5147
+  [COPD] macro-cycle end, t= 34.77s  auto_peep=3.6099
+  [COPD] macro-cycle end, t= 39.77s  auto_peep=3.6375
+  [COPD] macro-cycle end, t= 49.59s  auto_peep=1.5766
+  [COPD] macro-cycle end, t= 80.60s  auto_peep=3.2719
+  [COPD] macro-cycle end, t= 93.55s  auto_peep=2.2135
+  [COPD] macro-cycle end, t= 18.90s  auto_peep=1.8536
+  [COPD] macro-cycle end, t= 23.90s  auto_peep=4.5017
+  [COPD] macro-cycle end, t= 38.03s  auto_peep=2.7917
+  [COPD] macro-cycle end, t= 43.03s  auto_peep=4.3122
+  [COPD] macro-cycle end, t= 48.03s  auto_peep=2.3320
+  [COPD] macro-cycle end, t= 53.03s  auto_peep=2.6803
+  [COPD] macro-cycle end, t= 58.03s  auto_peep=3.9207
+  [COPD] macro-cycle end, t= 63.03s  auto_peep=3.4280
+  [COPD] macro-cycle end, t= 68.03s  auto_peep=2.5651
+  [COPD] macro-cycle end, t= 73.03s  auto_peep=2.4650
+  [COPD] macro-cycle end, t= 82.83s  auto_peep=4.1733
+  [COPD] macro-cycle end, t= 87.83s  auto_peep=4.6571
+  [COPD] macro-cycle end, t= 97.18s  auto_peep=3.1341
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=3.0017
+  [COPD] macro-cycle end, t= 14.56s  auto_peep=2.5991
+  [COPD] macro-cycle end, t= 23.54s  auto_peep=1.8416
+  [COPD] macro-cycle end, t= 47.28s  auto_peep=2.2375
+  [COPD] macro-cycle end, t= 56.21s  auto_peep=2.0051
+  [COPD] macro-cycle end, t= 61.21s  auto_peep=2.9537
+  [COPD] macro-cycle end, t= 66.21s  auto_peep=2.9705
+  [COPD] macro-cycle end, t= 71.21s  auto_peep=3.8226
+  [COPD] macro-cycle end, t= 86.09s  auto_peep=2.3550
+  [COPD] macro-cycle end, t= 91.09s  auto_peep=2.1619
+  [COPD] macro-cycle end, t= 96.09s  auto_peep=1.8678
+  [COPD] macro-cycle end, t=  9.65s  auto_peep=2.5902
+  [COPD] macro-cycle end, t= 14.65s  auto_peep=1.5114
+  [COPD] macro-cycle end, t= 19.65s  auto_peep=3.7721
+  [COPD] macro-cycle end, t= 24.65s  auto_peep=3.4666
+  [COPD] macro-cycle end, t= 51.09s  auto_peep=4.6069
+  [COPD] macro-cycle end, t= 56.09s  auto_peep=2.3728
+  [COPD] macro-cycle end, t= 61.09s  auto_peep=1.5590
+  [COPD] macro-cycle end, t= 66.09s  auto_peep=1.5131
+  [COPD] macro-cycle end, t= 71.09s  auto_peep=2.4871
+  [COPD] macro-cycle end, t= 76.09s  auto_peep=3.2754
+  [COPD] macro-cycle end, t= 81.09s  auto_peep=3.3225
+  [COPD] macro-cycle end, t= 90.04s  auto_peep=4.2972
+  [COPD] macro-cycle end, t= 95.04s  auto_peep=2.6860
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=3.4715
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=3.9354
+  [COPD] macro-cycle end, t= 23.56s  auto_peep=4.3897
+  [COPD] macro-cycle end, t= 45.79s  auto_peep=2.3632
+  [COPD] macro-cycle end, t= 50.79s  auto_peep=5.6836
+  [COPD] macro-cycle end, t= 59.85s  auto_peep=2.2854
+  [COPD] macro-cycle end, t= 64.85s  auto_peep=3.8022
+  [COPD] macro-cycle end, t= 74.74s  auto_peep=1.5424
+  [COPD] macro-cycle end, t= 79.74s  auto_peep=2.4657
+  [COPD] macro-cycle end, t=  9.76s  auto_peep=3.2269
+  [COPD] macro-cycle end, t= 14.76s  auto_peep=4.2079
+  [COPD] macro-cycle end, t= 29.30s  auto_peep=2.6484
+  [COPD] macro-cycle end, t= 34.30s  auto_peep=1.7391
+  [COPD] macro-cycle end, t= 39.30s  auto_peep=2.4447
+  [COPD] macro-cycle end, t= 49.07s  auto_peep=2.4969
+  [COPD] macro-cycle end, t= 54.07s  auto_peep=2.8770
+  [COPD] macro-cycle end, t= 63.17s  auto_peep=4.2621
+  [COPD] macro-cycle end, t= 68.17s  auto_peep=2.6681
+  [COPD] macro-cycle end, t= 73.17s  auto_peep=3.4183
+  [COPD] macro-cycle end, t= 78.17s  auto_peep=2.3020
+  [COPD] macro-cycle end, t= 83.17s  auto_peep=4.3531
+  [COPD] macro-cycle end, t= 88.17s  auto_peep=3.1933
+  [COPD] macro-cycle end, t= 97.27s  auto_peep=2.2195
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=2.3413
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=2.2920
+  [COPD] macro-cycle end, t= 19.04s  auto_peep=4.9376
+  [COPD] macro-cycle end, t= 24.04s  auto_peep=3.1827
+  [COPD] macro-cycle end, t= 29.04s  auto_peep=2.1449
+  [COPD] macro-cycle end, t= 38.25s  auto_peep=4.6909
+  [COPD] macro-cycle end, t= 74.89s  auto_peep=1.6926
+  [COPD] macro-cycle end, t= 93.23s  auto_peep=4.5472
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=4.7474
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=2.4447
+  [COPD] macro-cycle end, t= 15.00s  auto_peep=2.3344
+  [COPD] macro-cycle end, t= 24.07s  auto_peep=2.5573
+  [COPD] macro-cycle end, t= 29.07s  auto_peep=3.1268
+  [COPD] macro-cycle end, t= 34.07s  auto_peep=3.0180
+  [COPD] macro-cycle end, t= 43.16s  auto_peep=3.7410
+  [COPD] macro-cycle end, t= 51.93s  auto_peep=2.7776
+  [COPD] macro-cycle end, t= 61.19s  auto_peep=2.2926
+  [COPD] macro-cycle end, t= 66.19s  auto_peep=2.7031
+  [COPD] macro-cycle end, t= 71.19s  auto_peep=2.0847
+  [COPD] macro-cycle end, t= 79.98s  auto_peep=2.7748
+  [COPD] macro-cycle end, t= 89.89s  auto_peep=1.9721
+  [COPD] macro-cycle end, t= 94.89s  auto_peep=2.6814
+  [COPD] macro-cycle end, t=  9.61s  auto_peep=1.2894
+  [COPD] macro-cycle end, t= 14.61s  auto_peep=5.7091
+  [COPD] macro-cycle end, t= 24.58s  auto_peep=1.4400
+  [COPD] macro-cycle end, t= 29.58s  auto_peep=4.5127
+  [COPD] macro-cycle end, t= 34.58s  auto_peep=2.5397
+  [COPD] macro-cycle end, t= 39.58s  auto_peep=2.3259
+  [COPD] macro-cycle end, t= 44.58s  auto_peep=1.6834
+  [COPD] macro-cycle end, t= 61.83s  auto_peep=3.8533
+  [COPD] macro-cycle end, t= 66.83s  auto_peep=2.6821
+  [COPD] macro-cycle end, t= 71.83s  auto_peep=2.0389
+  [COPD] macro-cycle end, t= 81.47s  auto_peep=2.9881
+  [COPD] macro-cycle end, t= 86.47s  auto_peep=3.5301
+  [COPD] macro-cycle end, t= 91.47s  auto_peep=3.8367
+  [COPD] macro-cycle end, t= 96.47s  auto_peep=4.8603
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=2.6239
+  [COPD] macro-cycle end, t= 14.91s  auto_peep=3.2845
+  [COPD] macro-cycle end, t= 19.91s  auto_peep=4.9463
+  [COPD] macro-cycle end, t= 28.74s  auto_peep=2.2669
+  [COPD] macro-cycle end, t= 33.74s  auto_peep=2.6357
+  [COPD] macro-cycle end, t= 43.62s  auto_peep=2.4466
+  [COPD] macro-cycle end, t= 48.62s  auto_peep=3.4422
+  [COPD] macro-cycle end, t= 53.62s  auto_peep=1.4427
+  [COPD] macro-cycle end, t= 66.27s  auto_peep=1.6189
+  [COPD] macro-cycle end, t= 71.27s  auto_peep=1.9084
+  [COPD] macro-cycle end, t= 76.27s  auto_peep=2.8342
+  [COPD] macro-cycle end, t= 85.28s  auto_peep=2.2761
+  [COPD] macro-cycle end, t= 90.28s  auto_peep=2.2277
+  [COPD] macro-cycle end, t=  9.22s  auto_peep=2.5695
+  [COPD] macro-cycle end, t= 14.22s  auto_peep=4.1289
+  [COPD] macro-cycle end, t= 23.69s  auto_peep=2.8671
+  [COPD] macro-cycle end, t= 41.36s  auto_peep=3.3770
+  [COPD] macro-cycle end, t= 50.70s  auto_peep=1.8423
+  [COPD] macro-cycle end, t= 55.70s  auto_peep=2.8897
+  [COPD] macro-cycle end, t= 60.70s  auto_peep=2.0953
+  [COPD] macro-cycle end, t= 65.70s  auto_peep=3.8688
+  [COPD] macro-cycle end, t= 70.70s  auto_peep=2.4479
+  [COPD] macro-cycle end, t= 75.70s  auto_peep=4.0179
+  [COPD] macro-cycle end, t= 80.70s  auto_peep=3.7516
+  [COPD] macro-cycle end, t= 90.59s  auto_peep=1.8120
+  [COPD] macro-cycle end, t= 95.59s  auto_peep=0.8313
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=4.0649
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=1.7541
+  [COPD] macro-cycle end, t= 19.83s  auto_peep=2.5725
+  [COPD] macro-cycle end, t= 29.06s  auto_peep=2.6938
+  [COPD] macro-cycle end, t= 42.86s  auto_peep=2.0236
+  [COPD] macro-cycle end, t= 47.86s  auto_peep=1.8081
+  [COPD] macro-cycle end, t= 61.85s  auto_peep=2.1258
+  [COPD] macro-cycle end, t= 66.85s  auto_peep=2.7767
+  [COPD] macro-cycle end, t= 71.85s  auto_peep=1.5235
+  [COPD] macro-cycle end, t= 81.71s  auto_peep=3.8853
+  [COPD] macro-cycle end, t= 86.71s  auto_peep=6.5622
+  [COPD] macro-cycle end, t= 91.71s  auto_peep=1.9361
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=2.6860
+  [COPD] macro-cycle end, t= 10.63s  auto_peep=5.1116
+  [COPD] macro-cycle end, t= 19.71s  auto_peep=2.1862
+  [COPD] macro-cycle end, t= 24.71s  auto_peep=3.8011
+  [COPD] macro-cycle end, t= 34.31s  auto_peep=2.1029
+  [COPD] macro-cycle end, t= 48.50s  auto_peep=3.3998
+  [COPD] macro-cycle end, t= 66.35s  auto_peep=2.6840
+  [COPD] macro-cycle end, t= 71.35s  auto_peep=4.4445
+  [COPD] macro-cycle end, t= 76.35s  auto_peep=3.2970
+  [COPD] macro-cycle end, t= 90.51s  auto_peep=2.0227
+  [COPD] macro-cycle end, t= 95.51s  auto_peep=2.3068
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=3.9272
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=2.4200
+  [COPD] macro-cycle end, t= 19.94s  auto_peep=4.3002
+  [COPD] macro-cycle end, t= 24.94s  auto_peep=0.8953
+  [COPD] macro-cycle end, t= 34.49s  auto_peep=2.4528
+  [COPD] macro-cycle end, t= 43.98s  auto_peep=3.5600
+  [COPD] macro-cycle end, t= 53.07s  auto_peep=1.5976
+  [COPD] macro-cycle end, t= 67.16s  auto_peep=5.2465
+  [COPD] macro-cycle end, t= 76.54s  auto_peep=6.3779
+  [COPD] macro-cycle end, t= 81.54s  auto_peep=2.4227
+  [COPD] macro-cycle end, t= 95.42s  auto_peep=3.7056
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=4.7116
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=4.7159
+  [COPD] macro-cycle end, t= 15.00s  auto_peep=2.3407
+  [COPD] macro-cycle end, t= 24.98s  auto_peep=2.4669
+  [COPD] macro-cycle end, t= 50.69s  auto_peep=4.8625
+  [COPD] macro-cycle end, t= 59.69s  auto_peep=4.5482
+  [COPD] macro-cycle end, t= 69.27s  auto_peep=2.3433
+  [COPD] macro-cycle end, t= 79.13s  auto_peep=2.4853
+  [COPD] macro-cycle end, t=  8.96s  auto_peep=2.5429
+  [COPD] macro-cycle end, t= 13.96s  auto_peep=1.6651
+  [COPD] macro-cycle end, t= 23.82s  auto_peep=2.1928
+  [COPD] macro-cycle end, t= 45.65s  auto_peep=0.8166
+  [COPD] macro-cycle end, t= 50.65s  auto_peep=2.1160
+  [COPD] macro-cycle end, t= 59.72s  auto_peep=2.0581
+  [COPD] macro-cycle end, t= 64.72s  auto_peep=1.9971
+  [COPD] macro-cycle end, t= 74.01s  auto_peep=3.2546
+  [COPD] macro-cycle end, t= 87.73s  auto_peep=2.0152
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=1.4699
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=4.1995
+  [COPD] macro-cycle end, t= 15.00s  auto_peep=2.2322
+  [COPD] macro-cycle end, t= 20.00s  auto_peep=3.4824
+  [COPD] macro-cycle end, t= 25.00s  auto_peep=3.9521
+  [COPD] macro-cycle end, t= 37.63s  auto_peep=2.4915
+  [COPD] macro-cycle end, t= 42.63s  auto_peep=4.2662
+  [COPD] macro-cycle end, t= 47.63s  auto_peep=3.3508
+  [COPD] macro-cycle end, t= 52.63s  auto_peep=5.0957
+  [COPD] macro-cycle end, t= 57.63s  auto_peep=3.6066
+  [COPD] macro-cycle end, t= 66.81s  auto_peep=3.5700
+  [COPD] macro-cycle end, t= 80.93s  auto_peep=4.3168
+  [COPD] macro-cycle end, t= 90.31s  auto_peep=2.2357
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=5.1031
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=3.0686
+  [COPD] macro-cycle end, t= 19.66s  auto_peep=3.2377
+  [COPD] macro-cycle end, t= 29.05s  auto_peep=0.8445
+  [COPD] macro-cycle end, t= 38.20s  auto_peep=3.4665
+  [COPD] macro-cycle end, t= 47.38s  auto_peep=3.5641
+  [COPD] macro-cycle end, t= 52.38s  auto_peep=3.6922
+  [COPD] macro-cycle end, t= 57.38s  auto_peep=2.3625
+  [COPD] macro-cycle end, t= 72.07s  auto_peep=3.7597
+  [COPD] macro-cycle end, t= 81.52s  auto_peep=3.3831
+  [COPD] macro-cycle end, t= 95.05s  auto_peep=2.3733
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=2.9773
+  [COPD] macro-cycle end, t= 19.12s  auto_peep=1.8541
+  [COPD] macro-cycle end, t= 28.87s  auto_peep=3.9376
+  [COPD] macro-cycle end, t= 33.87s  auto_peep=3.1425
+  [COPD] macro-cycle end, t= 38.87s  auto_peep=2.7628
+  [COPD] macro-cycle end, t= 43.87s  auto_peep=4.1742
+  [COPD] macro-cycle end, t= 53.59s  auto_peep=2.3608
+  [COPD] macro-cycle end, t= 58.59s  auto_peep=2.6021
+  [COPD] macro-cycle end, t= 63.59s  auto_peep=2.3427
+  [COPD] macro-cycle end, t= 72.38s  auto_peep=1.7518
+  [COPD] macro-cycle end, t= 81.36s  auto_peep=1.6714
+  [COPD] macro-cycle end, t= 87.07s  auto_peep=3.1137
+  [COPD] macro-cycle end, t= 92.07s  auto_peep=2.5181
+  [COPD] macro-cycle end, t=  5.00s  auto_peep=1.9838
+  [COPD] macro-cycle end, t= 10.00s  auto_peep=2.4199
+  [COPD] macro-cycle end, t= 15.00s  auto_peep=3.4773
+  [COPD] macro-cycle end, t= 23.83s  auto_peep=3.6485
+  [COPD] macro-cycle end, t= 33.09s  auto_peep=3.0483
+  [COPD] macro-cycle end, t= 42.54s  auto_peep=2.1952
+  [COPD] macro-cycle end, t= 65.09s  auto_peep=2.4570
+  [COPD] macro-cycle end, t= 70.09s  auto_peep=2.2090
+  [COPD] macro-cycle end, t= 75.09s  auto_peep=3.7693
+  [COPD] macro-cycle end, t= 80.09s  auto_peep=3.2117
+  [COPD] macro-cycle end, t= 85.09s  auto_peep=5.1619
+  [COPD] macro-cycle end, t= 94.63s  auto_peep=2.2283
+  [COPD] macro-cycle end, t= 19.10s  auto_peep=4.4844
+  [COPD] macro-cycle end, t= 24.10s  auto_peep=1.8534
+  [COPD] macro-cycle end, t= 51.14s  auto_peep=3.8597
+  [COPD] macro-cycle end, t= 56.14s  auto_peep=3.5343
+  [COPD] macro-cycle end, t= 61.45s  auto_peep=5.4137
+  [COPD] macro-cycle end, t= 66.45s  auto_peep=3.6953
+  [COPD] macro-cycle end, t= 71.45s  auto_peep=1.7908
+  [COPD] macro-cycle end, t= 76.45s  auto_peep=1.9432
+  [COPD] macro-cycle end, t= 89.87s  auto_peep=2.3291
+  [COPD] macro-cycle end, t= 94.87s  auto_peep=2.5208
+COPD (SIMV): mean=0.8654  std=0.0273  min=0.7978  max=0.9285
+  [Bronchospasm] macro-cycle end, t= 51.58s  auto_peep=3.9006
+  [Bronchospasm] macro-cycle end, t=130.60s  auto_peep=2.9690
+  [Bronchospasm] macro-cycle end, t= 19.84s  auto_peep=1.7203
+  [Bronchospasm] macro-cycle end, t= 54.12s  auto_peep=3.2558
+  [Bronchospasm] macro-cycle end, t= 91.32s  auto_peep=3.8750
+  [Bronchospasm] macro-cycle end, t=101.32s  auto_peep=2.9217
+  [Bronchospasm] macro-cycle end, t=129.24s  auto_peep=2.6139
+  [Bronchospasm] macro-cycle end, t=179.34s  auto_peep=2.9407
+  [Bronchospasm] macro-cycle end, t= 90.05s  auto_peep=1.6808
+  [Bronchospasm] macro-cycle end, t=108.50s  auto_peep=3.8311
+  [Bronchospasm] macro-cycle end, t=118.50s  auto_peep=3.3754
+  [Bronchospasm] macro-cycle end, t=128.50s  auto_peep=3.5261
+  [Bronchospasm] macro-cycle end, t=147.44s  auto_peep=2.3921
+  [Bronchospasm] macro-cycle end, t= 95.09s  auto_peep=2.8669
+  [Bronchospasm] macro-cycle end, t= 10.00s  auto_peep=3.3473
+  [Bronchospasm] macro-cycle end, t=151.04s  auto_peep=1.6674
+  [Bronchospasm] macro-cycle end, t= 36.70s  auto_peep=1.3892
+  [Bronchospasm] macro-cycle end, t= 55.33s  auto_peep=2.9999
+  [Bronchospasm] macro-cycle end, t=127.08s  auto_peep=2.5320
+  [Bronchospasm] macro-cycle end, t=144.61s  auto_peep=6.2110
+  [Bronchospasm] macro-cycle end, t=162.13s  auto_peep=3.7446
+  [Bronchospasm] macro-cycle end, t= 35.07s  auto_peep=2.1687
+  [Bronchospasm] macro-cycle end, t= 69.45s  auto_peep=2.5307
+  [Bronchospasm] macro-cycle end, t=115.65s  auto_peep=3.1201
+  [Bronchospasm] macro-cycle end, t=152.78s  auto_peep=3.6559
+  [Bronchospasm] macro-cycle end, t= 18.09s  auto_peep=1.7648
+  [Bronchospasm] macro-cycle end, t=173.60s  auto_peep=2.9556
+  [Bronchospasm] macro-cycle end, t= 17.83s  auto_peep=1.6495
+  [Bronchospasm] macro-cycle end, t= 71.94s  auto_peep=1.3227
+  [Bronchospasm] macro-cycle end, t= 89.47s  auto_peep=2.7754
+  [Bronchospasm] macro-cycle end, t= 99.47s  auto_peep=2.6240
+  [Bronchospasm] macro-cycle end, t=136.82s  auto_peep=3.0146
+  [Bronchospasm] macro-cycle end, t=162.85s  auto_peep=1.8312
+  [Bronchospasm] macro-cycle end, t= 26.56s  auto_peep=5.2307
+  [Bronchospasm] macro-cycle end, t=125.90s  auto_peep=3.0325
+  [Bronchospasm] macro-cycle end, t=177.72s  auto_peep=3.1993
+  [Bronchospasm] macro-cycle end, t= 55.17s  auto_peep=3.1328
+  [Bronchospasm] macro-cycle end, t= 73.30s  auto_peep=3.5749
+  [Bronchospasm] macro-cycle end, t=175.36s  auto_peep=2.7140
+  [Bronchospasm] macro-cycle end, t=130.64s  auto_peep=2.4792
+  [Bronchospasm] macro-cycle end, t=150.01s  auto_peep=2.3338
+  [Bronchospasm] macro-cycle end, t= 62.13s  auto_peep=1.9255
+  [Bronchospasm] macro-cycle end, t=105.65s  auto_peep=3.3726
+  [Bronchospasm] macro-cycle end, t=172.77s  auto_peep=3.6310
+  [Bronchospasm] macro-cycle end, t= 37.72s  auto_peep=4.2941
+  [Bronchospasm] macro-cycle end, t= 56.74s  auto_peep=3.4195
+  [Bronchospasm] macro-cycle end, t=138.72s  auto_peep=4.2065
+  [Bronchospasm] macro-cycle end, t= 62.45s  auto_peep=1.7318
+  [Bronchospasm] macro-cycle end, t=126.42s  auto_peep=2.0262
+  [Bronchospasm] macro-cycle end, t= 95.97s  auto_peep=3.8516
+  [Bronchospasm] macro-cycle end, t=140.91s  auto_peep=6.8801
+  [Bronchospasm] macro-cycle end, t=150.91s  auto_peep=1.8226
+  [Bronchospasm] macro-cycle end, t= 27.78s  auto_peep=3.2239
+  [Bronchospasm] macro-cycle end, t= 56.85s  auto_peep=2.4651
+  [Bronchospasm] macro-cycle end, t=103.53s  auto_peep=5.6221
+  [Bronchospasm] macro-cycle end, t=166.16s  auto_peep=2.5286
+  [Bronchospasm] macro-cycle end, t= 26.22s  auto_peep=2.7378
+  [Bronchospasm] macro-cycle end, t= 44.80s  auto_peep=3.2633
+  [Bronchospasm] macro-cycle end, t= 71.26s  auto_peep=1.9279
+  [Bronchospasm] macro-cycle end, t= 81.26s  auto_peep=1.8632
+  [Bronchospasm] macro-cycle end, t= 10.00s  auto_peep=0.9764
+  [Bronchospasm] macro-cycle end, t= 10.00s  auto_peep=4.2093
+  [Bronchospasm] macro-cycle end, t= 27.87s  auto_peep=3.4176
+  [Bronchospasm] macro-cycle end, t=128.61s  auto_peep=2.1905
+  [Bronchospasm] macro-cycle end, t=173.57s  auto_peep=3.9591
+  [Bronchospasm] macro-cycle end, t= 28.66s  auto_peep=1.8904
+  [Bronchospasm] macro-cycle end, t=169.78s  auto_peep=2.8754
+  [Bronchospasm] macro-cycle end, t=172.54s  auto_peep=3.2384
+  [Bronchospasm] macro-cycle end, t= 52.05s  auto_peep=2.0504
+  [Bronchospasm] macro-cycle end, t=114.85s  auto_peep=3.9702
+  [Bronchospasm] macro-cycle end, t=132.38s  auto_peep=3.3736
+  [Bronchospasm] macro-cycle end, t=142.38s  auto_peep=2.8559
+  [Bronchospasm] macro-cycle end, t=152.64s  auto_peep=2.9641
+  [Bronchospasm] macro-cycle end, t= 25.81s  auto_peep=2.7104
+  [Bronchospasm] macro-cycle end, t= 45.07s  auto_peep=2.9489
+  [Bronchospasm] macro-cycle end, t= 80.03s  auto_peep=4.3302
+  [Bronchospasm] macro-cycle end, t=124.46s  auto_peep=3.8327
+  [Bronchospasm] macro-cycle end, t=134.46s  auto_peep=1.9446
+  [Bronchospasm] macro-cycle end, t= 19.15s  auto_peep=2.1386
+  [Bronchospasm] macro-cycle end, t= 10.00s  auto_peep=1.5468
+  [Bronchospasm] macro-cycle end, t= 20.00s  auto_peep=4.2049
+  [Bronchospasm] macro-cycle end, t=117.20s  auto_peep=1.5093
+  [Bronchospasm] macro-cycle end, t=127.20s  auto_peep=3.2010
+  [Bronchospasm] macro-cycle end, t=180.79s  auto_peep=0.9004
+Bronchospasm (SIMV): mean=0.2847  std=0.0134  min=0.2572  max=0.3130

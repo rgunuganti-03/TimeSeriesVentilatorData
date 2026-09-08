@@ -231,7 +231,9 @@ CONDITION_TIERS = [
         "resistance_step":   5,
         "n_cycles":         25,   # Extra cycles for auto-PEEP steady state
         # COPD: elevated drive (must overcome auto-PEEP), high ineffective rate
-        "default_effort":   {"pmus_peak": 14, "effort_rate": 26, "effort_dur": 0.75},
+        
+                # COPD: elevated drive (must overcome auto-PEEP), high ineffective rate
+        "default_effort":   {"pmus_peak": 15, "effort_rate": 24, "effort_dur": 0.60},
     },
     {
         "name":             "Bronchospasm",
@@ -241,7 +243,8 @@ CONDITION_TIERS = [
         "resistance_step":   5,
         "n_cycles":         20,   # Elevated R → more auto-PEEP buildup needed
         # Bronchospasm: recovery phase only; acute phase uses mandatory modes
-        "default_effort":   {"pmus_peak": 12, "effort_rate": 22, "effort_dur": 0.75},
+                # Bronchospasm: recovery phase only; acute phase uses mandatory modes
+        "default_effort":   {"pmus_peak": 16, "effort_rate": 28, "effort_dur": 0.45},
     },
     {
         "name":             "Pneumonia",

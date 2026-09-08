@@ -203,7 +203,7 @@ CONDITIONS = {
         "pmus_cv":                  0.35,
         "pressure_ceiling_cmH2O":   30,
         "mode_overrides": {
-            "simv": {"peep_cmH2O": 1, "respiratory_rate": 6},
+            "simv": {"peep_cmH2O": 0, "respiratory_rate": 6},
             "psv":  {"peep_cmH2O": 3},
         },
     },

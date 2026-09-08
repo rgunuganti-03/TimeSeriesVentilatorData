@@ -1017,10 +1017,6 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
             auto_peep_now = _current_auto_peep(V_comps, comps, C_chest,
                                                 stress_index, vt_ref_per_comp)
 
-            # --- DIAGNOSTIC: auto-PEEP convergence, once per macro-cycle ---
-            print(f"  [{condition}] macro-cycle end, t={t_current:6.2f}s  "
-                  f"auto_peep={auto_peep_now:.4f}")
-            # --- END DIAGNOSTIC ---
             if mode == "VC":
                 vt_target = float(params["tidal_volume_ml"])
                 seg = _run_mandatory_vc_inspiration(
