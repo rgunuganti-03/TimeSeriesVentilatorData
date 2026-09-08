@@ -435,10 +435,11 @@ def render_sidebar():
             )           
 
 # --- RR and I:E — VCV, PCV and PRVC only (PSV uses effort_rate below) -
+
         if engine_key in ("vcv", "pcv", "prvc", "simv"):
             _rr_default = int(preset["respiratory_rate"])                                  
-            if engine_key == "simv":                                                       
-                _rr_default = max(4, round(_rr_default * 0.5)) 
+            if engine_key == "simv" and _rr_default == int(get_condition(condition_name)["respiratory_rate"]):
+                _rr_default = max(4, round(_rr_default * 0.5))
 
             if is_neonatal:
                 rr = st.slider(
@@ -527,7 +528,7 @@ def render_sidebar():
                 rise_time = st.slider(
                     "Rise Time (s)",
                     min_value=0.0, max_value=0.4,
-                    value=float(preset.get("rise_time_s", 0.05)) if engine_key == "pcv" else 0.10, step=0.01,
+                    value=float(preset.get("rise_time_s", 0.05)), step=0.01,
                     help=(
                         "Time for pressure to ramp from PEEP to PIP. "
                         "0.0 = square wave step (maximum initial flow). "
