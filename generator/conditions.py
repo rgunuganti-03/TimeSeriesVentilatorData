@@ -140,7 +140,7 @@ CONDITIONS = {
         "pmus_peak_cmH2O":          14,
         "effort_rate_per_min":     35,
         "effort_duration_s":        0.50,
-        "pmus_cv":                  0.30,
+        "pmus_cv":                  0.14,
         "pressure_ceiling_cmH2O":   30
     },
 
@@ -193,7 +193,7 @@ CONDITIONS = {
         "resistance_cmH2O_L_s":      33,
         "rise_time_s":              0.10,
         "ie_ratio":                 0.20,
-        "peep_cmH2O":                 3,
+        "peep_cmH2O":                 0,
         "pressure_support_cmH2O":  14,
         "flow_cycle_threshold":     0.65,
         "trigger_threshold_cmH2O":  1.0,
@@ -289,7 +289,7 @@ CONDITIONS = {
         "pressure_support_cmH2O":   10,
         "flow_cycle_threshold":     0.15,
         "trigger_threshold_cmH2O":  0.5,                  # ASSUMPTION
-        "pmus_peak_cmH2O":          7,                    # weak preterm effort — ASSUMPTION
+        "pmus_peak_cmH2O":          6,                    # weak preterm effort — ASSUMPTION
         "effort_rate_per_min":      50,
         "effort_duration_s":        0.30,
         "pmus_cv":                  0.25,                 # ASSUMPTION
