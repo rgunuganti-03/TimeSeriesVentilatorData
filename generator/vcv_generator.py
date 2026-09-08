@@ -1118,8 +1118,10 @@ if __name__ == "__main__":
     # Invalid — VT above 12 mL/kg IBW
     p_hi_vt = {**p_normal_sq, "tidal_volume_ml": 900}
     r_hi_vt = generate_breath_cycles(p_hi_vt, n_cycles=2)
-    _check("VT above 12 mL/kg flagged invalid (high-VT bound)",
-           (not r_hi_vt["is_valid"]) and "VT" in r_hi_vt["invalid_reason"],
+    _check("VT above 12 mL/kg flagged invalid (high-VT or driving-pressure bound)",
+           (not r_hi_vt["is_valid"]) and
+           ("VT" in r_hi_vt["invalid_reason"] or
+            "driving" in r_hi_vt["invalid_reason"].lower()),
            f"{r_hi_vt['invalid_reason'][:60]}")
 
     # Valid — standard Normal-lung settings

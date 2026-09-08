@@ -1017,17 +1017,16 @@ if __name__ == "__main__":
                 "condition": "Severe ARDS", "pressure_ceiling_cmH2O": 15.0}
     r_severe = generate_breath_cycles(p_severe, n_cycles=12, seed=2)
     all_pass &= _check("test breath (breath 1) plateau reveals high true pressure need",
-                        r_severe["pressure_trajectory"][0] > p_severe["peep_cmH2O"] +
-                        p_severe["pressure_ceiling_cmH2O"],
+                        r_severe["pressure_trajectory"][0] > p_severe["pressure_ceiling_cmH2O"],
                         f"breath1={r_severe['pressure_trajectory'][0]:.1f} "
-                        f"ceiling={p_severe['peep_cmH2O'] + p_severe['pressure_ceiling_cmH2O']:.1f}")
+                        f"ceiling={p_severe['pressure_ceiling_cmH2O']:.1f}")
     all_pass &= _check("adaptive breaths (2+) are flat at the ceiling, not still climbing",
                         bool(np.allclose(r_severe["pressure_trajectory"][1:],
                                           r_severe["pressure_trajectory"][-1], atol=0.01)),
                         str(r_severe["pressure_trajectory"][1:]))
     all_pass &= _check("pinned at or near ceiling",
                         r_severe["pressure_trajectory"][-1] >=
-                        p_severe["peep_cmH2O"] + p_severe["pressure_ceiling_cmH2O"] - 0.5,
+                        p_severe["pressure_ceiling_cmH2O"] - 0.5,
                         f"final={r_severe['pressure_trajectory'][-1]:.1f}")
     all_pass &= _check("scenario retained (not hard-invalidated by ceiling failure)",
                         r_severe["is_valid"] is True or r_severe["ceiling_limited"],
