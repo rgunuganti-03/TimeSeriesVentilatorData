@@ -233,7 +233,7 @@ CONDITION_TIERS = [
      "resistance_range": (12, 16),  "resistance_step": 2, "n_cycles": 6},
     {"name": "Severe ARDS",    "compliance_range": (15, 28),  "compliance_step": 4,
      "resistance_range": (14, 20),  "resistance_step": 3, "n_cycles": 6},
-    {"name": "COPD",           "compliance_range": (80, 150), "compliance_step": 20,
+    {"name": "COPD",           "compliance_range": (50, 130), "compliance_step": 20,
      "resistance_range": (18, 35),  "resistance_step": 5, "n_cycles": 10},
     {"name": "Bronchospasm",   "compliance_range": (60, 90),  "compliance_step": 10,
      "resistance_range": (25, 50),  "resistance_step": 5, "n_cycles": 10},

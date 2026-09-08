@@ -733,7 +733,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
             P_work = peep + AUTOFLOW_TEST_BREATH_FRACTION * driving_plat
             
             P_work = float(np.clip(P_work, peep + pressure_floor,
-                                    peep + pressure_ceiling))
+                                    pressure_ceiling))
 
         else:
             P_work_this_breath = P_work
@@ -780,7 +780,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
                     P_work_next = P_work_this_breath + step
                 else:
                     P_work_next = P_work_this_breath
-                P_work_ceiling = peep + pressure_ceiling
+                P_work_ceiling = pressure_ceiling
                 P_work_floor = peep + pressure_floor
                 P_work = float(np.clip(P_work_next, P_work_floor, P_work_ceiling))
 

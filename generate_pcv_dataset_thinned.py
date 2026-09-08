@@ -121,7 +121,7 @@ CONDITION_TIERS = [
     },
     {
         "name":             "COPD",
-        "compliance_range": (80, 150),   # HIGH — emphysema destroys elastic recoil
+        "compliance_range": (50, 130),   # HIGH — emphysema destroys elastic recoil
         "compliance_step":  20,
         "resistance_range": (18, 35),    # ETT + severely obstructed airways
         "resistance_step":  5,

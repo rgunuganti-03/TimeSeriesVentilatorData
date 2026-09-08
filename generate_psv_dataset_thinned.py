@@ -225,7 +225,7 @@ CONDITION_TIERS = [
     },
     {
         "name":             "COPD",
-        "compliance_range": (80, 150),
+        "compliance_range": (50, 130),
         "compliance_step":  20,
         "resistance_range": (18, 35),
         "resistance_step":   5,
