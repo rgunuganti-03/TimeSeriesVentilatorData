@@ -1,7 +1,7 @@
 # Problem Statement — Ventilator Waveform Simulator
 **Project:** Time Series Ventilator Data — Aiden Medical Internship
-**Version:** 0.3 (VCV + PCV Implemented)
-**Date:** May 2026
+**Version:** 0.4 (VCV + PCV + PSV + PRVC + SIMV Implemented; Neonatal/Pediatric Extension In Progress)
+**Date:** September 2026
 
 ---
 
@@ -42,12 +42,13 @@ Build a modular, interactive ventilator waveform simulator that:
    - COPD (high resistance — obstructed airways)
    - Bronchospasm (very high resistance — acute bronchoconstriction)
    - Pneumonia (moderate compliance reduction — alveolar consolidation)
+   - Normal Neonate and RDS (Respiratory Distress Syndrome) — neonatal/pediatric extension, in progress
 
 3. Provides an interactive UI with adjustable parameters via sliders
 
 4. Exports generated data as structured CSV files for downstream modeling
 
-5. Is architected to scale from two implemented mandatory ventilation modes (VCV, PCV) toward spontaneous and hybrid modes (PSV, SIMV, PRVC)
+5. Supports all five ventilation modes — VCV and PCV (mandatory), PSV (spontaneous), SIMV (hybrid mandatory/spontaneous), and PRVC (dual-control adaptive) — behind the same interface contract, so the UI and data layers require no changes as new modes are added
 
 ---
 
@@ -75,37 +76,36 @@ Build a modular, interactive ventilator waveform simulator that:
 - Interactive visualization dashboard with PCV-specific controls
 - Full parameter grid dataset generation with validity filter
 
-### Next Steps — Additional Ventilation Modes
+### Implemented — PSV (Pressure Support Ventilation)
+- Event-driven breath simulation — advances by detecting patient effort onsets, checking trigger success, running the inspiratory ODE until   the flow-cycle criterion is met, then the expiratory ODE until the next effort onset (`generator/psv_generator.py`)
+- Patient effort (Pmus) term added to the equation of motion — tidal volume and breath timing are both patient-dependent; breath-to-breath    variability is a feature, not an error
+- Dyssynchrony modeling: ineffective triggering, trigger delay, and flow-cycle threshold variability
+- ETT complications (obstruction, cuff leak) modeled as overlays
+- Same seven condition presets as VCV/PCV
+- Interactive visualization dashboard with PSV-specific controls
+- Full parameter grid dataset generation with validity filter
 
-The following modes are the planned next steps for the simulator. Each
-introduces a new dimension of complexity — patient effort, breath-to-breath
-adaptation, or hybrid mandatory/spontaneous sequencing — that builds directly
-on the VCV and PCV physics already implemented.
+### Implemented — SIMV (Synchronized Intermittent Mandatory Ventilation)
+- Event-driven single time cursor threading mandatory (VC/PC) and spontaneous (PSV-style) breaths through continuous compartment and auto-    PEEP state (`generator/simv_generator.py`)
+- Synchronization-window state machine classifying each patient effort as spontaneous, synchronized-mandatory, or time-triggered-mandatory
+- Selectable mandatory sub-mode per scenario: VC (tidal-volume-targeted) or PC (pressure-targeted)
+- Same seven condition presets as VCV/PCV/PSV
+- Interactive visualization dashboard with SIMV-specific controls, including mandatory breath type selection
+- Full parameter grid dataset generation with validity filter
 
-**PSV (Pressure Support Ventilation)**
-Patient-triggered, pressure-limited, flow-cycled ventilation. The patient
-initiates every breath; the ventilator delivers a set pressure support above
-PEEP and cycles off when inspiratory flow decays to a threshold fraction of
-peak flow. Modeling PSV requires adding a patient effort term (Pmus) to the
-equation of motion, making tidal volume and breath timing both patient-
-dependent. Breath-to-breath variability is a feature, not an error.
+### Implemented — PRVC (Pressure-Regulated Volume Control)
+- Dual-loop breath-to-breath adaptive control (`generator/prvc_generator.py`): an inner loop identical in structure to PCV, and an outer      loop that adjusts the working pressure breath-by-breath toward a tidal volume target
+- Volume-controlled test breath (breath 1) bootstraps the working pressure for breath 2, matching documented Servo/Dräger AutoFlow behavior
+- Convergence and ceiling-limited terminal states tracked and retained as valid, labeled outcomes rather than hard-invalidated
+- Same seven condition presets as VCV/PCV/PSV/SIMV
+- Interactive visualization dashboard with PRVC-specific controls
+- Full parameter grid dataset generation with validity filter
 
-**SIMV (Synchronized Intermittent Mandatory Ventilation)**
-A hybrid mode that delivers a set number of mandatory breaths per minute
-(either VC or PC) synchronized to the patient's effort, while allowing
-spontaneous pressure-supported breaths between mandatory cycles. Generating
-SIMV waveforms requires producing two distinct breath types — mandatory and
-spontaneous — within the same time series, with correct synchronization windows
-and phase-appropriate waveform shapes for each.
-
-**PRVC (Pressure-Regulated Volume Control)**
-A dual-control mode that targets a set tidal volume but adjusts the applied
-inspiratory pressure breath-by-breath to achieve it. The control algorithm
-measures delivered Vt on each breath and increases or decreases the next
-breath's pressure by a fixed increment (typically 1–3 cmH₂O) to converge on
-the target. Generating PRVC requires multi-breath sequences where the pressure
-waveform changes across cycles — it cannot be produced from single-breath
-snapshots.
+### In Progress — Neonatal/Pediatric Extension (CR0023)
+- Extends the platform beyond adult physiology to neonatal/pediatric scenarios
+- Normal Neonate and RDS (Respiratory Distress Syndrome) implemented across all five generators and the dashboard
+- Meconium Aspiration Syndrome (MAS) scoped but deferred, pending genuine two-compartment modeling
+- See `ARCHITECTURE.md` → 1a for full detail
 
 ### Out of Scope (current)
 - Real patient data ingestion
