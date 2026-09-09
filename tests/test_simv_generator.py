@@ -61,6 +61,7 @@ from generator.simv_generator import (
     RECRUITMENT_SLOPES,
     VT_MAX_ML,
     VT_MIN_ML,
+    PPLAT_MAX_CMHH2O,
     generate_breath_cycles,
     generate_dataset,
 )
@@ -212,6 +213,18 @@ class TestThresholdConstants:
 
     def test_ai_high_asynchrony_threshold_matches_thille_2006(self):
         assert AI_HIGH_ASYNCHRONY_THRESHOLD == pytest.approx(0.10)
+
+    def test_pplat_max_is_ardsnet_scale(self):
+        assert 25.0 <= PPLAT_MAX_CMHH2O <= 35.0
+
+    def test_pplat_max_within_ppeak_max(self):
+        # The Pplat check sits after the Ppeak check in the validity
+       # filter's elif chain, so PPLAT_MAX must stay below PPEAK_MAX for
+        # it to ever actually fire -- otherwise the barotrauma check
+        # always catches a breach first and the Pplat check becomes dead
+        # code, the same class of silent gap flagged elsewhere on this
+        # project (see the Bronchospasm compartment-count comment).
+        assert PPLAT_MAX_CMHH2O <= PPEAK_MAX_CMHH2O
 
 
 # ---------------------------------------------------------------------------

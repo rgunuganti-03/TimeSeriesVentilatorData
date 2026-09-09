@@ -37,7 +37,7 @@ Physiological refinements incorporated
 ---------------------------------------
     1. Multi-compartment lung mechanics -- parallel RC compartments per
        condition, identical compartment counts/profiles to psv_generator
-       (Normal=1, ARDS tiers=2, COPD=3, Pneumonia=3, Bronchospasm=2).
+       (Normal=1, ARDS tiers=2, COPD=3, Pneumonia=3, Bronchospasm=2, Normal Neonate = 1, RDS = 1).
 
     2. Non-linear compliance -- power-law compliance per compartment
        parameterized by stress index, identical to psv_generator.
@@ -787,7 +787,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     if not converged:
         final_vt = delivered_vt_trajectory[-1]
         final_error = (vt_target - final_vt) / max(vt_target, 1.0)
-        at_ceiling = pressure_trajectory[-1] >= (peep + pressure_ceiling - 1e-6)
+        at_ceiling = pressure_trajectory[-1] >= (pressure_ceiling - 1e-6)
         if at_ceiling and final_error > vt_tolerance_frac:
             ceiling_limited = True
 
@@ -836,7 +836,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     elif converged and population != "neonate" and delivered_vt_final > VT_MAX_ML:
         is_valid = False
         invalid_reason = f"Converged delivered Vt {delivered_vt_final:.0f} mL exceeds maximum {VT_MAX_ML:.0f} mL"
-    elif ppeak_final_breath > PPLAT_MAX_CMHH2O:
+    elif population != "neonate" and ppeak_final_breath > PPLAT_MAX_CMHH2O:
         is_valid = False
         invalid_reason = f"Plateau pressure {ppeak_final_breath:.1f} cmH2O exceeds ARDSNet limit ({PPLAT_MAX_CMHH2O} cmH2O)"
     # Ceiling-limited non-convergence is retained as a valid, labeled scenario

@@ -27,7 +27,7 @@ Physiological refinements incorporated
 ---------------------------------------
     1. Multi-compartment lung mechanics  — parallel RC compartments
        per condition (1–3 compartments); COPD uses 3, Pneumonia uses 3,
-       ARDS uses 2, others use 1.
+       ARDS uses 2, Bronchospasm uses 2, others use 1.
 
     2. Breath-to-breath variability — Pmus amplitude and effort duration
        drawn from log-normal and normal distributions respectively,
@@ -166,6 +166,7 @@ IBW_KG: float            = 70.0
 VT_MIN_ML: float         = IBW_KG * 3      # 210 mL
 VT_MAX_ML: float         = IBW_KG * 12     # 840 mL
 PPEAK_MAX_CMHH2O: float  = 50.0
+PPLAT_MAX_CMHH2O: float  = 30.0 
 PS_MAX_CMHH2O: float     = 35.0
 FILL_FRACTION_MIN: float = 0.10            # PSV can have lower fill fraction than PCV
 MAX_INSP_TIME_S: float   = 3.0            # absolute safety limit on inspiratory time
@@ -766,6 +767,8 @@ def _assess_validity(metrics: dict, params: dict) -> Tuple[bool, str]:
         return False, f"Delivered Vt {vt:.0f} mL below minimum {vt_min_ml:.0f} mL"
     if ff < FILL_FRACTION_MIN:
         return False, f"Fill fraction {ff:.3f} below minimum {FILL_FRACTION_MIN}"
+    if population != "neonate" and ppk > PPLAT_MAX_CMHH2O:
+        return False, f"Plateau pressure {ppk:.1f} cmH2O exceeds ARDSNet limit ({PPLAT_MAX_CMHH2O} cmH2O)"
     return True, ""
 
 

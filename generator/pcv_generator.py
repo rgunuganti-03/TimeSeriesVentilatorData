@@ -28,7 +28,7 @@ The lung is represented as 1–3 parallel RC compartments per condition:
     Moderate ARDS: 2 compartments
     Severe ARDS:   2 compartments
     COPD:          3 compartments (fast / medium / slow)
-    Bronchospasm:  1 compartment
+    Bronchospasm:  2 compartment
     Pneumonia:     3 compartments (healthy / transitional / consolidated)
 
 Governing physics
@@ -720,7 +720,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
             f"({FILL_FRACTION_MIN}) — lung barely fills at these mechanics "
             f"and inspiratory time"
         )
-    elif ppeak > PPLAT_MAX_CMHH2O:
+    elif population != "neonate" and ppeak > PPLAT_MAX_CMHH2O:
         is_valid = False
         invalid_reason = f"Plateau pressure {ppeak:.1f} cmH2O exceeds ARDSNet limit ({PPLAT_MAX_CMHH2O} cmH2O)"
 

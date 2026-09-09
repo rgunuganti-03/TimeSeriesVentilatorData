@@ -72,8 +72,8 @@ CONDITIONS = {
         ),
         "condition":   "Mild ARDS",
         "population":  "adult",
-        "respiratory_rate":          20,
-        "stress_index": 0.90, 
+        "respiratory_rate":         20,
+        "stress_index":             0.90, 
         "tidal_volume_ml":          420,
         "compliance_ml_per_cmH2O":   45,
         "resistance_cmH2O_L_s":      10,
@@ -99,8 +99,8 @@ CONDITIONS = {
         ),
         "condition":   "Moderate ARDS",
         "population":  "adult",
-        "respiratory_rate":          24,
-        "stress_index": 0.85,
+        "respiratory_rate":         24,
+        "stress_index":             0.85,
         "tidal_volume_ml":          380,
         "compliance_ml_per_cmH2O":   35,
         "resistance_cmH2O_L_s":      12,
@@ -127,7 +127,7 @@ CONDITIONS = {
         "condition":   "Severe ARDS",
         "population":  "adult",
         "respiratory_rate":          28,
-        "stress_index": 0.80,
+        "stress_index":             0.80,
         "tidal_volume_ml":          300,
         "compliance_ml_per_cmH2O":   25,
         "resistance_cmH2O_L_s":      14,
@@ -155,7 +155,7 @@ CONDITIONS = {
         "condition":   "COPD",
         "population":  "adult",
         "respiratory_rate":          12,
-        "stress_index": 1.20,
+        "stress_index":             1.20,
         "tidal_volume_ml":          550,
         "compliance_ml_per_cmH2O":  70,
         "resistance_cmH2O_L_s":      22,
@@ -187,7 +187,7 @@ CONDITIONS = {
         "condition":   "Bronchospasm",
         "population":  "adult",
         "respiratory_rate":          10,
-        "stress_index": 1.00,
+        "stress_index":             1.00,
         "tidal_volume_ml":          420,
         "compliance_ml_per_cmH2O":   70,
         "resistance_cmH2O_L_s":      33,
@@ -218,7 +218,7 @@ CONDITIONS = {
         "condition":   "Pneumonia",
         "population":  "adult",
         "respiratory_rate":          22,
-        "stress_index": 0.95,
+        "stress_index":             0.95,
         "tidal_volume_ml":          450,
         "compliance_ml_per_cmH2O":   50,
         "resistance_cmH2O_L_s":      12,
@@ -263,8 +263,6 @@ CONDITIONS = {
     "pmus_cv":                  0.20,
     "pressure_ceiling_cmH2O":   20,
     "ett_cuff_leak_fraction":   0.15,                # NEW field — see Open Decision 1
-    "cuff_leak_fraction":     0.15,     # ADD — PSV/SIMV convention
-    "ett_complication":       "cuff_leak",  # ADD — PSV/SIMV convention
     },
 
     "RDS": {
@@ -295,8 +293,6 @@ CONDITIONS = {
         "pmus_cv":                  0.25,                 # ASSUMPTION
         "pressure_ceiling_cmH2O":   20,
         "cuff_leak_fraction":       0.15,
-        "ett_complication":         "cuff_leak",
-        "ett_cuff_leak_fraction":   0.15,  
     },
 }
 

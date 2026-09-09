@@ -51,6 +51,7 @@ from generator.psv_generator import (
     RRSB_FAILURE_THRESHOLD,
     VT_MAX_ML,
     VT_MIN_ML,
+    PPLAT_MAX_CMHH2O,
     generate_breath_cycles,
     generate_dataset,
     generate_sbt_sequence,
@@ -1326,6 +1327,24 @@ class TestValidityFilter:
         result = generate_breath_cycles(p_low_ff, n_cycles=5, seed=77)
         if result["fill_fraction"] < FILL_FRACTION_MIN:
             assert not result["is_valid"]
+
+    def test_pplat_threshold_constant(self):
+        assert PPLAT_MAX_CMHH2O == 30.0
+
+    def test_high_pplat_triggers_invalid(self):
+        """High PEEP + moderate PS -> PIP > 30 while ps itself stays under
+        PS_MAX_CMHH2O -> isolates the new ARDSNet plateau check from the
+        existing pressure-support ceiling check."""
+        p_high_pip = {
+           **NORMAL_PARAMS,
+           "peep_cmH2O":              15.0,
+            "pressure_support_cmH2O":  18.0,
+        }
+        result = generate_breath_cycles(p_high_pip, n_cycles=5, seed=78)
+        if result["ppeak_cmH2O"] > PPLAT_MAX_CMHH2O:
+            assert not result["is_valid"]
+            assert "plateau" in result["invalid_reason"].lower() or \
+                   "ardsnet" in result["invalid_reason"].lower()
 
 
 # ---------------------------------------------------------------------------

@@ -26,7 +26,7 @@ The lung is represented as 1–3 parallel RC compartments per condition:
     Moderate ARDS: 2 compartments
     Severe ARDS:   2 compartments
     COPD:          3 compartments (fast / medium / slow)
-    Bronchospasm:  1 compartment
+    Bronchospasm:  2 compartment
     Pneumonia:     3 compartments (healthy / transitional / consolidated)
 
 Compartments share a common branch-point pressure (P_branch) at the carina

@@ -90,7 +90,7 @@ except where noted)
 ---------------------------------------------------------------------------
     1. Multi-compartment lung mechanics — parallel RC compartments per
        condition, identical COMPARTMENT_PROFILES to vcv/pcv/psv/prvc
-       (Normal=1, ARDS tiers=2, COPD=3, Bronchospasm=2, Pneumonia=3).
+       (Normal=1, ARDS tiers=2, COPD=3, Bronchospasm=2, Pneumonia=3, Normal Neonate = 1, RDS = 1).
     2. Continuous compartment/auto-PEEP state across breath-type
        transitions (NEW to this engine — the other four are each
        self-contained single-regime simulators; SIMV must hand live lung
