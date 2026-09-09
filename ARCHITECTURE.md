@@ -143,17 +143,19 @@ All five modes are implemented and all have completed control-loop documentation
 
 ### 1a. Neonatal / Pediatric Extension (in progress — CR0023)
 
-The most recent phase of work extends the platform beyond adult physiology to neonatal/pediatric scenarios, adding three new conditions: **Normal Neonate**, **RDS** (Respiratory Distress Syndrome), and **Meconium Aspiration Syndrome (MAS)**.
++The most recent phase of work extends the platform beyond adult physiology to neonatal/pediatric scenarios, adding two new conditions: **Normal Neonate** and **RDS** (Respiratory Distress Syndrome). A third condition, **Meconium Aspiration Syndrome (MAS)**, was scoped but is deferred (see below).
+
 
 Neonatal physiology is treated as genuinely distinct from adult physiology, not a rescaled version of it — absolute compliance is roughly 10–20× lower, resistance is dominated by the narrow endotracheal tube (50–150 cmH₂O/L/s vs. 2–10 in adults), respiratory rates run 30–60+ bpm, time constants are much shorter, and uncuffed tubes introduce ETT leak (inspired volume exceeding expired volume) as a defining, model-able feature.
 
 **Architectural decisions made so far:**
 - Every one of the seven existing adult conditions was explicitly backfilled with `"population": "adult"` in `conditions.py`, so no condition is ambiguous about which population it belongs to
 - Each of the five generator files now has a population-gated constants block (`if population == "neonate": ...`) and a shared `_neonate_or_adult()` helper, resolving an early bug class where hardcoded adult safety constants (`VT_MIN_ML`, `VT_MAX_ML`, `PPEAK_MAX_CMHH2O`, etc.) silently rejected valid neonatal scenarios
-- `render_sidebar()` in `dashboard.py` branches on an `is_neonatal` flag so slider ranges (e.g. compliance 0.1–8.0 mL/cmH₂O vs. 5–150) don't silently clip neonatal parameter values
+- `render_sidebar()` in `dashboard.py` branches on an `is_neonatal` flag so slider ranges (e.g. compliance 0.3–10.0 mL/cmH₂O vs. 5–150) don't silently clip neonatal parameter values
 - `params["population"]` and `params["weight_kg"]` are set once, after the `if/elif engine_key ==` chain closes, rather than duplicated inside each branch
 - The Amato 2015 driving-pressure check is intentionally omitted for neonates — no sourced neonatal equivalent exists
-- Two adult-specific constants (`NEONATE_ETT_K1/K2`, `VT_MAX_ML_PER_KG_NEONATE` variants beyond the sourced VT floor/ceiling) were deliberately **not** added because no primary source was found — flagged rather than guessed
+- `NEONATE_ETT_K1`/`NEONATE_ETT_K2` were deliberately **not** added — no primary source was found for neonatal-specific ETT Rohrer coefficients, so the adult `ETT_K1`/`ETT_K2` values are used unmodified rather than guessed
+- `VT_MAX_ML_PER_KG_NEONATE` **is** defined (`8.0`, flagged `ASSUMPTION`) in the four generators that carry it, but is not currently wired into the validity check — the neonatal VT-max check is skipped entirely (`population != "neonate" and delivered_vt > VT_MAX_ML`). This is unresolved dead code, not a deliberate omission — needs either wiring in or removing
 - ETT leak reuses the existing fixed-fraction `cuff_leak` machinery, default-on for neonatal scenarios
 - RDS currently ships as a single compartment; MAS is deferred entirely — it requires genuine two-compartment modeling (an obstructive/air-trapping compartment plus an atelectatic/surfactant-inactivated compartment), and is treated as a distinct pathophysiology rather than a rescaled COPD preset
 - Scenario IDs use population-gated ×10 compliance precision for neonatal scenarios, to avoid sub-1-unit rounding collisions across the much finer neonatal compliance range (particularly in RDS sweeps)
