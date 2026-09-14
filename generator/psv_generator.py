@@ -1711,6 +1711,7 @@ if __name__ == "__main__":
         "weight_kg":                3.0,
     }
     r_neo = generate_breath_cycles(p_neo, n_cycles=30, seed=50)
+    print("triggered_breath_rate:", r_neo.get("triggered_breath_rate"))
     _check("neonate scenario returns dict", isinstance(r_neo, dict))
     _check("neonate scenario is valid",     r_neo["is_valid"], r_neo.get("invalid_reason", ""))
 
