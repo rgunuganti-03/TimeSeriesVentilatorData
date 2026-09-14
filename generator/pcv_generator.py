@@ -332,6 +332,10 @@ def _rohrer_resistance(Q: float, K1: float, K2: float) -> float:
     """Rohrer ETT/airway pressure drop: K1*Q + K2*Q*|Q|. Sign-preserving."""
     return K1 * Q + K2 * Q * abs(Q)
 
+def _leak_flow(paw: float, k_leak: float, p_atm: float = 0.0) -> float:
+    """Orifice-equation leak flow at the airway opening, sign-preserving."""
+    dp = paw - p_atm
+    return float(np.sign(dp) * k_leak * np.sqrt(abs(dp)))
 
 def _R_insp_with_tethering(R_base: float,
                             V_current: float,

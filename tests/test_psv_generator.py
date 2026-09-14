@@ -1332,13 +1332,16 @@ class TestValidityFilter:
         assert PPLAT_MAX_CMHH2O == 30.0
 
     def test_high_pplat_triggers_invalid(self):
-        """High PEEP + moderate PS -> PIP > 30 while ps itself stays under
-        PS_MAX_CMHH2O -> isolates the new ARDSNet plateau check from the
-        existing pressure-support ceiling check."""
+        """High PEEP + moderate PS -> PIP > 30, with compliance lowered so
+        delivered VT stays inside [VT_MIN_ML, VT_MAX_ML] -> isolates the
+        new ARDSNet plateau check from both the pressure-support ceiling
+        check and the VT-overdistension check (VT and PIP are coupled
+        through compliance, so both must be controlled together)."""
         p_high_pip = {
            **NORMAL_PARAMS,
            "peep_cmH2O":              15.0,
             "pressure_support_cmH2O":  18.0,
+            "compliance_ml_per_cmH2O": 25.0,
         }
         result = generate_breath_cycles(p_high_pip, n_cycles=5, seed=78)
         if result["ppeak_cmH2O"] > PPLAT_MAX_CMHH2O:

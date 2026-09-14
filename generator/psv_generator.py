@@ -392,6 +392,11 @@ def _rohrer_resistance(Q: float, K1: float, K2: float) -> float:
     """
     return K1 * Q + K2 * Q * abs(Q)
 
+def _leak_flow(paw: float, k_leak: float, p_atm: float = 0.0) -> float:
+    """Orifice-equation leak flow at the airway opening, sign-preserving."""
+    dp = paw - p_atm
+    return float(np.sign(dp) * k_leak * np.sqrt(abs(dp)))
+
 
 def _R_insp_with_tethering(R_base: float,
                              V_current: float,
@@ -582,7 +587,6 @@ def _classify_dyssynchrony(triggered: bool,
                              Q_peak: float,
                              flow_cycle_threshold: float,
                              ps_level: float,
-                             Q_at_trigger: float,
                              Q_demand: float, insp_ended_by_reversal=False) -> str:
     """
     Classify each breath into one of seven categories.
@@ -613,8 +617,10 @@ def _classify_dyssynchrony(triggered: bool,
 
     # Flow starvation: PS insufficient to meet demand at trigger
     # Manifests as a scooped pressure plateau (Pao dips below PIP)
-    if Q_demand > Q_at_trigger * 1.8 and ps_level < 10.0:
+
+    if Q_demand > Q_peak * 1.3:
         return "flow_starvation"
+
 
     # Delayed cycling: ventilator Ti substantially exceeds patient neural Ti
     # Patient begins active exhalation while ventilator still pressurising
@@ -911,6 +917,8 @@ def generate_breath_cycles(params: dict,
 
         # ---- Passive expiration until effort onset -----------------------
         t_exp = max(t_effort_noisy - t_prev_insp, 0.10)
+
+        print(t_exp, t_insp, t_exp + t_insp)
      
 
         # ---- Final expiration to complete the last breath cycle ----------------
@@ -1078,8 +1086,6 @@ def generate_breath_cycles(params: dict,
             tpeep_now = peep_e + (V_baseline_total / max(C_rs_now, 0.1))
             pao_now = P_vent 
            
-            if t_insp < DT:
-                Q_at_trigger = Q_total
 
             T_list.append(t_current + t_insp)
             P_list.append(pao_now)
@@ -1102,6 +1108,7 @@ def generate_breath_cycles(params: dict,
 
             t_insp += DT
         t_prev_insp = t_insp
+        print(f"t_exp={t_exp:.3f} t_insp={t_insp:.3f} sum={t_exp + t_insp:.3f}")
         # ---- Compute breath-level metrics --------------------------------
         insp_vt = float(V_comps.sum() - V_start_insp.sum())
         insp_vt = max(insp_vt, 0.0)
@@ -1117,7 +1124,6 @@ def generate_breath_cycles(params: dict,
             Q_peak=Q_peak_insp,
             flow_cycle_threshold=fct,
             ps_level=ps_level,
-            Q_at_trigger=Q_at_trigger,
             Q_demand=Q_demand,
             insp_ended_by_reversal=insp_ended_by_reversal,
         )
@@ -1703,7 +1709,7 @@ if __name__ == "__main__":
         "population":               "neonate",
         "weight_kg":                3.0,
     }
-    r_neo = generate_breath_cycles(p_neo, n_cycles=5, seed=50)
+    r_neo = generate_breath_cycles(p_neo, n_cycles=30, seed=50)
     _check("neonate scenario returns dict", isinstance(r_neo, dict))
     _check("neonate scenario is valid",     r_neo["is_valid"], r_neo.get("invalid_reason", ""))
 

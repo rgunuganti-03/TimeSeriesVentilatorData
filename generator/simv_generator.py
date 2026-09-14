@@ -366,6 +366,11 @@ def _rohrer_resistance(Q: float, K1: float, K2: float) -> float:
     """Rohrer airway/ETT pressure drop: K1*Q + K2*Q*|Q|. Sign-preserving."""
     return K1 * Q + K2 * Q * abs(Q)
 
+def _leak_flow(paw: float, k_leak: float, p_atm: float = 0.0) -> float:
+    """Orifice-equation leak flow at the airway opening, sign-preserving."""
+    dp = paw - p_atm
+    return float(np.sign(dp) * k_leak * np.sqrt(abs(dp)))
+
 
 def _R_insp_with_tethering(R_base: float, V_current: float, V_target: float,
                             tethering: float) -> float:
@@ -544,7 +549,7 @@ def _solve_branch_pressure(V_comps: np.ndarray, C_rs_arr: np.ndarray,
 
 def _classify_dyssynchrony(triggered: bool, t_insp: float, t_effort_dur: float,
                             Q_peak: float, flow_cycle_threshold: float,
-                            ps_level: float, Q_at_trigger: float,
+                            ps_level: float, 
                             Q_demand: float) -> str:
     """
     Classify a spontaneous breath's synchrony (reused, five-category subset
@@ -554,7 +559,7 @@ def _classify_dyssynchrony(triggered: bool, t_insp: float, t_effort_dur: float,
     if not triggered:
         return "ineffective_trigger"
 
-    if Q_demand > Q_at_trigger * 1.8 and ps_level < 10.0:
+    if Q_demand > Q_peak * 1.3:
         return "flow_starvation"
 
     ti_ratio = t_insp / max(t_effort_dur, 0.1)
@@ -813,8 +818,6 @@ def _run_spontaneous_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: floa
         Q_total = float(Q_comps.sum())
         V_total = float(V_comps.sum())
 
-        if t < DT:
-            Q_at_trigger = Q_total
 
         t_list.append(t)
         # Servo-clamped: Pao = P_vent, not P_vent + reconstructed ETT drop
@@ -892,7 +895,7 @@ def _advance_passive(V_comps: np.ndarray, comps: Dict, C_chest: float, peep: flo
         # test_pressure_within_plausible_bounds). Floor matches the "small
         # negative dip at valve opening" this project's expiration
         # convention documents, bounded rather than unbounded.
-        Pao[k]   = max(peep + P_ett_drop, peep - 5.0)
+        Pao[k]   = float(np.clip(peep + 0.1 * P_ett_drop, peep - 1.0, peep + 1.0))
         Q_tot[k] = Q_total
         V_tot[k] = float(V_comps.sum())
 
@@ -1110,7 +1113,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
             label = _classify_dyssynchrony(
                 triggered=True, t_insp=seg["duration"], t_effort_dur=eff_dur_i,
                 Q_peak=seg["Q_peak_insp"], flow_cycle_threshold=fct,
-                ps_level=ps_level, Q_at_trigger=seg["Q_at_trigger"],
+                ps_level=ps_level,
                 Q_demand=Q_demand)
 
             delivered_vt = seg["delivered_vt_ml"] * (1.0 - leak_frac)
