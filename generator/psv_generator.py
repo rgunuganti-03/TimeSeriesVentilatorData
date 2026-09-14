@@ -918,7 +918,7 @@ def generate_breath_cycles(params: dict,
         # ---- Passive expiration until effort onset -----------------------
         t_exp = max(t_effort_noisy - t_prev_insp, 0.10)
 
-        print(t_exp, t_insp, t_exp + t_insp)
+        
      
 
         # ---- Final expiration to complete the last breath cycle ----------------
@@ -1108,6 +1108,7 @@ def generate_breath_cycles(params: dict,
 
             t_insp += DT
         t_prev_insp = t_insp
+        # print(t_exp, t_insp, t_exp + t_insp)
         print(f"t_exp={t_exp:.3f} t_insp={t_insp:.3f} sum={t_exp + t_insp:.3f}")
         # ---- Compute breath-level metrics --------------------------------
         insp_vt = float(V_comps.sum() - V_start_insp.sum())
