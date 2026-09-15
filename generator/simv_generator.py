@@ -427,7 +427,8 @@ def _peep_recruited_compliance_sigmoid(C_base: float, peep: float,
     c_F, d_F     = rec_params["c_F"],   rec_params["d_F"]
     F_ref  = _recruitment_fraction(peep_ref, alpha, gamma, c_F, d_F)
     F_peep = _recruitment_fraction(peep,     alpha, gamma, c_F, d_F)
-    return C_base * (F_peep / max(F_ref, 0.01))
+    span = max(gamma - alpha, 0.01)
+    return C_base * ((F_peep - alpha) / max(F_ref - alpha, 0.01 * span))
 
 def _C_rs(C_lung: float, C_chest: float) -> float:
     """Total respiratory system compliance, lung and chest wall in series."""
@@ -979,7 +980,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
     circ_compensated = bool(params.get("circuit_compensated", True))
     peep_ref         = float(params.get("peep_reference_cmH2O", 5.0))
     rec_slope        = float(params.get("recruitment_slope",
-                                         RECRUITMENT_SLOPES.get(condition, 0.5)))
+                                         RECRUITMENT_SLOPES.get(condition, 0.0)))
 
     ett_complication = params.get("ett_complication", None)
     cuff_leak_frac, leak_from_direct_key = _resolve_ett_leak_fraction(params)
@@ -992,8 +993,10 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
 
     K1_intrinsic = R_global * 0.60
     K2_intrinsic = R_global * 0.04
-    K1_base = K1_intrinsic + ETT_K1
-    K2_base = K2_intrinsic + ETT_K2
+    ett_k1 = ETT_K1_NEONATE_3MM if population == "neonate" else ETT_K1
+    ett_k2 = ETT_K2_NEONATE_3MM if population == "neonate" else ETT_K2
+    K1_base = K1_intrinsic + ett_k1
+    K2_base = K2_intrinsic + ett_k2
     K1_eff, K2_eff, leak_frac = _get_ett_params(
         ett_complication, cuff_leak_frac, obs_multiplier, K1_base, K2_base)
 

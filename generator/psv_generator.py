@@ -318,6 +318,10 @@ NEONATE_RECRUITMENT_PARAMS: Dict[str, Dict[str, float]] = {
     "RDS":            {"alpha": -0.76, "gamma": 0.60, "c_F": 6.0, "d_F": 2.5},
 }
 
+NEONATE_CONDITION_WEIGHT_KG: Dict[str, float] = {
+    "Normal Neonate": 3.0,
+    "RDS":             1.5,
+}
 # ---------------------------------------------------------------------------
 # Section 4 — Physics Functions
 # ---------------------------------------------------------------------------
@@ -866,7 +870,7 @@ def generate_breath_cycles(params: dict,
     circ_compensated = bool(params.get("circuit_compensated", True))
     peep_ref        = float(params.get("peep_reference_cmH2O", 5.0))
     rec_slope       = float(params.get("recruitment_slope",
-                                        RECRUITMENT_SLOPES.get(condition, 0.5)))
+                                        RECRUITMENT_SLOPES.get(condition, 0.0)))
 
     # ETT complications
    
@@ -883,8 +887,10 @@ def generate_breath_cycles(params: dict,
     # Rohrer base coefficients (derive from total R; ETT contributes ~50%)
     K1_intrinsic = R_global * 0.60
     K2_intrinsic = R_global * 0.04
-    K1_base = K1_intrinsic + ETT_K1
-    K2_base = K2_intrinsic + ETT_K2
+    ett_k1 = ETT_K1_NEONATE_3MM if population == "neonate" else ETT_K1
+    ett_k2 = ETT_K2_NEONATE_3MM if population == "neonate" else ETT_K2
+    K1_base = K1_intrinsic + ett_k1
+    K2_base = K2_intrinsic + ett_k2
     K1_eff, K2_eff, leak_frac = _get_ett_params(
         ett_complication, cuff_leak_frac, obs_multiplier, K1_base, K2_base
     )
@@ -1152,7 +1158,6 @@ def generate_breath_cycles(params: dict,
         insp_vt = max(insp_vt, 0.0)
 
         # Apply cuff-leak correction
-        patient_vt = insp_vt * (1.0 - leak_frac)
 
         # Classify dyssynchrony for this breath
         label = _classify_dyssynchrony(
@@ -1516,7 +1521,7 @@ def generate_dataset(condition_name: str,
                       compliance_ml_per_cmH2O: float,
                       resistance_cmH2O_L_s: float,
                       n_cycles: int = 5,
-                      seed: Optional[int] = None) -> List[dict]:
+                      seed: Optional[int] = None, population: Optional[str] = None) -> List[dict]:
     """
     Sweep the thinned PSV parameter grid for one condition + mechanics pair.
 
@@ -1536,8 +1541,11 @@ def generate_dataset(condition_name: str,
     """
     scenarios = []
     rng_base  = np.random.default_rng(seed)
+    if population is None:
+        population = "neonate" if condition_name in NEONATE_RECRUITMENT_PARAMS else "adult"
 
-    rec_slope = RECRUITMENT_SLOPES.get(condition_name, 0.5)
+
+    rec_slope = RECRUITMENT_SLOPES.get(condition_name, 0.0)
 
     grid_keys = list(DATASET_GRID.keys())
     grid_vals = [DATASET_GRID[k] for k in grid_keys]
@@ -1547,7 +1555,11 @@ def generate_dataset(condition_name: str,
         p["compliance_ml_per_cmH2O"] = compliance_ml_per_cmH2O
         p["resistance_cmH2O_L_s"]     = resistance_cmH2O_L_s
         p["condition"]                = condition_name
+        p["population"]               = population
         p["recruitment_slope"]        = rec_slope
+
+        if population == "neonate":
+            p["weight_kg"] = NEONATE_CONDITION_WEIGHT_KG.get(condition_name, NEONATE_IBW_KG_DEFAULT)
 
         scenario_seed = int(rng_base.integers(0, 2**31))
         scenario_id   = _make_scenario_id(condition_name, p)

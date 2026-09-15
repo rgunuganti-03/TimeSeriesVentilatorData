@@ -424,7 +424,8 @@ def _peep_recruited_compliance_sigmoid(C_base: float, peep: float,
     c_F, d_F     = rec_params["c_F"],   rec_params["d_F"]
     F_ref  = _recruitment_fraction(peep_ref, alpha, gamma, c_F, d_F)
     F_peep = _recruitment_fraction(peep,     alpha, gamma, c_F, d_F)
-    return C_base * (F_peep / max(F_ref, 0.01))
+    span = max(gamma - alpha, 0.01)
+    return C_base * ((F_peep - alpha) / max(F_ref - alpha, 0.01 * span))
 
 
 def _C_rs(C_lung: float, C_chest: float) -> float:
@@ -658,8 +659,11 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     vt_full_per_comp = vt_target * fractions     # full target per compartment
 
     # ETT Rohrer coefficients (with obstruction multiplier)
-    K1_ett = ETT_K1 * obs_mult
-    K2_ett = ETT_K2 * obs_mult
+
+    ett_k1 = ETT_K1_NEONATE_3MM if population == "neonate" else ETT_K1
+    ett_k2 = ETT_K2_NEONATE_3MM if population == "neonate" else ETT_K2
+    K1_ett = ett_k1 * obs_mult
+    K2_ett = ett_k2 * obs_mult
 
     # ---- Timing ---------------------------------------------------------
     t_cycle = 60.0 / rr

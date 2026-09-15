@@ -399,7 +399,9 @@ def _peep_recruited_compliance_sigmoid(C_base: float, peep: float,
     c_F, d_F     = rec_params["c_F"],   rec_params["d_F"]
     F_ref  = _recruitment_fraction(peep_ref, alpha, gamma, c_F, d_F)
     F_peep = _recruitment_fraction(peep,     alpha, gamma, c_F, d_F)
-    return C_base * (F_peep / max(F_ref, 0.01))
+    span = max(gamma - alpha, 0.01)
+    return C_base * ((F_peep - alpha) / max(F_ref - alpha, 0.01 * span))
+
 
 
 def _C_rs(C_lung: float, C_chest: float) -> float:
@@ -539,7 +541,6 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
             C_global, peep, peep_ref, NEONATE_RECRUITMENT_PARAMS[condition])
     else:
         C_lung_rec = _peep_recruited_compliance(C_global, peep, peep_ref, rec_slope)
-    C_lung_rec  = _peep_recruited_compliance(C_global, peep, peep_ref, rec_slope)
     C_frac_norm = float(np.dot(C_frac_arr, fractions))
     C_comps_base = C_lung_rec * C_frac_arr * fractions / max(C_frac_norm, 0.01)
     # Per-compartment R: scaled by R_frac, AND by the obstruction multiplier
@@ -552,9 +553,12 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     vt_full_per_comp = p_insp * C_comps_base                 # mL, full per-comp
     vt_ref_per_comp  = 0.5 * vt_full_per_comp                # mid-fill reference
 
+    ett_k1 = ETT_K1_NEONATE_3MM if population == "neonate" else ETT_K1
+    ett_k2 = ETT_K2_NEONATE_3MM if population == "neonate" else ETT_K2
+
     # ETT Rohrer coefficients for the displayed pressure decomposition
-    K1_ett = ETT_K1 * obs_mult
-    K2_ett = ETT_K2 * obs_mult
+    K1_ett = ett_k1 * obs_mult
+    K2_ett = ett_k2 * obs_mult
 
     # ---- Timing ---------------------------------------------------------
     t_cycle = 60.0 / rr

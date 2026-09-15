@@ -377,7 +377,8 @@ def _peep_recruited_compliance_sigmoid(C_base: float, peep: float,
     c_F, d_F     = rec_params["c_F"],   rec_params["d_F"]
     F_ref  = _recruitment_fraction(peep_ref, alpha, gamma, c_F, d_F)
     F_peep = _recruitment_fraction(peep,     alpha, gamma, c_F, d_F)
-    return C_base * (F_peep / max(F_ref, 0.01))
+    span = max(gamma - alpha, 0.01)
+    return C_base * ((F_peep - alpha) / max(F_ref - alpha, 0.01 * span))
 
 
 def _R_insp_with_tethering(R_base: float, V_current: float, V_target: float,
@@ -440,9 +441,6 @@ def _build_compartments(condition: str, C_global: float, R_global: float,
     teth_arr = np.array([c["tethering"] for c in profile])
     C_frac_norm = float(np.dot(C_frac_arr, fractions))
 
-    C_lung_rec = _peep_recruited_compliance(C_global, peep, peep_ref, rec_slope)
-    C_lung_rec = _C_rs(C_lung_rec, C_chest)
-
     if population == "neonate" and condition in NEONATE_RECRUITMENT_PARAMS:
         C_lung_rec = _peep_recruited_compliance_sigmoid(
             C_global, peep, peep_ref, NEONATE_RECRUITMENT_PARAMS[condition])
@@ -469,7 +467,7 @@ def _build_compartments(condition: str, C_global: float, R_global: float,
 
 def _run_vc_test_breath(comps: Dict, vt_target_ml: float, peep: float,
                          t_insp: float, stress_index: float,
-                         K1_frac: float, K2_frac: float) -> Tuple[np.ndarray, ...]:
+                         K1_ett: float, K2_ett: float) -> Tuple[np.ndarray, ...]:
     """
     Deliver a constant-total-flow, multi-compartment volume-controlled
     breath (algebraic branch-point solve each timestep), then compute the
@@ -510,6 +508,8 @@ def _run_vc_test_breath(comps: Dict, vt_target_ml: float, peep: float,
 
         V = V + Q_i * DT * 1000.0
         V = np.maximum(V, 0.0)
+
+        P_ett_drop = _rohrer(Q_total_target, K1_ett, K2_ett)
 
         t_list.append(t_now)
         P_list.append(Pao)
@@ -700,8 +700,12 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     circuit_c = _neonate_or_adult(population, NEONATE_CIRCUIT_COMPLIANCE_ML_PER_CMH2O, CIRCUIT_COMPLIANCE_ML_PER_CMH2O)
     vt_min_ml = weight_kg * _neonate_or_adult(population, VT_MIN_ML_PER_KG_NEONATE, VT_MIN_ML_PER_KG_ADULT)
     peep_ref = float(params.get("peep_reference_cmH2O", 5.0))
-    rec_slope = float(params.get("recruitment_slope", RECRUITMENT_SLOPES.get(condition, 0.5)))
+    rec_slope = float(params.get("recruitment_slope", RECRUITMENT_SLOPES.get(condition, 0.0)))
     circ_compensated = bool(params.get("circuit_compensated", True))
+
+    K1_ett = ETT_K1_NEONATE_3MM if population == "neonate" else ETT_K1
+    K2_ett = ETT_K2_NEONATE_3MM if population == "neonate" else ETT_K2
+
 
     if rr <= 0:
         raise ValueError("respiratory_rate must be positive")
@@ -734,7 +738,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
         if is_maneuver_breath:
             t, P, Q, V, P_plat, V_end_insp, dur = _run_vc_test_breath(
                 comps, vt_target, peep, t_insp, stress_index,
-                K1_frac=0.60, K2_frac=0.04,
+                K1_ett=K1_ett, K2_ett=K2_ett,
             )
             test_breath_plateau = P_plat
             P_work_this_breath = P_plat  # what breath 1 actually operated at
