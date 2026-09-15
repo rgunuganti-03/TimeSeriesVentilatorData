@@ -125,10 +125,11 @@ NORMAL_NEONATE_PARAMS = {
     # Start from your file's existing baseline shape, then override:
     # NORMAL_PARAMS for pcv/psv/prvc; NORMAL_PARAMS_SQR (or _DEC) for vcv;
     # NORMAL_PARAMS_VC (or _PC) for simv — see the fixture table in Item 1f.
+    **NORMAL_PARAMS_VC,
     "condition":                "Normal Neonate",
     "population":               "neonate",
     "weight_kg":                3.0,
-    "respiratory_rate":         25,      # ADD — mand
+    "respiratory_rate":         50,      # ADD — mand
     "compliance_ml_per_cmH2O":  4.0,
     "resistance_cmH2O_L_s":     80,
     "peep_cmH2O":               5,
@@ -138,12 +139,13 @@ NORMAL_NEONATE_PARAMS = {
     "tidal_volume_ml":          15.0,    # ADD — required when mandatory_mode="VC"
     "flow_pattern":             "square",# ADD — required when mandatory_mode="VC"
     "f_window":                 0.20,    # ADD
+    "insp_pressure_cmH2O":      7.0,  
     "pressure_support_cmH2O":   8.0,     # ADD
     "flow_cycle_threshold":     0.15,    # ADD
     "trigger_threshold_cmH2O":  0.5,     # ADD
     "pmus_peak_cmH2O":          5.0,     # ADD
     "effort_rate_per_min":      50,      # ADD — patient's own rate, separate from the mandatory backup rate above
-    "effort_duration_s":        0.30,    # ADD
+    "effort_duration_s":        0.35,    # ADD
     "pmus_cv":                  0.20,    # ADD
     # + whichever engine-specific keys your file's baseline fixture already
     # carries (tidal_volume_ml / flow_pattern for VCV; insp_pressure_cmH2O

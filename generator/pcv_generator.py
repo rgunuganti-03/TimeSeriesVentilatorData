@@ -204,6 +204,8 @@ DEFAULT_CHEST_WALL_COMPLIANCE: float   = 250.0       # mL/cmH2O (~inert default)
 ETT_K1: float = 0.92   # cmH2O/L/s     — viscous ETT resistance
 ETT_K2: float = 6.01  # cmH2O/(L/s)^2 — turbulent ETT resistance
 
+ETT_K1_NEONATE_3MM = 14.5   # cmH2O/(L/s) — derived, not directly sourced; range 12–18
+ETT_K2_NEONATE_3MM = 180.0  # cmH2O/(L/s)^2 — derived; range 175–235
 # ---------------------------------------------------------------------------
 # Section 2b — Neonatal population constants (only 3 — see CR0023)
 # ---------------------------------------------------------------------------
@@ -319,10 +321,17 @@ RECRUITMENT_SLOPES: Dict = {
     "COPD":          0.00,
     "Bronchospasm":  0.00,
     "Pneumonia":     0.10,
-    "Normal Neonate":               0.30,   # ASSUMPTION — modest PEEP recruitment, like adult Normal
-    "RDS":                          0.60,   # higher than adult ARDS — RDS is the textbook recruitable lung
 }
 
+NEONATE_RECRUITMENT_PARAMS: Dict[str, Dict[str, float]] = {
+    # ASSUMPTION on magnitude. Functional form + Normal-Neonate values from
+    # Ellwein Fix et al., "Theoretical open-loop model of respiratory
+    # mechanics in the extremely preterm infant" (arXiv:1805.05359), Table 2.
+    # RDS shifts c_F up / gamma down per that paper's stated (unquantified)
+    # direction for pathological lungs — direction sourced, magnitude not.
+    "Normal Neonate": {"alpha": -0.76, "gamma": 1.00, "c_F": 0.1, "d_F": 0.4},
+    "RDS":            {"alpha": -0.76, "gamma": 0.60, "c_F": 6.0, "d_F": 2.5},
+}
 
 # ---------------------------------------------------------------------------
 # Section 4 — Physics helper functions (mirrored from psv_generator)
@@ -373,6 +382,24 @@ def _peep_recruited_compliance(C_base: float,
     """C gain from PEEP-mediated alveolar recruitment above peep_ref."""
     delta_peep = max(0.0, peep - peep_ref)
     return C_base + recruitment_slope * delta_peep
+
+def _recruitment_fraction(P: float, alpha: float, gamma: float,
+                           c_F: float, d_F: float) -> float:
+    """Fraction of lung recruited at transmural pressure P (Hamlington et al.
+    2016 / Ellwein Fix et al. 2018 sigmoid)."""
+    return alpha + (gamma - alpha) / (1.0 + np.exp(-(P - c_F) / d_F))
+
+
+def _peep_recruited_compliance_sigmoid(C_base: float, peep: float,
+                                        peep_ref: float,
+                                        rec_params: Dict[str, float]) -> float:
+    """Baseline compliance vs. PEEP via the recruitment-fraction sigmoid.
+    Normalized so C_lung_rec == C_base exactly at peep_ref."""
+    alpha, gamma = rec_params["alpha"], rec_params["gamma"]
+    c_F, d_F     = rec_params["c_F"],   rec_params["d_F"]
+    F_ref  = _recruitment_fraction(peep_ref, alpha, gamma, c_F, d_F)
+    F_peep = _recruitment_fraction(peep,     alpha, gamma, c_F, d_F)
+    return C_base * (F_peep / max(F_ref, 0.01))
 
 
 def _C_rs(C_lung: float, C_chest: float) -> float:
@@ -507,6 +534,11 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     teth_arr    = np.array([c["tethering"]   for c in profile])
 
     # PEEP-recruited compliance applied before per-compartment split
+    if population == "neonate" and condition in NEONATE_RECRUITMENT_PARAMS:
+        C_lung_rec = _peep_recruited_compliance_sigmoid(
+            C_global, peep, peep_ref, NEONATE_RECRUITMENT_PARAMS[condition])
+    else:
+        C_lung_rec = _peep_recruited_compliance(C_global, peep, peep_ref, rec_slope)
     C_lung_rec  = _peep_recruited_compliance(C_global, peep, peep_ref, rec_slope)
     C_frac_norm = float(np.dot(C_frac_arr, fractions))
     C_comps_base = C_lung_rec * C_frac_arr * fractions / max(C_frac_norm, 0.01)

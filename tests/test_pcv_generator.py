@@ -74,6 +74,7 @@ NORMAL_NEONATE_PARAMS = {
     # Start from your file's existing baseline shape, then override:
     # NORMAL_PARAMS for pcv/psv/prvc; NORMAL_PARAMS_SQR (or _DEC) for vcv;
     # NORMAL_PARAMS_VC (or _PC) for simv — see the fixture table in Item 1f.
+    **NORMAL_PARAMS,
     "condition":                "Normal Neonate",
     "population":               "neonate",
     "weight_kg":                3.0,
@@ -82,8 +83,8 @@ NORMAL_NEONATE_PARAMS = {
     "resistance_cmH2O_L_s":     80,
     "peep_cmH2O":               5,
     "ie_ratio":                 0.50,
-    "rise_time_s":              0.05,
-    "insp_pressure_cmH2O": 10.0,
+    "insp_pressure_cmH2O":      7.0,   # placeholder — refine once fix #7 lands
+
     # + whichever engine-specific keys your file's baseline fixture already
     # carries (tidal_volume_ml / flow_pattern for VCV; insp_pressure_cmH2O
     # for PCV; pressure_support_cmH2O / flow_cycle_threshold /

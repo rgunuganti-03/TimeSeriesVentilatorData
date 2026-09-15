@@ -41,11 +41,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 from generator.conditions    import get_condition, get_condition_for_mode, get_condition_meta, list_conditions
-from generator.vcv_generator import generate_breath_cycles as _gen_vcv
-from generator.pcv_generator import generate_breath_cycles as _gen_pcv
-from generator.psv_generator import generate_breath_cycles as _gen_psv
-from generator.prvc_generator import generate_breath_cycles as _gen_prvc
-from generator.simv_generator import generate_breath_cycles as _gen_simv  
+from generator.vcv_generator import DEFAULT_CHEST_WALL_COMPLIANCE, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, RECRUITMENT_SLOPES, NEONATE_RECRUITMENT_PARAMS, _peep_recruited_compliance_sigmoid, generate_breath_cycles as _gen_vcv
+from generator.pcv_generator import DEFAULT_CHEST_WALL_COMPLIANCE, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, RECRUITMENT_SLOPES, NEONATE_RECRUITMENT_PARAMS, _peep_recruited_compliance_sigmoid, generate_breath_cycles as _gen_pcv
+from generator.psv_generator import DEFAULT_CHEST_WALL_COMPLIANCE, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, RECRUITMENT_SLOPES, NEONATE_RECRUITMENT_PARAMS, _peep_recruited_compliance_sigmoid, generate_breath_cycles as _gen_psv
+from generator.prvc_generator import DEFAULT_CHEST_WALL_COMPLIANCE, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, RECRUITMENT_SLOPES, NEONATE_RECRUITMENT_PARAMS, _peep_recruited_compliance_sigmoid, generate_breath_cycles as _gen_prvc
+from generator.simv_generator import DEFAULT_CHEST_WALL_COMPLIANCE, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, RECRUITMENT_SLOPES, NEONATE_RECRUITMENT_PARAMS, _peep_recruited_compliance_sigmoid, generate_breath_cycles as _gen_simv  
 
 # ---------------------------------------------------------------------------
 # Engine registry — VCV and PCV only
@@ -287,19 +287,32 @@ def _ie_default_index(ie_value: float) -> int:
     return min(range(len(values)), key=lambda i: abs(values[i] - ie_value))
 
 def _pcv_default_driving_pressure(preset: dict) -> int:
-    rr  = preset["respiratory_rate"]
-    C   = preset["compliance_ml_per_cmH2O"]
-    R   = preset["resistance_cmH2O_L_s"]
-    ie  = preset["ie_ratio"]
-    V_T = preset["tidal_volume_ml"]
+    rr   = preset["respiratory_rate"]
+    C    = preset["compliance_ml_per_cmH2O"]
+    R    = preset["resistance_cmH2O_L_s"]
+    ie   = preset["ie_ratio"]
+    V_T  = preset["tidal_volume_ml"]
+    peep = preset["peep_cmH2O"]
+
+    population = preset.get("population", "adult")
+    C_chest  = NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE if population == "neonate" else DEFAULT_CHEST_WALL_COMPLIANCE
+    peep_ref = preset.get("peep_reference_cmH2O", 5.0)
+
+    if population == "neonate" and preset["condition"] in NEONATE_RECRUITMENT_PARAMS:
+        C_rec = _peep_recruited_compliance_sigmoid(
+            C, peep, peep_ref, NEONATE_RECRUITMENT_PARAMS[preset["condition"]])
+    else:
+        slope = RECRUITMENT_SLOPES.get(preset["condition"], 0.0)
+        C_rec = C + slope * max(0.0, peep - peep_ref)
+    C_rs = 1.0 / (1.0 / max(C_rec, 0.1) + 1.0 / max(C_chest, 0.1))
 
     t_cycle = 60.0 / rr
     t_insp  = t_cycle * ie / (1.0 + ie)
-    tau     = R * C / 1000.0
+    tau     = R * C_rs / 1000.0
     ff      = 1.0 - np.exp(-t_insp / tau)
-    delta_P = V_T / (C * ff)
+    delta_P = V_T / (C_rs * ff)
 
-    return int(round(min(delta_P, 35)))  # clamp to slider max
+    return int(round(min(delta_P, 35)))
 
 
 def render_sidebar():

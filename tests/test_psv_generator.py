@@ -130,9 +130,6 @@ FLOW_STARVATION_PARAMS = {
 }
 
 NORMAL_NEONATE_PARAMS = {
-    # Start from your file's existing baseline shape, then override:
-    # NORMAL_PARAMS for pcv/psv/prvc; NORMAL_PARAMS_SQR (or _DEC) for vcv;
-    # NORMAL_PARAMS_VC (or _PC) for simv — see the fixture table in Item 1f.
     "condition":                "Normal Neonate",
     "population":               "neonate",
     "weight_kg":                3.0,
@@ -142,22 +139,13 @@ NORMAL_NEONATE_PARAMS = {
     "peep_cmH2O":               5,
     "ie_ratio":                 0.50,
     "rise_time_s":              0.05,
-    "pressure_support_cmH2O":   8.0,    # ADD
-    "flow_cycle_threshold":     0.15,   # ADD
-    "trigger_threshold_cmH2O":  0.5,    # ADD
-    "pmus_peak_cmH2O":          5.0,    # ADD
-    "effort_rate_per_min":      50,     # ADD
-    "effort_duration_s":        0.35,   # ADD
-    "pmus_cv":                  0.20,   # ADD
-    # + whichever engine-specific keys your file's baseline fixture already
-    # carries (tidal_volume_ml / flow_pattern for VCV; insp_pressure_cmH2O
-    # for PCV; pressure_support_cmH2O / flow_cycle_threshold /
-    # trigger_threshold_cmH2O / pmus_peak_cmH2O / effort_rate_per_min /
-    # effort_duration_s / pmus_cv for PSV/SIMV/PRVC; mandatory_mode for
-    # SIMV) — copy the pattern already used to build that baseline in this
-    # file rather than retyping from scratch. For vcv/simv specifically,
-    # you likely want a NORMAL_NEONATE_PARAMS_SQR/_DEC or _VC/_PC pair,
-    # same reasoning as the adult baseline needing two variants there.
+    "pressure_support_cmH2O":   8.0,    
+    "flow_cycle_threshold":     0.15,   
+    "trigger_threshold_cmH2O":  0.5,    
+    "pmus_peak_cmH2O":          5.0,    
+    "effort_rate_per_min":      50,     
+    "effort_duration_s":        0.35,   
+    "pmus_cv":                  0.20,   
 }
 
 RDS_PARAMS = {
@@ -1656,3 +1644,7 @@ class TestTriggerMechanism:
             f"With pmus just above threshold, majority should trigger; "
             f"got trig_rate={trig_rate:.2f}"
         )
+
+if __name__ == "__main__":
+    r = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=3, seed=1)
+    print(r["is_valid"], r.get("invalid_reason", ""))
