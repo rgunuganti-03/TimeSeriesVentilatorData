@@ -487,7 +487,6 @@ def _peep_recruited_compliance(C_base: float,
     recruitment_slope: mL/cmH2O of C gained per cmH2O of PEEP above peep_ref
     Condition-specific: ARDS ~2.5, COPD ~0.2, Normal ~0.3
     """
-    raise RuntimeError("CHECKPOINT: this exact function body is executing")
     delta_peep = max(0.0, peep - peep_ref)
     return C_base + recruitment_slope * delta_peep
 
@@ -507,7 +506,8 @@ def _peep_recruited_compliance_sigmoid(C_base: float, peep: float,
     c_F, d_F     = rec_params["c_F"],   rec_params["d_F"]
     F_ref  = _recruitment_fraction(peep_ref, alpha, gamma, c_F, d_F)
     F_peep = _recruitment_fraction(peep,     alpha, gamma, c_F, d_F)
-    return C_base * (F_peep / max(F_ref, 0.01))
+    span = max(gamma - alpha, 0.01)
+    return C_base * ((F_peep - alpha) / max(F_ref - alpha, 0.01 * span))
 
 def _C_rs(C_lung: float, C_chest: float) -> float:
     """
@@ -901,9 +901,7 @@ def generate_breath_cycles(params: dict,
     teth_arr    = np.array([c["tethering"] for c in profile])
 
     # PEEP-recruited compliance applied to global C before per-compartment split
-    import sys
-    print("module identity check:", sys.modules["generator.psv_generator"].__file__)
-    print("function identity check:", _peep_recruited_compliance) 
+   
 
     if population == "neonate" and condition in NEONATE_RECRUITMENT_PARAMS:
         C_lung_rec = _peep_recruited_compliance_sigmoid(
@@ -911,8 +909,6 @@ def generate_breath_cycles(params: dict,
     else:
         C_lung_rec = _peep_recruited_compliance(C_global, peep_e, peep_ref, rec_slope)
 
-    print(f"IN: C_global={C_global} peep_e={peep_e} peep_ref={peep_ref} "
-          f"rec_slope={rec_slope}  ->  OUT: C_lung_rec={C_lung_rec}")
     # Per-compartment base compliance and resistance (intrinsic + ETT)
     C_comps_base = C_lung_rec * C_frac_arr * fractions / max(C_frac_norm, 0.01)   # mL/cmH2O per compartment
     
@@ -1105,15 +1101,8 @@ def generate_breath_cycles(params: dict,
                 )
                 drive_i = P_vent + pmus_now - (Vi / max(C_rs_i, 0.1)) - peep_e
                 dVdt_i   = drive_i / max(Ri_i, 0.1) * 1000.0
-                drive_i = P_vent + pmus_now - (Vi / max(C_rs_i, 0.1)) - peep_e
-                dVdt_i   = drive_i / max(Ri_i, 0.1) * 1000.0
                 
-                V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
-                Q_comps[i] = dVdt_i / 1000.0
-                # if int(round(t_insp / DT)) % 10 == 0:
-                #     print(f"C_lung={C_comps_base[i]:.3f} C_rs={C_rs_i:.3f} "
-                #           f"t={t_insp:.4f} recoil={Vi/max(C_rs_i,0.1):.3f} "
-                #           f"drive={drive_i:.3f} Q={Q_comps[i]:.4f}")
+                
                 V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
                 Q_comps[i] = dVdt_i / 1000.0
 
