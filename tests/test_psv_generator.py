@@ -1646,5 +1646,8 @@ class TestTriggerMechanism:
         )
 
 if __name__ == "__main__":
-    r = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=3, seed=1)
-    print(r["is_valid"], r.get("invalid_reason", ""))
+    r = generate_breath_cycles(RDS_PARAMS, n_cycles=5)
+    print(r["breath_dyssynchrony_labels"])
+    print(r["delivered_vt_ml"])
+    # r = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=3, seed=1)
+    # print(r["is_valid"], r.get("invalid_reason", ""))
