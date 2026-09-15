@@ -487,7 +487,7 @@ def _peep_recruited_compliance(C_base: float,
     recruitment_slope: mL/cmH2O of C gained per cmH2O of PEEP above peep_ref
     Condition-specific: ARDS ~2.5, COPD ~0.2, Normal ~0.3
     """
-    breakpoint()
+    raise RuntimeError("CHECKPOINT: this exact function body is executing")
     delta_peep = max(0.0, peep - peep_ref)
     return C_base + recruitment_slope * delta_peep
 
@@ -901,6 +901,9 @@ def generate_breath_cycles(params: dict,
     teth_arr    = np.array([c["tethering"] for c in profile])
 
     # PEEP-recruited compliance applied to global C before per-compartment split
+    import sys
+    print("module identity check:", sys.modules["generator.psv_generator"].__file__)
+    print("function identity check:", _peep_recruited_compliance) 
 
     if population == "neonate" and condition in NEONATE_RECRUITMENT_PARAMS:
         C_lung_rec = _peep_recruited_compliance_sigmoid(
