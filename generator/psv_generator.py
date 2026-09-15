@@ -487,6 +487,7 @@ def _peep_recruited_compliance(C_base: float,
     recruitment_slope: mL/cmH2O of C gained per cmH2O of PEEP above peep_ref
     Condition-specific: ARDS ~2.5, COPD ~0.2, Normal ~0.3
     """
+    breakpoint()
     delta_peep = max(0.0, peep - peep_ref)
     return C_base + recruitment_slope * delta_peep
 
@@ -907,9 +908,11 @@ def generate_breath_cycles(params: dict,
     else:
         C_lung_rec = _peep_recruited_compliance(C_global, peep_e, peep_ref, rec_slope)
 
-
+    print(f"IN: C_global={C_global} peep_e={peep_e} peep_ref={peep_ref} "
+          f"rec_slope={rec_slope}  ->  OUT: C_lung_rec={C_lung_rec}")
     # Per-compartment base compliance and resistance (intrinsic + ETT)
     C_comps_base = C_lung_rec * C_frac_arr * fractions / max(C_frac_norm, 0.01)   # mL/cmH2O per compartment
+    
     R_comps_base = R_global * R_frac_arr      # cmH2O/L/s per compartment
 
     # Reference volume for non-linear compliance (mid-inspiration target)
@@ -1099,6 +1102,15 @@ def generate_breath_cycles(params: dict,
                 )
                 drive_i = P_vent + pmus_now - (Vi / max(C_rs_i, 0.1)) - peep_e
                 dVdt_i   = drive_i / max(Ri_i, 0.1) * 1000.0
+                drive_i = P_vent + pmus_now - (Vi / max(C_rs_i, 0.1)) - peep_e
+                dVdt_i   = drive_i / max(Ri_i, 0.1) * 1000.0
+                
+                V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
+                Q_comps[i] = dVdt_i / 1000.0
+                # if int(round(t_insp / DT)) % 10 == 0:
+                #     print(f"C_lung={C_comps_base[i]:.3f} C_rs={C_rs_i:.3f} "
+                #           f"t={t_insp:.4f} recoil={Vi/max(C_rs_i,0.1):.3f} "
+                #           f"drive={drive_i:.3f} Q={Q_comps[i]:.4f}")
                 V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
                 Q_comps[i] = dVdt_i / 1000.0
 
