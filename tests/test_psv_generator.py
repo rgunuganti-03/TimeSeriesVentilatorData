@@ -157,7 +157,7 @@ RDS_PARAMS = {
     "ie_ratio":                 0.33,
     "rise_time_s":              0.03,
     "peep_cmH2O":                6,
-    "pressure_support_cmH2O":   10,     
+    "pressure_support_cmH2O":   7,     
     "pmus_peak_cmH2O":          6,      
     "effort_duration_s":        0.30,   
     "pmus_cv":                  0.25,   

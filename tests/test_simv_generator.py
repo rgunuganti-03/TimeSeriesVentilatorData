@@ -167,6 +167,11 @@ RDS_PARAMS = {
     "ie_ratio":                 0.33,
     "rise_time_s":              0.03,
     "peep_cmH2O":                6,
+    "pressure_support_cmH2O":   7,
+    "pmus_peak_cmH2O":          6,
+    "effort_duration_s":        0.30,
+    "pmus_cv":                  0.25,
+    "stress_index":             0.85,
 }
 
 
@@ -1278,3 +1283,7 @@ class TestParameterGrid:
         for key, values in PARAMETER_GRID.items():
             assert isinstance(values, list), f"{key} is not a list"
             assert len(values) >= 2, f"{key} needs >= 2 values for a real sweep"
+
+if __name__ == "__main__":
+    r = generate_breath_cycles(RDS_PARAMS, n_cycles=10)
+    print(r["spontaneous_delivered_vt_ml"], r["is_valid"], r.get("invalid_reason"))
