@@ -853,7 +853,7 @@ def _run_spontaneous_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: floa
             dVdt_i = drive / max(R_i, 0.1) * 1000.0
             V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
             Q_comps[i] = dVdt_i / 1000.0
-
+            
         Q_total = float(Q_comps.sum())
         V_total = float(V_comps.sum())
 
@@ -1013,6 +1013,11 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
     vt_ref_per_comp = comps["C_base"] * 5.0    # mid-fill reference, mL
     vt_full_per_comp = comps["C_base"] * 10.0  # full-fill reference, mL
 
+    if population == "neonate":
+        vt_ref_per_comp_spont = np.maximum(weight_kg * 6.0 * comps["fractions"], 1.0)
+    else:
+        vt_ref_per_comp_spont = vt_ref_per_comp
+
     # ---- Mandatory-breath timing -----------------------------------------
     T_mand = 60.0 / rr_mand
     t_insp_mand = T_mand * ie / (1.0 + ie)
@@ -1149,7 +1154,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
             seg = _run_spontaneous_inspiration(
                 V_comps, comps, C_chest, peep, auto_peep_now, ps_level,
                 rise_time, fct, pmus_i, eff_dur_i, K1_eff, K2_eff,
-                stress_index, vt_ref_per_comp)
+                stress_index, vt_ref_per_comp_spont)
 
             label = _classify_dyssynchrony(
                 triggered=True, t_insp=seg["duration"], t_effort_dur=eff_dur_i,
@@ -1624,5 +1629,6 @@ if __name__ == "__main__":
     print(f"{'=' * 65}\n")
 
     n_pass = sum(_results)
+    
     sys.exit(0 if n_pass == n_total else 1)
 

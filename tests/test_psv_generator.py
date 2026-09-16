@@ -1650,5 +1650,7 @@ class TestTriggerMechanism:
             f"got trig_rate={trig_rate:.2f}"
         )
 
-
+if __name__ == "__main__":
+    result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
+    print(result["is_valid"], result.get("invalid_reason"), result["delivered_vt_ml"])
     

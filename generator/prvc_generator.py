@@ -552,7 +552,7 @@ def _run_vc_test_breath(comps: Dict, vt_target_ml: float, peep: float,
 
 def _run_pc_breath(comps: Dict, V_start: np.ndarray, P_work: float, peep: float,
                     t_insp: float, t_exp: float, rise_time: float,
-                    stress_index: float) -> Tuple[np.ndarray, ...]:
+                    stress_index: float, weight_kg: float) -> Tuple[np.ndarray, ...]:
     """
     Run one full inspiration+expiration cycle at a fixed working pressure
     P_work, starting from V_start (auto-PEEP carry-forward), multi-
@@ -564,9 +564,10 @@ def _run_pc_breath(comps: Dict, V_start: np.ndarray, P_work: float, peep: float,
     R_exp_ratio = comps["R_exp_ratio"]
     tethering = comps["tethering"]
     fractions = comps["fractions"]
-
     V = V_start.copy()
-    V_target_per_comp = np.maximum(V_start + 50.0 * fractions, 50.0)  # ref for tethering/nonlin
+
+    offset = 50.0 * (weight_kg / IBW_KG)
+    V_target_per_comp = np.maximum(V_start + offset * fractions, offset)
 
     t_list, P_list, Q_list, V_list = [], [], [], []
     t_now = 0.0
@@ -781,7 +782,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
         else:
             P_work_this_breath = P_work
             t, P, Q, V, V_end_insp, V_exp_end, dur = _run_pc_breath(
-                comps, V_carry, P_work_this_breath, peep, t_insp, t_exp, rise_time, stress_index,
+                comps, V_carry, P_work_this_breath, peep, t_insp, t_exp, rise_time, stress_index, weight_kg,
             )
             V_carry = V_exp_end.copy()
             delivered_vt = float(np.sum(V_end_insp))

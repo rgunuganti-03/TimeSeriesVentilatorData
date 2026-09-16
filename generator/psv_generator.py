@@ -1748,7 +1748,7 @@ if __name__ == "__main__":
     print("\n[6/6] Neonatal population branch — weight scaling, leak")
     p_neo = {
         "respiratory_rate":         50,
-        "pressure_support_cmH2O":   8.0,
+        "pressure_support_cmH2O":   4.0,
         "peep_cmH2O":               5.0,
         "flow_cycle_threshold":     0.15,
         "trigger_threshold_cmH2O":  0.5,
