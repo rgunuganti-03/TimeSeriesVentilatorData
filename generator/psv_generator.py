@@ -795,6 +795,7 @@ def _assess_validity(metrics: dict, params: dict) -> Tuple[bool, str]:
     ppeak_max  = _neonate_or_adult(population, NEONATE_PPEAK_MAX_CMHH2O, PPEAK_MAX_CMHH2O)
     vt_min_ml  = weight_kg * _neonate_or_adult(
         population, VT_MIN_ML_PER_KG_NEONATE, VT_MIN_ML_PER_KG_ADULT)
+    vt_max_ml_neonate = weight_kg * VT_MAX_ML_PER_KG_NEONATE
 
     if ppk > ppeak_max:
         return False, f"Ppeak {ppk:.1f} cmH2O exceeds barotrauma threshold {ppeak_max}"
@@ -802,6 +803,9 @@ def _assess_validity(metrics: dict, params: dict) -> Tuple[bool, str]:
         return False, f"Pressure support {ps} cmH2O exceeds maximum {PS_MAX_CMHH2O}"
     if population != "neonate" and vt > VT_MAX_ML:
         return False, f"Delivered Vt {vt:.0f} mL exceeds overdistension limit {VT_MAX_ML:.0f} mL"
+    if population == "neonate" and vt > vt_max_ml_neonate:
+        return False, (f"Delivered Vt {vt:.1f} mL exceeds neonatal overdistension "
+                        f"limit {vt_max_ml_neonate:.1f} mL ({VT_MAX_ML_PER_KG_NEONATE} mL/kg)")
     if vt < vt_min_ml and metrics.get("triggered_breath_rate", 0) > 0:
         return False, f"Delivered Vt {vt:.0f} mL below minimum {vt_min_ml:.0f} mL"
     if ff < FILL_FRACTION_MIN:
@@ -921,7 +925,7 @@ def generate_breath_cycles(params: dict,
     R_comps_base = R_global * R_frac_arr      # cmH2O/L/s per compartment
 
     # Reference volume for non-linear compliance (mid-inspiration target)
-    vt_ref_per_comp = (IBW_KG * 6.0) * fractions  # 6 mL/kg IBW per compartment
+    vt_ref_per_comp = (weight_kg * 6.0) * fractions  # 6 mL/kg IBW per compartment
 
     # ---- Simulation state ------------------------------------------------
     rng = np.random.default_rng(seed)
@@ -1782,4 +1786,6 @@ if __name__ == "__main__":
     if n_pass < n_total:
         print("  WARNING: some checks failed — review output above")
     print(f"{'='*55}\n")
+
+    
     sys.exit(0 if n_pass == n_total else 1)

@@ -157,6 +157,11 @@ RDS_PARAMS = {
     "ie_ratio":                 0.33,
     "rise_time_s":              0.03,
     "peep_cmH2O":                6,
+    "pressure_support_cmH2O":   10,     
+    "pmus_peak_cmH2O":          6,      
+    "effort_duration_s":        0.30,   
+    "pmus_cv":                  0.25,   
+    "stress_index":             0.85,   
 }
 
 
@@ -1645,3 +1650,8 @@ class TestTriggerMechanism:
             f"got trig_rate={trig_rate:.2f}"
         )
 
+if __name__ == "__main__":
+    for ps in (6.0, 7.0, 8.0, 9.0, 10.0):
+        r = generate_breath_cycles({**RDS_PARAMS, "pressure_support_cmH2O": ps}, n_cycles=5)
+        print(ps, r["delivered_vt_ml"], r["is_valid"])
+    

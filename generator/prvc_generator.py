@@ -516,7 +516,7 @@ def _run_vc_test_breath(comps: Dict, vt_target_ml: float, peep: float,
         P_ett_drop = _rohrer(Q_total_target, K1_ett, K2_ett)
 
         t_list.append(t_now)
-        P_list.append(Pao)
+        P_list.append(Pao + P_ett_drop)
         Q_list.append(float(np.sum(Q_i)))
         V_list.append(float(np.sum(V)))
         t_now += DT
@@ -1177,11 +1177,6 @@ if __name__ == "__main__":
           f"{full_combo_count} per mechanics point)")
 
     print("\n" + "=" * 60)
-
-    # ---- Temporary: verify generate_dataset population/weight fix -------
-    ds = generate_dataset("RDS", 0.75, 80, n_cycles=5, max_scenarios=1)
-    print(ds[0]["params"]["population"], ds[0]["params"]["weight_kg"],
-          ds[0]["params"]["vt_target_ml"])
 
     print("\n" + "=" * 60)
 
