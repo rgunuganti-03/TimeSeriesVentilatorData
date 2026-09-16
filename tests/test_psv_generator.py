@@ -1650,8 +1650,5 @@ class TestTriggerMechanism:
             f"got trig_rate={trig_rate:.2f}"
         )
 
-if __name__ == "__main__":
-    for ps in (6.0, 7.0, 8.0, 9.0, 10.0):
-        r = generate_breath_cycles({**RDS_PARAMS, "pressure_support_cmH2O": ps}, n_cycles=5)
-        print(ps, r["delivered_vt_ml"], r["is_valid"])
+
     

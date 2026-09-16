@@ -1165,10 +1165,7 @@ if __name__ == "__main__":
     if n_pass < n_total:
         print("  WARNING: some checks failed — review output above")
     print(f"{'=' * 65}\n")
-        # ---- Temporary: verify generate_dataset population/weight fix -------
-    ds = generate_dataset("RDS", 0.75, 80, n_cycles=5)
-    print(ds[0]["params"]["population"], ds[0]["params"]["weight_kg"],
-          ds[0]["params"]["insp_pressure_cmH2O"])
+    
 
     # ---- Summary --------------------------------------------------------
     n_pass = sum(_results)

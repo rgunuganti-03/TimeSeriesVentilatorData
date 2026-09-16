@@ -644,8 +644,11 @@ def _validate_params(params: dict) -> None:
         if "insp_pressure_cmH2O" not in params:
             raise ValueError("Missing required parameter(s): ['insp_pressure_cmH2O'] (mandatory_mode='PC')")
 
-    if not (4    <= float(params["respiratory_rate"])          <= 35):
-        raise ValueError("respiratory_rate must be 4–35 bpm")
+    population = params.get("population", "adult")
+    rr_lo, rr_hi = (10, 40) if population == "neonate" else (4, 35)
+
+    if not (rr_lo <= float(params["respiratory_rate"])          <= rr_hi):
+        raise ValueError(f"respiratory_rate must be {rr_lo}–{rr_hi} bpm")
     if not (0    <= float(params["peep_cmH2O"])                 <= 20):
         raise ValueError("peep_cmH2O must be 0–20 cmH2O")
     if not (0.2  <= float(params["ie_ratio"])                   <= 1.0):
@@ -658,8 +661,7 @@ def _validate_params(params: dict) -> None:
         raise ValueError("pressure_support_cmH2O out of range [1, 50]")
     if not (0.05 <= float(params["flow_cycle_threshold"])       <= 0.70):
         raise ValueError("flow_cycle_threshold out of range [0.05, 0.70]")
-    
-    population = params.get("population", "adult")
+
     c_lo, c_hi = (0.3, 10)  if population == "neonate" else (5, 200)
     r_lo, r_hi = (40, 200)  if population == "neonate" else (0.5, 60)
 
@@ -1620,11 +1622,6 @@ if __name__ == "__main__":
     if n_pass < n_total:
         print("  WARNING: some checks failed — review output above")
     print(f"{'=' * 65}\n")
-
-    # ---- Temporary: verify generate_dataset population/weight fix -------
-    ds = generate_dataset("RDS", 0.75, 80, n_cycles=5, max_scenarios=1)
-    print(ds[0]["params"]["population"], ds[0]["params"]["weight_kg"],
-          ds[0]["params"].get("tidal_volume_ml"))
 
     n_pass = sum(_results)
     sys.exit(0 if n_pass == n_total else 1)

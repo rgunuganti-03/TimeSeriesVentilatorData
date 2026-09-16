@@ -129,7 +129,7 @@ NORMAL_NEONATE_PARAMS = {
     "condition":                "Normal Neonate",
     "population":               "neonate",
     "weight_kg":                3.0,
-    "respiratory_rate":         50,      # ADD — mand
+    "respiratory_rate":         25,      # ADD — mand
     "compliance_ml_per_cmH2O":  4.0,
     "resistance_cmH2O_L_s":     80,
     "peep_cmH2O":               5,
@@ -1284,6 +1284,3 @@ class TestParameterGrid:
             assert isinstance(values, list), f"{key} is not a list"
             assert len(values) >= 2, f"{key} needs >= 2 values for a real sweep"
 
-if __name__ == "__main__":
-    r = generate_breath_cycles(RDS_PARAMS, n_cycles=10)
-    print(r["spontaneous_delivered_vt_ml"], r["is_valid"], r.get("invalid_reason"))
