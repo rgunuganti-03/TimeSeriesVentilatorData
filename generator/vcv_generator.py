@@ -335,6 +335,10 @@ NEONATE_RECRUITMENT_PARAMS: Dict[str, Dict[str, float]] = {
     "RDS":            {"alpha": -0.76, "gamma": 0.60, "c_F": 6.0, "d_F": 2.5},
 }
 
+NEONATE_CONDITION_WEIGHT_KG: Dict[str, float] = {
+    "Normal Neonate": 3.0,
+    "RDS":             1.5,
+}
 # ---------------------------------------------------------------------------
 # Section 4 — Physics helper functions (mirrored from psv_generator)
 # ---------------------------------------------------------------------------
@@ -944,6 +948,7 @@ def generate_dataset(
     compliance_ml_per_cmH2O: float,
     resistance_cmH2O_L_s:    float,
     n_cycles:                 int = 10,
+    population: Optional[str] = None,
 ) -> list:
     """
     Sweep the full VCV parameter grid for one condition + mechanics pair.
@@ -951,13 +956,18 @@ def generate_dataset(
     """
     scenarios: List[dict] = []
 
+    if population is None:
+        population = "neonate" if condition_name in NEONATE_RECRUITMENT_PARAMS else "adult"
+    weight_kg = (NEONATE_CONDITION_WEIGHT_KG.get(condition_name, NEONATE_IBW_KG_DEFAULT)
+                 if population == "neonate" else IBW_KG)
+
     keys   = ["tidal_volume_ml_per_kg", "respiratory_rate",
                "peep_cmH2O", "ie_ratio", "flow_pattern"]
     values = [PARAMETER_GRID[k] for k in keys]
 
     for combo in itertools.product(*values):
         vt_per_kg, rr, peep, ie, pattern = combo
-        vt_mL = vt_per_kg * IBW_KG
+        vt_mL = vt_per_kg * weight_kg
 
         params = {
             "respiratory_rate":        rr,
@@ -967,7 +977,9 @@ def generate_dataset(
             "ie_ratio":                ie,
             "peep_cmH2O":              peep,
             "flow_pattern":            pattern,
+            "population":              population,
             "condition":               condition_name,
+            "weight_kg":               weight_kg,
         }
 
         try:
@@ -1238,4 +1250,12 @@ if __name__ == "__main__":
     if n_pass < n_total:
         print("  WARNING: some checks failed — review output above")
     print(f"{'=' * 65}\n")
+
+    # ---- Temporary: verify generate_dataset population/weight fix -------
+    ds = generate_dataset("RDS", 0.75, 80, n_cycles=5)
+    print(ds[0]["params"]["population"], ds[0]["params"]["weight_kg"],
+          ds[0]["params"]["tidal_volume_ml"])
+
+    # ---- Summary --------------------------------------------------------
+    n_pass = sum(_results)
     sys.exit(0 if n_pass == n_total else 1)

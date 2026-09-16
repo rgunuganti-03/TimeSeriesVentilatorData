@@ -311,6 +311,10 @@ NEONATE_RECRUITMENT_PARAMS: Dict[str, Dict[str, float]] = {
     "Normal Neonate": {"alpha": -0.76, "gamma": 1.00, "c_F": 0.1, "d_F": 0.4},
     "RDS":            {"alpha": -0.76, "gamma": 0.60, "c_F": 6.0, "d_F": 2.5},
 }
+NEONATE_CONDITION_WEIGHT_KG: Dict[str, float] = {
+    "Normal Neonate": 3.0,
+    "RDS":             1.5,
+}
 # Condition tiers used by generate_dataset() / thinned-script style sweeps.
 # Identical to the CONDITION_TIERS shared across vcv/pcv/psv thinned
 # scripts (corrected resistance floors -- see parameter grid doc 1d).
@@ -907,7 +911,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
 
 def generate_dataset(condition_name: str, compliance_ml_per_cmH2O: float,
                       resistance_cmH2O_L_s: float, n_cycles: int = 12,
-                      max_scenarios: Optional[int] = None) -> List[Dict]:
+                      max_scenarios: Optional[int] = None, population: Optional[str] = None) -> List[Dict]:
     """
     Sweep PARAMETER_GRID's ventilator-side dimensions (excluding the
     uniform adaptation_step/vt_tolerance_frac) for one condition +
@@ -929,6 +933,11 @@ def generate_dataset(condition_name: str, compliance_ml_per_cmH2O: float,
                             (empty dict for invalid/errored scenarios)
         "generated_at"   : str -- ISO timestamp
     """
+
+    if population is None:
+        population = "neonate" if condition_name in NEONATE_RECRUITMENT_PARAMS else "adult"
+    weight_kg = (NEONATE_CONDITION_WEIGHT_KG.get(condition_name, NEONATE_IBW_KG_DEFAULT)
+                 if population == "neonate" else IBW_KG)
     keys = ["vt_target_ml_per_kg", "respiratory_rate", "peep_cmH2O",
             "ie_ratio", "pressure_ceiling_cmH2O"]
     combos = list(itertools.product(*[PARAMETER_GRID[k] for k in keys]))
@@ -939,7 +948,7 @@ def generate_dataset(condition_name: str, compliance_ml_per_cmH2O: float,
     for combo in combos:
         vent = dict(zip(keys, combo))
         params = {
-            "vt_target_ml": vent["vt_target_ml_per_kg"] * IBW_KG,
+            "vt_target_ml": vent["vt_target_ml_per_kg"] * weight_kg,
             "respiratory_rate": vent["respiratory_rate"],
             "peep_cmH2O": vent["peep_cmH2O"],
             "ie_ratio": vent["ie_ratio"],
@@ -947,6 +956,8 @@ def generate_dataset(condition_name: str, compliance_ml_per_cmH2O: float,
             "compliance_ml_per_cmH2O": compliance_ml_per_cmH2O,
             "resistance_cmH2O_L_s": resistance_cmH2O_L_s,
             "condition": condition_name,
+            "population": population,
+            "weight_kg": weight_kg,
             "adaptation_step_cmH2O": PARAMETER_GRID["adaptation_step_cmH2O"][0],
             "vt_tolerance_frac": PARAMETER_GRID["vt_tolerance_frac"][0],
         }
@@ -1166,6 +1177,14 @@ if __name__ == "__main__":
           f"{full_combo_count} per mechanics point)")
 
     print("\n" + "=" * 60)
+
+    # ---- Temporary: verify generate_dataset population/weight fix -------
+    ds = generate_dataset("RDS", 0.75, 80, n_cycles=5, max_scenarios=1)
+    print(ds[0]["params"]["population"], ds[0]["params"]["weight_kg"],
+          ds[0]["params"]["vt_target_ml"])
+
+    print("\n" + "=" * 60)
+
     if all_pass:
         print("ALL SMOKE TESTS PASSED")
         sys.exit(0)

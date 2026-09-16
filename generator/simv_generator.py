@@ -353,6 +353,11 @@ NEONATE_RECRUITMENT_PARAMS: Dict[str, Dict[str, float]] = {
     "Normal Neonate": {"alpha": -0.76, "gamma": 1.00, "c_F": 0.1, "d_F": 0.4},
     "RDS":            {"alpha": -0.76, "gamma": 0.60, "c_F": 6.0, "d_F": 2.5},
 }
+
+NEONATE_CONDITION_WEIGHT_KG: Dict[str, float] = {
+    "Normal Neonate": 3.0,
+    "RDS":             1.5,
+}
 # Condition-aware flow-cycle-threshold guidance (literature-refined defaults
 # for preset/UI use — flow_cycle_threshold itself remains a plain generator
 # parameter, matching psv_generator; this dict is guidance, not enforced).
@@ -1361,7 +1366,7 @@ def _timestamp() -> str:
 
 def generate_dataset(condition_name: str, compliance_ml_per_cmH2O: float,
                       resistance_cmH2O_L_s: float, n_cycles: int = 10,
-                      max_scenarios: Optional[int] = None) -> List[Dict]:
+                      max_scenarios: Optional[int] = None, population: Optional[str] = None) -> List[Dict]:
     """
     Sweep PARAMETER_GRID for one condition + mechanics pair, bifurcated by
     mandatory_mode (VC rows use tidal_volume/flow_pattern; PC rows use
@@ -1370,6 +1375,11 @@ def generate_dataset(condition_name: str, compliance_ml_per_cmH2O: float,
     (intended to be thinned first via a companion
     generate_simv_dataset_thinned.py script, matching sibling precedent).
     """
+
+    if population is None:
+        population = "neonate" if condition_name in NEONATE_RECRUITMENT_PARAMS else "adult"
+    weight_kg = (NEONATE_CONDITION_WEIGHT_KG.get(condition_name, NEONATE_IBW_KG_DEFAULT)
+                 if population == "neonate" else IBW_KG)
     shared_keys = ["respiratory_rate", "peep_cmH2O", "ie_ratio", "rise_time_s",
                    "f_window", "pressure_support_cmH2O", "flow_cycle_threshold",
                    "trigger_threshold_cmH2O", "pmus_peak_cmH2O",
@@ -1401,8 +1411,10 @@ def generate_dataset(condition_name: str, compliance_ml_per_cmH2O: float,
                 params["condition"] = condition_name
                 params["compliance_ml_per_cmH2O"] = compliance_ml_per_cmH2O
                 params["resistance_cmH2O_L_s"] = resistance_cmH2O_L_s
+                params["population"] = population
+                params["weight_kg"] = weight_kg
                 if mode == "VC":
-                    params["tidal_volume_ml"] = params.pop("tidal_volume_ml_per_kg") * IBW_KG
+                    params["tidal_volume_ml"] = params.pop("tidal_volume_ml_per_kg") * weight_kg
 
                 scenario_id = _make_scenario_id(condition_name, params)
                 count += 1
@@ -1608,5 +1620,12 @@ if __name__ == "__main__":
     if n_pass < n_total:
         print("  WARNING: some checks failed — review output above")
     print(f"{'=' * 65}\n")
+
+    # ---- Temporary: verify generate_dataset population/weight fix -------
+    ds = generate_dataset("RDS", 0.75, 80, n_cycles=5, max_scenarios=1)
+    print(ds[0]["params"]["population"], ds[0]["params"]["weight_kg"],
+          ds[0]["params"].get("tidal_volume_ml"))
+
+    n_pass = sum(_results)
     sys.exit(0 if n_pass == n_total else 1)
 
