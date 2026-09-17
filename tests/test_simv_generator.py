@@ -62,6 +62,8 @@ from generator.simv_generator import (
     VT_MAX_ML,
     VT_MIN_ML,
     PPLAT_MAX_CMHH2O,
+    NEONATE_RECRUITMENT_PARAMS,
+    _peep_recruited_compliance_sigmoid,
     generate_breath_cycles,
     generate_dataset,
 )
@@ -478,8 +480,23 @@ class TestNeonatalConditions:
         assert result["is_valid"] is True, result["invalid_reason"]
 
     def test_rds_scenario_is_valid_at_baseline(self):
-        result = generate_breath_cycles(RDS_PARAMS, n_cycles=5)
+        result = generate_breath_cycles(RDS_PARAMS, n_cycles=10, seed=42)
         assert result["is_valid"] is True, result["invalid_reason"]
+        assert 6.0 <= result["spontaneous_delivered_vt_ml"] <= 12.0, (
+            f"spontaneous VT {result['spontaneous_delivered_vt_ml']:.1f} mL "
+            f"outside 4-8 mL/kg target for a 1.5 kg RDS infant"
+        )
+
+    def test_recruitment_sigmoid_never_negative(self):
+        """Regression test: dividing by a raw F_ref that can be negative
+        produced -6.0 for RDS at peep_ref=5 before the alpha-shift fix."""
+        for peep in range(0, 21):
+            c = _peep_recruited_compliance_sigmoid(
+                0.75, float(peep), 5.0, NEONATE_RECRUITMENT_PARAMS["RDS"])
+            assert c > 0, f"compliance went non-positive at PEEP={peep}: {c}"
+
+    def test_neonatal_backup_rate_below_effort_rate(self):
+        assert NORMAL_NEONATE_PARAMS["respiratory_rate"] < NORMAL_NEONATE_PARAMS["effort_rate_per_min"]
 # ---------------------------------------------------------------------------
 # Class 3 — Synchronization window (the mode-defining logic)
 # ---------------------------------------------------------------------------

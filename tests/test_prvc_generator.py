@@ -55,6 +55,8 @@ from generator.prvc_generator import (
     VT_MAX_ML,
     VT_MIN_ML,
     VT_TOLERANCE_FRAC_DEFAULT,
+    NEONATE_RECRUITMENT_PARAMS,
+    _peep_recruited_compliance_sigmoid,
     generate_breath_cycles,
     generate_dataset,
 )
@@ -367,6 +369,12 @@ class TestNeonatalConditions:
     def test_rds_scenario_is_valid_at_baseline(self):
         result = generate_breath_cycles(RDS_PARAMS, n_cycles=5)
         assert result["is_valid"] is True, result["invalid_reason"]
+
+    def test_recruitment_sigmoid_never_negative(self):
+        for peep in range(0, 21):
+            c = _peep_recruited_compliance_sigmoid(
+                0.75, float(peep), 5.0, NEONATE_RECRUITMENT_PARAMS["RDS"])
+            assert c > 0, f"compliance went non-positive at PEEP={peep}: {c}"
 # ---------------------------------------------------------------------------
 # Class 3 — Test breath bootstrap (PRVC-specific)
 # ---------------------------------------------------------------------------
@@ -387,6 +395,11 @@ class TestTestBreathBootstrap:
         result = generate_breath_cycles(params, n_cycles=5, seed=2)
         assert result["test_breath_plateau_cmH2O"] is None
 
+    def test_test_breath_pressure_includes_ett_drop(self):
+        r_high_r = generate_breath_cycles({**NORMAL_PARAMS, "resistance_cmH2O_L_s": 40.0}, n_cycles=1, seed=1)
+        r_low_r  = generate_breath_cycles({**NORMAL_PARAMS, "resistance_cmH2O_L_s": 5.0}, n_cycles=1, seed=1)
+        assert r_high_r["test_breath_plateau_cmH2O"] != r_low_r["test_breath_plateau_cmH2O"]
+        
     def test_test_breath_delivers_target_vt(self):
         result = generate_breath_cycles(NORMAL_PARAMS, n_cycles=5, seed=2)
         breath1_vt = result["delivered_vt_trajectory"][0]

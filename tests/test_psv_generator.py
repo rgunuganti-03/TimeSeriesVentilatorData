@@ -52,6 +52,8 @@ from generator.psv_generator import (
     VT_MAX_ML,
     VT_MIN_ML,
     PPLAT_MAX_CMHH2O,
+    NEONATE_RECRUITMENT_PARAMS,
+    _peep_recruited_compliance_sigmoid,
     generate_breath_cycles,
     generate_dataset,
     generate_sbt_sequence,
@@ -437,6 +439,25 @@ class TestNeonatalConditions:
     def test_rds_scenario_is_valid_at_baseline(self):
         result = generate_breath_cycles(RDS_PARAMS, n_cycles=5)
         assert result["is_valid"] is True, result["invalid_reason"]
+        assert 6.0 <= result["delivered_vt_ml"] <= 12.0, (
+            f"delivered {result['delivered_vt_ml']:.1f} mL outside "
+            f"4-8 mL/kg target for a 1.5 kg RDS infant"
+        )
+
+    def test_recruitment_sigmoid_never_negative(self):
+        """Regression test: dividing by a raw F_ref that can be negative
+        produced -6.0 for RDS at peep_ref=5 before the alpha-shift fix."""
+        for peep in range(0, 21):
+            c = _peep_recruited_compliance_sigmoid(
+                0.75, float(peep), 5.0, NEONATE_RECRUITMENT_PARAMS["RDS"])
+            assert c > 0, f"compliance went non-positive at PEEP={peep}: {c}"
+
+    def test_neonatal_vt_max_ceiling_enforced(self):
+        """PS=10 on RDS_PARAMS silently passed at 15.4 mL (9.7 mL/kg,
+        above the 8 mL/kg ceiling) before this check existed."""
+        r = generate_breath_cycles({**RDS_PARAMS, "pressure_support_cmH2O": 10.0}, n_cycles=5)
+        assert r["is_valid"] is False
+        assert "maximum" in r["invalid_reason"].lower() or "exceeds" in r["invalid_reason"].lower()
 # ---------------------------------------------------------------------------
 # Class 3 — PSV Waveform Shape
 # ---------------------------------------------------------------------------
@@ -1041,8 +1062,17 @@ class TestPressureDecomposition:
                 f"{key} length {len(result[key])} != time length "
                 f"{len(result['time'])}"
             )
+# ---------------------------------------------------------------------------
+# Class 7 — Test Trigger Rate
+# ---------------------------------------------------------------------------
+class TestTriggeredRate:
+    def test_mean_triggered_rr_matches_configured_effort_rate(self):
+        r = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=30, seed=50)
+        assert abs(r["triggered_breath_rate"] - 50.0) / 50.0 < 0.10
 
-
+    def test_mean_triggered_rr_converges_tightly_at_high_n(self):
+        r = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=200, seed=50)
+        assert abs(r["triggered_breath_rate"] - 50.0) / 50.0 < 0.05
 # ---------------------------------------------------------------------------
 # Class 8 — Multi-Compartment Mechanics
 # ---------------------------------------------------------------------------

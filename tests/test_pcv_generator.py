@@ -42,6 +42,8 @@ from generator.pcv_generator import (
     RECRUITMENT_SLOPES,
     VT_MAX_ML,
     VT_MIN_ML,
+    NEONATE_RECRUITMENT_PARAMS,
+    _peep_recruited_compliance_sigmoid,
     generate_breath_cycles,
     generate_dataset,
 )
@@ -397,6 +399,14 @@ class TestNeonatalConditions:
     def test_rds_scenario_is_valid_at_baseline(self):
         result = generate_breath_cycles(RDS_PARAMS, n_cycles=5)
         assert result["is_valid"] is True, result["invalid_reason"]
+
+    def test_recruitment_sigmoid_never_negative(self):
+        """Regression test: dividing by a raw F_ref that can be negative
+        produced -6.0 for RDS at peep_ref=5 before the alpha-shift fix."""
+        for peep in range(0, 21):
+            c = _peep_recruited_compliance_sigmoid(
+                0.75, float(peep), 5.0, NEONATE_RECRUITMENT_PARAMS["RDS"])
+            assert c > 0, f"compliance went non-positive at PEEP={peep}: {c}"
 # ---------------------------------------------------------------------------
 # Class 3 — PCV waveform shape
 # ---------------------------------------------------------------------------
