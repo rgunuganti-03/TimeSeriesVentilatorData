@@ -139,7 +139,7 @@ NORMAL_NEONATE_PARAMS = {
     "peep_cmH2O":               5,
     "ie_ratio":                 0.50,
     "rise_time_s":              0.05,
-    "pressure_support_cmH2O":   8.0,    
+    "pressure_support_cmH2O":   6.0,    
     "flow_cycle_threshold":     0.15,   
     "trigger_threshold_cmH2O":  0.5,    
     "pmus_peak_cmH2O":          5.0,    
@@ -157,7 +157,7 @@ RDS_PARAMS = {
     "ie_ratio":                 0.33,
     "rise_time_s":              0.03,
     "peep_cmH2O":                6,
-    "pressure_support_cmH2O":   7,     
+    "pressure_support_cmH2O":   6.0,     
     "pmus_peak_cmH2O":          6,      
     "effort_duration_s":        0.30,   
     "pmus_cv":                  0.25,   
@@ -1650,7 +1650,3 @@ class TestTriggerMechanism:
             f"got trig_rate={trig_rate:.2f}"
         )
 
-if __name__ == "__main__":
-    result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
-    print(result["is_valid"], result.get("invalid_reason"), result["delivered_vt_ml"])
-    

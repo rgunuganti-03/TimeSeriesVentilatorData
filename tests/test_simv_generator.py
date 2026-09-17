@@ -1051,7 +1051,7 @@ class TestPopulationBranching:
         genuinely keyed off `population`."""
         p = {
             **NORMAL_PARAMS_VC, "population": "neonate", "weight_kg": 3.0,
-            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80,
+            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80, "respiratory_rate": 12,
         }
         result = generate_breath_cycles(p, n_cycles=3)
         assert result["is_valid"] is True or "VT" not in result.get("invalid_reason", "")
@@ -1072,7 +1072,7 @@ class TestPopulationBranching:
         """VT floor must scale with weight_kg, not be a second fixed number."""
         p_1_5kg = {
             **NORMAL_PARAMS_VC, "population": "neonate", "weight_kg": 1.5,
-            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80,
+            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80, "respiratory_rate": 12,
         }
         p_3_0kg = {**p_1_5kg, "weight_kg": 3.0}
         r_1_5 = generate_breath_cycles(p_1_5kg, n_cycles=3)
@@ -1092,7 +1092,7 @@ class TestPopulationBranching:
         # not be flagged for driving pressure either.
         p = {
             **NORMAL_PARAMS_VC, "population": "neonate", "weight_kg": 3.0,
-            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80,
+            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80, "respiratory_rate": 12,
         }
         result = generate_breath_cycles(p, n_cycles=3)
         if not result["is_valid"]:
