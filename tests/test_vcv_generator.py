@@ -792,12 +792,16 @@ class TestETTComplications:
         r_leak = generate_breath_cycles(p_leak, n_cycles=5)
         assert r_leak["delivered_vt_ml"] < r_normal["delivered_vt_ml"]
 
-    def test_cuff_leak_fraction_matches_expected_reduction(self):
+    def test_cuff_leak_produces_meaningful_but_approximate_reduction(self):
+        """Leak is now real orifice-flow physics, not an exact post-hoc
+        scalar -- expect the right direction and rough magnitude, not a
+        precise match to leak_frac (the orifice equation's sqrt(P) relation
+        only matches the calibration point exactly, not the whole breath)."""
         r_normal = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=5)
-        p_leak = {**NORMAL_PARAMS_SQR, "ett_cuff_leak_fraction": 0.25}
+        p_leak = {**NORMAL_PARAMS_SQR, "ett_cuff_leak_fraction": 0.20}
         r_leak = generate_breath_cycles(p_leak, n_cycles=5)
-        expected = r_normal["delivered_vt_ml"] * 0.75
-        assert abs(r_leak["delivered_vt_ml"] - expected) < 5.0
+        reduction_frac = 1.0 - (r_leak["delivered_vt_ml"] / r_normal["delivered_vt_ml"])
+        assert 0.10 < reduction_frac < 0.35, f"reduction was {reduction_frac:.2%}"
 
     def test_larger_cuff_leak_produces_larger_vt_loss(self):
         r_normal = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=5)
@@ -809,15 +813,21 @@ class TestETTComplications:
         gap_large = r_normal["delivered_vt_ml"] - r_large["delivered_vt_ml"]
         assert gap_large > gap_small
 
-    def test_cuff_leak_does_not_change_ppeak(self):
-        """Cuff leak is a post-hoc volume-balance correction — it must
-        not perturb the pressure waveform."""
+    def test_larger_leak_lowers_ppeak(self):
+        """Leak now reduces compartment fill throughout inspiration, which
+        also drops peak pressure -- not just the plateau."""
         r_normal = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=5)
-        p_leak = {**NORMAL_PARAMS_SQR, "ett_cuff_leak_fraction": 0.30}
+        p_leak = {**NORMAL_PARAMS_SQR, "ett_cuff_leak_fraction": 0.20}
         r_leak = generate_breath_cycles(p_leak, n_cycles=5)
-        assert r_leak["ppeak_cmH2O"] == pytest.approx(
-            r_normal["ppeak_cmH2O"], abs=0.1
-        )
+        assert r_leak["ppeak_cmH2O"] < r_normal["ppeak_cmH2O"]
+    
+    def test_larger_leak_lowers_pplat(self):
+        """New signal available now that leak persists through the pause:
+        a real cuff leak clinically shows as a decaying plateau."""
+        r_normal = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=5)
+        p_leak = {**NORMAL_PARAMS_SQR, "ett_cuff_leak_fraction": 0.20}
+        r_leak = generate_breath_cycles(p_leak, n_cycles=5)
+        assert r_leak["pplat_cmH2O"] < r_normal["pplat_cmH2O"]
 
     def test_obstruction_raises_ppeak(self):
         r_normal = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=5)
@@ -852,13 +862,20 @@ class TestETTComplications:
         assert r1["ppeak_cmH2O"] == pytest.approx(r2["ppeak_cmH2O"], abs=1e-6)
 
     def test_obstruction_and_cuff_leak_combine_independently(self):
-        r_normal = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=5)
+        r_leak_only = generate_breath_cycles(
+            {**NORMAL_PARAMS_SQR, "ett_cuff_leak_fraction": 0.20}, n_cycles=5)
         p_both = {**NORMAL_PARAMS_SQR,
                   "ett_obstruction_multiplier": 3.0,
                   "ett_cuff_leak_fraction": 0.20}
         r_both = generate_breath_cycles(p_both, n_cycles=5)
-        assert r_both["ppeak_cmH2O"] > r_normal["ppeak_cmH2O"]
-        assert r_both["delivered_vt_ml"] < r_normal["delivered_vt_ml"]
+        assert r_both["ppeak_cmH2O"] > r_leak_only["ppeak_cmH2O"]
+        # delivered_vt_ml is governed by the leak-reduced Q_to_comps only
+        # -- obstruction changes Pao (via the ETT term) but not the
+        # branch-solve flow, so VT should be essentially unaffected by
+        # adding obstruction on top of an existing leak.
+        assert r_both["delivered_vt_ml"] == pytest.approx(
+            r_leak_only["delivered_vt_ml"], rel=0.05
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1304,3 +1321,9 @@ class TestParameterGrid:
             f"Full VCV grid should be 1,008 combinations/mechanics point "
             f"(4x7x6x3x2), got {expected}"
         )
+
+if __name__ == "__main__":
+    r_normal = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=5)
+    p_leak = {**NORMAL_PARAMS_SQR, "ett_cuff_leak_fraction": 0.20}
+    r_leak = generate_breath_cycles(p_leak, n_cycles=5)
+    print(r_normal["ppeak_cmH2O"], r_leak["ppeak_cmH2O"])

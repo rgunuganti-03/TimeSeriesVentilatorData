@@ -412,6 +412,17 @@ def _leak_flow(paw: float, k_leak: float, p_atm: float = 0.0) -> float:
     dp = paw - p_atm
     return float(np.sign(dp) * k_leak * np.sqrt(abs(dp)))
 
+def _calibrate_k_leak(leak_frac: float, vt_target_ml: float,
+                       t_insp_s: float, nominal_dp_cmH2O: float) -> float:
+    """One-time k_leak calibration: solve for the orifice coefficient that
+    leaks approximately leak_frac * vt_target_ml over one inspiration at
+    the engine's nominal driving pressure. Recomputed once per
+    generate_breath_cycles() call, not per timestep."""
+    if leak_frac <= 0.0 or nominal_dp_cmH2O <= 0.0:
+        return 0.0
+    Q_leak_nominal_L_s = (leak_frac * vt_target_ml / 1000.0) / max(t_insp_s, 0.05)
+    return Q_leak_nominal_L_s / np.sqrt(nominal_dp_cmH2O)
+
 
 def _R_insp_with_tethering(R_base: float,
                              V_current: float,
@@ -899,6 +910,9 @@ def generate_breath_cycles(params: dict,
         ett_complication, cuff_leak_frac, obs_multiplier, K1_base, K2_base
     )
 
+    nominal_t_insp = MAX_INSP_TIME_S / 6.0
+    nominal_vt = (weight_kg * 6.0)  # matches vt_ref_per_comp's own mL/kg convention
+    k_leak = _calibrate_k_leak(leak_frac, nominal_vt, nominal_t_insp, ps_level)
     # ---- Build compartment arrays ----------------------------------------
     profile = COMPARTMENT_PROFILES.get(condition, COMPARTMENT_PROFILES["Normal"])
     n_comps = len(profile)
@@ -1116,8 +1130,8 @@ def generate_breath_cycles(params: dict,
                 V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
                 Q_comps[i] = dVdt_i / 1000.0
 
-            
-            Q_total = float(Q_comps.sum())
+            Q_leak  = _leak_flow(P_vent, k_leak)
+            Q_total = float(Q_comps.sum()) + Q_leak
             V_total   = float(V_comps.sum())
             C_rs_now  = max(C_lung_rec * sum(
                 fractions[i] * _compliance_nonlinear(
@@ -1161,7 +1175,7 @@ def generate_breath_cycles(params: dict,
         insp_vt = float(V_comps.sum() - V_start_insp.sum())
         insp_vt = max(insp_vt, 0.0)
 
-        # Apply cuff-leak correction
+        
 
         # Classify dyssynchrony for this breath
         label = _classify_dyssynchrony(
@@ -1787,5 +1801,6 @@ if __name__ == "__main__":
         print("  WARNING: some checks failed — review output above")
     print(f"{'='*55}\n")
 
+    
     
     sys.exit(0 if n_pass == n_total else 1)

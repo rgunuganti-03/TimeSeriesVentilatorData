@@ -399,7 +399,7 @@ class TestTestBreathBootstrap:
         r_high_r = generate_breath_cycles({**NORMAL_PARAMS, "resistance_cmH2O_L_s": 40.0}, n_cycles=1, seed=1)
         r_low_r  = generate_breath_cycles({**NORMAL_PARAMS, "resistance_cmH2O_L_s": 5.0}, n_cycles=1, seed=1)
         assert r_high_r["test_breath_plateau_cmH2O"] != r_low_r["test_breath_plateau_cmH2O"]
-        
+
     def test_test_breath_delivers_target_vt(self):
         result = generate_breath_cycles(NORMAL_PARAMS, n_cycles=5, seed=2)
         breath1_vt = result["delivered_vt_trajectory"][0]
@@ -433,7 +433,23 @@ class TestTestBreathBootstrap:
             f"Severe ARDS plateau {r_severe['test_breath_plateau_cmH2O']:.1f} should exceed "
             f"Normal plateau {r_normal['test_breath_plateau_cmH2O']:.1f}"
         )
+    def test_run_pc_breath_reference_volume_scales_with_weight(self):
+        """Regression test: V_target_per_comp used a flat 50 mL offset
+        regardless of population before this fix -- silently wrong for any
+        neonatal condition with stress_index != 1.0 (RDS's 0.85)."""
+        from generator.prvc_generator import _run_pc_breath, IBW_KG
+        comps_light = {"n_comps": 1, "C_base": np.array([1.0]), "R_base": np.array([50.0]),
+                    "R_exp_ratio": np.array([1.0]), "tethering": np.array([0.5]),
+                    "fractions": np.array([1.0])}
+        V_start = np.array([2.0])
 
+        _, _, _, V_neo, *_ = _run_pc_breath(comps_light, V_start, 15.0, 5.0, 0.4, 0.6, 0.05, 0.85, 1.5)
+        _, _, _, V_adult, *_ = _run_pc_breath(comps_light, V_start, 15.0, 5.0, 0.4, 0.6, 0.05, 0.85, IBW_KG)
+
+        # With stress_index=0.85 (non-linear), the reference volume genuinely
+        # shapes delivered volume -- a 1.5 kg vs. 70 kg V_target_per_comp
+        # must produce different trajectories, not identical ones.
+        assert not np.allclose(V_neo, V_adult)
 
 # ---------------------------------------------------------------------------
 # Class 4 — Outer loop control (PRVC-specific)
@@ -1076,4 +1092,5 @@ class TestParameterGrid:
 
 
 if __name__ == "__main__":
-    sys.exit(pytest.main([__file__, "-v"]))
+    r_neo = generate_breath_cycles({**NORMAL_NEONATE_PARAMS}, n_cycles=5)  # PRVC's own neonatal fixture
+    print(r_neo["delivered_vt_ml"], r_neo["is_valid"])

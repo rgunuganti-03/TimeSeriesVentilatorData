@@ -1300,4 +1300,3 @@ class TestParameterGrid:
         for key, values in PARAMETER_GRID.items():
             assert isinstance(values, list), f"{key} is not a list"
             assert len(values) >= 2, f"{key} needs >= 2 values for a real sweep"
-

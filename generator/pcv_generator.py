@@ -350,6 +350,17 @@ def _leak_flow(paw: float, k_leak: float, p_atm: float = 0.0) -> float:
     dp = paw - p_atm
     return float(np.sign(dp) * k_leak * np.sqrt(abs(dp)))
 
+def _calibrate_k_leak(leak_frac: float, vt_target_ml: float,
+                       t_insp_s: float, nominal_dp_cmH2O: float) -> float:
+    """One-time k_leak calibration: solve for the orifice coefficient that
+    leaks approximately leak_frac * vt_target_ml over one inspiration at
+    a nominal driving pressure. Recomputed once per generate_breath_cycles()
+    call, not per timestep."""
+    if leak_frac <= 0.0 or nominal_dp_cmH2O <= 0.0:
+        return 0.0
+    Q_leak_nominal_L_s = (leak_frac * vt_target_ml / 1000.0) / max(t_insp_s, 0.05)
+    return Q_leak_nominal_L_s / np.sqrt(nominal_dp_cmH2O)
+
 def _R_insp_with_tethering(R_base: float,
                             V_current: float,
                             V_target: float,
@@ -580,6 +591,8 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     n_per   = n_insp + n_exp
     n_total = n_per * n_cycles
 
+    k_leak = _calibrate_k_leak(cuff_leak_frac, vt_full_per_comp.sum(), t_insp, p_insp)
+
     # ---- Ventilator pressure profile (a function of in-cycle time) -----
     def vent_pressure(t_in_breath: float) -> float:
         if t_in_breath <= t_rise:
@@ -614,7 +627,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
                 R_comps_base[i], V_state[i], vt_full_per_comp[i], teth_arr[i])
             drive  = P_vent - (V_state[i] / max(C_rs_i, 0.1)) - peep
             Q_comps[i] = drive / max(R_i, 0.1)          # L/s
-        Q_total = float(Q_comps.sum())
+        Q_total = float(Q_comps.sum()) + _leak_flow(P_vent, k_leak)
         return Q_comps, Q_total
 
     def _step_expiration(V_state: np.ndarray, V_end_insp_state: np.ndarray
@@ -695,7 +708,6 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     delivered_vt = _circuit_vt_correction(
         vt_raw, ppeak, peep, C_circ=circuit_c, compensated=circ_compensated
     )
-    delivered_vt = max(0.0, delivered_vt * (1.0 - cuff_leak_frac))
 
     minute_vent = (rr * delivered_vt) / 1000.0
 
@@ -1170,5 +1182,17 @@ if __name__ == "__main__":
     # ---- Summary --------------------------------------------------------
     n_pass = sum(_results)
 
-    
+    base = {
+    "respiratory_rate": 15, "insp_pressure_cmH2O": 12.0,
+    "compliance_ml_per_cmH2O": 60.0, "resistance_cmH2O_L_s": 8.0,
+    "ie_ratio": 0.5, "peep_cmH2O": 5.0, "rise_time_s": 0.1,
+    "condition": "Normal",
+    }
+    r_no_leak = generate_breath_cycles(base, n_cycles=5)
+    r_leak    = generate_breath_cycles({**base, "ett_cuff_leak_fraction": 0.20}, n_cycles=5)
+
+    print("delivered_vt_ml:", r_no_leak["delivered_vt_ml"], "->", r_leak["delivered_vt_ml"])
+    print("ppeak_cmH2O:    ", r_no_leak["ppeak_cmH2O"], "->", r_leak["ppeak_cmH2O"])
+    print("mean insp flow: ", r_no_leak["flow"][r_no_leak["flow"] > 0].mean(),
+        "->", r_leak["flow"][r_leak["flow"] > 0].mean())
     sys.exit(0 if n_pass == n_total else 1)
