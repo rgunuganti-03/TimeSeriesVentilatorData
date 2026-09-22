@@ -349,6 +349,7 @@ class TestNeonatalConditions:
         time constant despite unchanged resistance."""
         r_normal = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
         r_rds    = generate_breath_cycles(RDS_PARAMS, n_cycles=5)
+        assert r_rds["time_to_peak_flow_s"] < r_normal["time_to_peak_flow_s"]
         # Use whichever of time_to_peak_flow_s / fill_fraction your file's
         # generator exposes (PCV/PRVC/PSV/SIMV expose time_to_peak_flow_s;
         # VCV does not — use fill_fraction-equivalent reasoning there instead).
@@ -1093,4 +1094,6 @@ class TestParameterGrid:
             f"Full PRVC ventilator-side grid should be 2,520 "
             f"combinations/mechanics point (4x7x6x3x5), got {expected}"
         )
-
+if __name__ == "__main__":
+    result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
+    print("time_to_peak_flow_s" in result, list(result.keys()))

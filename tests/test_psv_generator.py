@@ -419,6 +419,8 @@ class TestNeonatalConditions:
         time constant despite unchanged resistance."""
         r_normal = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
         r_rds    = generate_breath_cycles(RDS_PARAMS, n_cycles=5)
+        assert r_rds["fill_fraction"] > r_normal["fill_fraction"]
+        
         # Use whichever of time_to_peak_flow_s / fill_fraction your file's
         # generator exposes (PCV/PRVC/PSV/SIMV expose time_to_peak_flow_s;
         # VCV does not — use fill_fraction-equivalent reasoning there instead).
@@ -1682,3 +1684,6 @@ class TestTriggerMechanism:
             f"got trig_rate={trig_rate:.2f}"
         )
 
+if __name__ == "__main__":
+    result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
+    print("time_to_peak_flow_s" in result, list(result.keys()))
