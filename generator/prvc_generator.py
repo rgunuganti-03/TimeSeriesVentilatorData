@@ -1191,8 +1191,25 @@ if __name__ == "__main__":
 
     p_leak = {**p_neo, "ett_cuff_leak_fraction": 0.15}
     r_leak = generate_breath_cycles(p_leak, n_cycles=15)
-    all_pass = _check("leak reduces delivered_vt vs no-leak baseline",
-                       r_leak["delivered_vt_ml"] < r_neo["delivered_vt_ml"]) and all_pass
+
+    r_leak_insp_flow = r_leak["flow"][r_leak["flow"] > 0].mean()
+    r_neo_insp_flow  = r_neo["flow"][r_neo["flow"] > 0].mean()
+    all_pass = _check("leak raises mean inspiratory flow vs no-leak baseline",
+                       r_leak_insp_flow > r_neo_insp_flow,
+                       f"no-leak={r_neo_insp_flow:.3f} leak={r_leak_insp_flow:.3f}") and all_pass
+
+    reduction_frac = 1.0 - (r_leak["delivered_vt_ml"] / r_neo["delivered_vt_ml"])
+    all_pass = _check("leak's steady-state VT shift stays small (PC breaths are leak-invariant at fixed P_work)",
+                       0.0 <= reduction_frac < 0.08,
+                       f"reduction was {reduction_frac:.2%}") and all_pass
+    # r_leak_insp_flow = r_leak["flow"][r_leak["flow"] > 0].mean()
+    # r_neo_insp_flow  = r_neo["flow"][r_neo["flow"] > 0].mean()
+    # all_pass = _check("leak raises mean inspiratory flow vs no-leak baseline",
+    #                    r_leak_insp_flow > r_neo_insp_flow,
+    #                    f"no-leak={r_neo_insp_flow:.3f} leak={r_leak_insp_flow:.3f}") and all_pass
+    # all_pass = _check("delivered_vt_ml essentially unchanged by leak (final breath is PC)",
+    #                    abs(r_leak["delivered_vt_ml"] - r_neo["delivered_vt_ml"]) < 5.0,
+    #                    f"no-leak={r_neo['delivered_vt_ml']:.1f} leak={r_leak['delivered_vt_ml']:.1f}") and all_pass
 
     # ---- Dataset sweep smoke check ----
     print("\n[dataset] generate_dataset() smoke check (capped sample, not full sweep)")
@@ -1211,7 +1228,6 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
 
     print("\n" + "=" * 60)
-
     
 
     if all_pass:

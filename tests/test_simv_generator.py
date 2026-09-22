@@ -481,8 +481,11 @@ class TestNeonatalConditions:
         both (vcv/pcv report a single delivered_vt_ml already net of leak;
         psv/prvc/simv report insp_vt vs. the leak-corrected patient_vt —
         assert accordingly per file)."""
-        result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
-        assert result["is_valid"] in (True, False)  # replace with the file's actual leak-delta assertion
+        r_normal = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
+        p_leak = {**NORMAL_NEONATE_PARAMS, "ett_complication": "cuff_leak",
+                  "cuff_leak_fraction": 0.15}
+        r_leak = generate_breath_cycles(p_leak, n_cycles=5)
+        assert r_leak["mandatory_delivered_vt_ml"] < r_normal["mandatory_delivered_vt_ml"]
 
     def test_normal_neonate_scenario_is_valid_at_baseline(self):
         result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
@@ -1325,3 +1328,4 @@ class TestParameterGrid:
         for key, values in PARAMETER_GRID.items():
             assert isinstance(values, list), f"{key} is not a list"
             assert len(values) >= 2, f"{key} needs >= 2 values for a real sweep"
+

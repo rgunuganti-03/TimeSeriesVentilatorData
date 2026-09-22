@@ -359,8 +359,12 @@ class TestNeonatalConditions:
         both (vcv/pcv report a single delivered_vt_ml already net of leak;
         psv/prvc/simv report insp_vt vs. the leak-corrected patient_vt —
         assert accordingly per file)."""
-        result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
-        assert result["is_valid"] in (True, False)  # replace with the file's actual leak-delta assertion
+        r_normal = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=15)
+        p_leak = {**NORMAL_NEONATE_PARAMS, "ett_cuff_leak_fraction": 0.15}
+        r_leak = generate_breath_cycles(p_leak, n_cycles=15)
+        flow_normal = r_normal["flow"][r_normal["flow"] > 0].mean()
+        flow_leak = r_leak["flow"][r_leak["flow"] > 0].mean()
+        assert flow_leak > flow_normal
 
     def test_normal_neonate_scenario_is_valid_at_baseline(self):
         result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
