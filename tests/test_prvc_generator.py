@@ -893,7 +893,9 @@ class TestPopulationBranching:
         """An adult-named condition forced into the neonatal population
         branch must get neonatal thresholds — confirms the branch is
         genuinely keyed off `population`."""
-        p = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0}
+        p = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0,
+             "respiratory_rate": 50}  # NORMAL_PARAMS's 16 is below the
+                                      # neonatal validation floor of 20
         result = generate_breath_cycles(p, n_cycles=3)
         # A 15 mL breath is below the adult VT floor (210 mL) but above
         # the neonatal floor (3.0 * 4.0 = 12 mL) — this only passes if
@@ -915,8 +917,11 @@ class TestPopulationBranching:
 
     def test_neonate_vt_min_scales_with_weight_kg(self):
         """VT floor must scale with weight_kg, not be a second fixed number."""
-        p_1_5kg = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 1.5}
-        p_3_0kg = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0}
+        p_1_5kg = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 1.5,
+                   "respiratory_rate": 50}  # NORMAL_PARAMS's 16 is below the
+                                            # neonatal validation floor of 20
+        p_3_0kg = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0,
+                   "respiratory_rate": 50}
         r_1_5 = generate_breath_cycles(p_1_5kg, n_cycles=3)
         r_3_0 = generate_breath_cycles(p_3_0kg, n_cycles=3)
         # Same delivered VT should be valid for the heavier weight and
@@ -932,7 +937,8 @@ class TestPopulationBranching:
         # delivered volume relative to weight — must NOT be flagged for
         # exceeding a VT ceiling (there isn't one for neonates), and must
         # not be flagged for driving pressure either.
-        p = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0}
+        p = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0,
+             "respiratory_rate": 50}
         result = generate_breath_cycles(p, n_cycles=3)
         if not result["is_valid"]:
             assert "maximum" not in result["invalid_reason"].lower()
