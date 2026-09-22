@@ -386,6 +386,17 @@ def _leak_flow(paw: float, k_leak: float, p_atm: float = 0.0) -> float:
     dp = paw - p_atm
     return float(np.sign(dp) * k_leak * np.sqrt(abs(dp)))
 
+def _calibrate_k_leak(leak_frac: float, vt_target_ml: float,
+                       t_insp_s: float, nominal_dp_cmH2O: float) -> float:
+    """One-time k_leak calibration: solve for the orifice coefficient that
+    leaks approximately leak_frac * vt_target_ml over one inspiration at
+    a nominal driving pressure. Recomputed once per generate_breath_cycles()
+    call, not per timestep."""
+    if leak_frac <= 0.0 or nominal_dp_cmH2O <= 0.0:
+        return 0.0
+    Q_leak_nominal_L_s = (leak_frac * vt_target_ml / 1000.0) / max(t_insp_s, 0.05)
+    return Q_leak_nominal_L_s / np.sqrt(nominal_dp_cmH2O)
+
 
 def _R_insp_with_tethering(R_base: float, V_current: float, V_target: float,
                             tethering: float) -> float:
@@ -682,7 +693,7 @@ def _run_mandatory_vc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
                                    peep: float, t_insp: float, flow_pattern: str,
                                    vt_target_ml: float, K1_ett: float, K2_ett: float,
                                    stress_index: float, vt_ref_per_comp: np.ndarray,
-                                   vt_full_per_comp: np.ndarray,) -> Dict:
+                                   vt_full_per_comp: np.ndarray, k_leak: float = 0.0) -> Dict:
     """One VC mandatory breath: prescribed-flow inspiration + inspiratory
     pause, algebraic branch-point solve each step (vcv_generator physics)."""
     n_comps = comps["n_comps"]
@@ -703,6 +714,8 @@ def _run_mandatory_vc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
     Q_tot   = np.zeros(n_total)
     V_tot   = np.zeros(n_total)
 
+    Pao_prev = peep
+
     for k in range(n_insp):
         C_rs_arr = _current_C_rs_arr(V_comps, comps, C_chest, stress_index, vt_ref_per_comp)
         R_arr = np.array([
@@ -711,13 +724,16 @@ def _run_mandatory_vc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
             for i in range(n_comps)
         ])
         Q_total = float(Q_insp[k])
-        P_branch, Q_comps = _solve_branch_pressure(V_comps, C_rs_arr, R_arr, Q_total, peep)
+        Q_leak     = _leak_flow(Pao_prev, k_leak)
+        Q_to_comps = Q_total - Q_leak
+        P_branch, Q_comps = _solve_branch_pressure(V_comps, C_rs_arr, R_arr, Q_to_comps, peep)
         P_ett_drop = _rohrer_resistance(Q_total, K1_ett, K2_ett)
 
         V_comps = np.maximum(V_comps + Q_comps * 1000.0 * DT, 0.0)
 
         t_rel[k] = t_i[k]
         Pao[k]   = P_branch + P_ett_drop
+        Pao_prev = Pao[k]
         Q_tot[k] = Q_total
         V_tot[k] = float(V_comps.sum())
 
@@ -728,12 +744,15 @@ def _run_mandatory_vc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
                                     vt_full_per_comp[i], comps["tethering"][i])
             for i in range(n_comps)
         ])
-        P_branch, Q_comps = _solve_branch_pressure(V_comps, C_rs_arr, R_arr, 0.0, peep)
+        Q_leak     = _leak_flow(Pao_prev, k_leak)
+        Q_to_comps = 0.0 - Q_leak
+        P_branch, Q_comps = _solve_branch_pressure(V_comps, C_rs_arr, R_arr, Q_to_comps, peep)
         V_comps = np.maximum(V_comps + Q_comps * 1000.0 * DT, 0.0)
 
         idx = n_insp + k
         t_rel[idx] = t_insp + (k + 1) * DT
         Pao[idx]   = P_branch
+        Pao_prev   = Pao[idx]
         Q_tot[idx] = 0.0
         V_tot[idx] = float(V_comps.sum())
 
@@ -749,7 +768,7 @@ def _run_mandatory_vc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
 def _run_mandatory_pc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: float,
                                    peep: float, t_insp: float, t_rise: float,
                                    insp_pressure: float, K1_ett: float, K2_ett: float,
-                                   stress_index: float, vt_ref_per_comp: np.ndarray, leak_frac: float = 0.0
+                                   stress_index: float, vt_ref_per_comp: np.ndarray, k_leak: float = 0.0
                                    ) -> Dict:
     """One PC mandatory breath: 3-phase pressure profile (rise + plateau
     only; expiration handled generically), per-compartment ODE (pcv_generator
@@ -787,7 +806,7 @@ def _run_mandatory_pc_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: flo
             V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
             Q_comps[i] = dVdt_i / 1000.0
 
-        Q_total = float(Q_comps.sum())
+        Q_total = float(Q_comps.sum()) + _leak_flow(P_vent, k_leak)
 
         t_rel[k] = t
         # Pressure-targeted breath: the ventilator servo-clamps airway
@@ -815,7 +834,7 @@ def _run_spontaneous_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: floa
                                   peep: float, auto_peep_now: float, ps_level: float,
                                   rise_time: float, fct: float, pmus_peak: float,
                                   eff_dur: float, K1_eff: float, K2_eff: float,
-                                  stress_index: float, vt_ref_per_comp: np.ndarray
+                                  stress_index: float, vt_ref_per_comp: np.ndarray, k_leak: float = 0.0
                                   ) -> Dict:
     """One spontaneous (PSV-style) breath: event-driven inspiration until
     flow-cycled off, per-compartment ODE with combined ventilator + patient
@@ -854,7 +873,7 @@ def _run_spontaneous_inspiration(V_comps: np.ndarray, comps: Dict, C_chest: floa
             V_comps[i] = max(V_comps[i] + dVdt_i * DT, 0.0)
             Q_comps[i] = dVdt_i / 1000.0
             
-        Q_total = float(Q_comps.sum())
+        Q_total = float(Q_comps.sum()) + _leak_flow(P_vent, k_leak)
         V_total = float(V_comps.sum())
 
 
@@ -1031,6 +1050,15 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
 
     attempt_interval = 60.0 / eff_rate
 
+    C_lung_total = float(comps["C_base"].sum())
+    if mode == "VC":
+        vt_nominal = float(params["tidal_volume_ml"])
+        dp_nominal = vt_nominal / max(C_lung_total, 1.0)
+    else:
+        dp_nominal = float(params["insp_pressure_cmH2O"])
+        vt_nominal = dp_nominal * C_lung_total
+    k_leak = _calibrate_k_leak(leak_frac, vt_nominal, t_insp_mand, dp_nominal)
+
     # ---- State threaded across the whole simulation -----------------------
     V_comps = np.zeros(n_comps)
     t_current = 0.0          # global elapsed time
@@ -1071,14 +1099,14 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 seg = _run_mandatory_vc_inspiration(
                     V_comps, comps, C_chest, peep, t_insp_mand,
                     params["flow_pattern"], vt_target, K1_eff, K2_eff,
-                    stress_index, vt_ref_per_comp, vt_full_per_comp)
+                    stress_index, vt_ref_per_comp, vt_full_per_comp, k_leak)
             else:
                 insp_p = float(params["insp_pressure_cmH2O"])
                 seg = _run_mandatory_pc_inspiration(
                     V_comps, comps, C_chest, peep, t_insp_mand, rise_time,
-                    insp_p, K1_eff, K2_eff, stress_index, vt_ref_per_comp,)
+                    insp_p, K1_eff, K2_eff, stress_index, vt_ref_per_comp, k_leak)
 
-            delivered_vt = seg["delivered_vt_ml"] * (1.0 - leak_frac)
+            delivered_vt = seg["delivered_vt_ml"] 
             _append(seg, t_current)
             breath_records.append({
                 "breath_type": "mandatory", "trigger_mode": "time_triggered",
@@ -1125,14 +1153,14 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 seg = _run_mandatory_vc_inspiration(
                     V_comps, comps, C_chest, peep, t_insp_mand,
                     params["flow_pattern"], vt_target, K1_eff, K2_eff,
-                    stress_index, vt_ref_per_comp, vt_full_per_comp)
+                    stress_index, vt_ref_per_comp, vt_full_per_comp, k_leak)
             else:
                 insp_p = float(params["insp_pressure_cmH2O"])
                 seg = _run_mandatory_pc_inspiration(
                     V_comps, comps, C_chest, peep, t_insp_mand, rise_time,
-                    insp_p, K1_eff, K2_eff, stress_index, vt_ref_per_comp)
+                    insp_p, K1_eff, K2_eff, stress_index, vt_ref_per_comp, k_leak)
 
-            delivered_vt = seg["delivered_vt_ml"] * (1.0 - leak_frac)
+            delivered_vt = seg["delivered_vt_ml"]
             _append(seg, t_current)
             breath_records.append({
                 "breath_type": "mandatory", "trigger_mode": "synchronized",
@@ -1154,7 +1182,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
             seg = _run_spontaneous_inspiration(
                 V_comps, comps, C_chest, peep, auto_peep_now, ps_level,
                 rise_time, fct, pmus_i, eff_dur_i, K1_eff, K2_eff,
-                stress_index, vt_ref_per_comp_spont)
+                stress_index, vt_ref_per_comp_spont, k_leak)
 
             label = _classify_dyssynchrony(
                 triggered=True, t_insp=seg["duration"], t_effort_dur=eff_dur_i,
@@ -1162,7 +1190,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 ps_level=ps_level,
                 Q_demand=Q_demand)
 
-            delivered_vt = seg["delivered_vt_ml"] * (1.0 - leak_frac)
+            delivered_vt = seg["delivered_vt_ml"] 
             _append(seg, t_current)
             breath_records.append({
                 "breath_type": "spontaneous", "trigger_mode": "patient",
@@ -1629,6 +1657,31 @@ if __name__ == "__main__":
     print(f"{'=' * 65}\n")
 
     n_pass = sum(_results)
+
+    base_vc = {
+    "mandatory_mode": "VC", "tidal_volume_ml": 420.0, "flow_pattern": "square",
+    "respiratory_rate": 8.0, "peep_cmH2O": 5.0, "ie_ratio": 0.5, "rise_time_s": 0.1,
+    "f_window": 0.25, "pressure_support_cmH2O": 10.0, "flow_cycle_threshold": 0.25,
+    "trigger_threshold_cmH2O": 1.5, "pmus_peak_cmH2O": 20.0, "effort_rate_per_min": 30.0,
+    "effort_duration_s": 0.8, "pmus_cv": 0.15, "compliance_ml_per_cmH2O": 60.0,
+    "resistance_cmH2O_L_s": 10.0, "condition": "Normal",
+    }
+    # High effort rate/pmus so spontaneous breaths actually occur -- need both
+    # mandatory (VC) and spontaneous breath types exercised in the same run.
+    r_no_leak = generate_breath_cycles(base_vc, n_cycles=6, seed=60)
+    r_leak    = generate_breath_cycles({**base_vc, "ett_complication": "cuff_leak",
+                                        "cuff_leak_fraction": 0.20}, n_cycles=6, seed=60)
+
+    print("mandatory_delivered_vt_ml:", r_no_leak["mandatory_delivered_vt_ml"], "->", r_leak["mandatory_delivered_vt_ml"])
+    print("spontaneous_delivered_vt_ml:", r_no_leak["spontaneous_delivered_vt_ml"], "->", r_leak["spontaneous_delivered_vt_ml"])
+    print("n_spontaneous_breaths:", r_no_leak["n_spontaneous_breaths"], r_leak["n_spontaneous_breaths"])
+
+    base_pc = {**base_vc, "mandatory_mode": "PC", "insp_pressure_cmH2O": 15.0}
+    del base_pc["tidal_volume_ml"]; del base_pc["flow_pattern"]
+    r_pc_no_leak = generate_breath_cycles(base_pc, n_cycles=6, seed=60)
+    r_pc_leak    = generate_breath_cycles({**base_pc, "ett_complication": "cuff_leak",
+                                            "cuff_leak_fraction": 0.20}, n_cycles=6, seed=60)
+    print("PC mandatory_delivered_vt_ml:", r_pc_no_leak["mandatory_delivered_vt_ml"], "->", r_pc_leak["mandatory_delivered_vt_ml"])
     
     sys.exit(0 if n_pass == n_total else 1)
 

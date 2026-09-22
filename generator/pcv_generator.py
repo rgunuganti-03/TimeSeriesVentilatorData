@@ -1166,8 +1166,14 @@ if __name__ == "__main__":
 
     p_leak = {**p_neo, "ett_cuff_leak_fraction": 0.15}
     r_leak = generate_breath_cycles(p_leak, n_cycles=3)
-    _check("leak reduces delivered_vt vs no-leak baseline",
-           r_leak["delivered_vt_ml"] < r_neo["delivered_vt_ml"])
+    r_leak_insp_flow = r_leak["flow"][r_leak["flow"] > 0].mean()
+    r_neo_insp_flow  = r_neo["flow"][r_neo["flow"] > 0].mean()
+    _check("leak raises mean inspiratory flow vs no-leak baseline",
+           r_leak_insp_flow > r_neo_insp_flow,
+           f"no-leak={r_neo_insp_flow:.3f} leak={r_leak_insp_flow:.3f}")
+    _check("delivered_vt_ml essentially unchanged by leak (pressure-prescribed)",
+           abs(r_leak["delivered_vt_ml"] - r_neo["delivered_vt_ml"]) < 5.0,
+           f"no-leak={r_neo['delivered_vt_ml']:.1f} leak={r_leak['delivered_vt_ml']:.1f}")
 
     # ---- Summary --------------------------------------------------------
     n_pass = sum(_results)

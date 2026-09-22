@@ -403,6 +403,23 @@ def _rohrer(Q_L_s: float, K1: float, K2: float) -> float:
     """Rohrer flow-dependent resistive pressure drop. Q in L/s, returns cmH2O."""
     return K1 * Q_L_s + K2 * Q_L_s * abs(Q_L_s)
 
+def _leak_flow(paw: float, k_leak: float, p_atm: float = 0.0) -> float:
+    """Orifice-equation leak flow at the airway opening, sign-preserving."""
+    dp = paw - p_atm
+    return float(np.sign(dp) * k_leak * np.sqrt(abs(dp)))
+
+
+def _calibrate_k_leak(leak_frac: float, vt_target_ml: float,
+                       t_insp_s: float, nominal_dp_cmH2O: float) -> float:
+    """One-time k_leak calibration: solve for the orifice coefficient that
+    leaks approximately leak_frac * vt_target_ml over one inspiration at
+    a nominal driving pressure. Recomputed once per generate_breath_cycles()
+    call, not per timestep."""
+    if leak_frac <= 0.0 or nominal_dp_cmH2O <= 0.0:
+        return 0.0
+    Q_leak_nominal_L_s = (leak_frac * vt_target_ml / 1000.0) / max(t_insp_s, 0.05)
+    return Q_leak_nominal_L_s / np.sqrt(nominal_dp_cmH2O)
+
 
 def _C_rs(C_lung: float, C_chest: float) -> float:
     """Total respiratory system compliance, lung and chest wall in series."""
@@ -471,7 +488,7 @@ def _build_compartments(condition: str, C_global: float, R_global: float,
 
 def _run_vc_test_breath(comps: Dict, vt_target_ml: float, peep: float,
                          t_insp: float, stress_index: float,
-                         K1_ett: float, K2_ett: float) -> Tuple[np.ndarray, ...]:
+                         K1_ett: float, K2_ett: float, k_leak: float = 0.0) -> Tuple[np.ndarray, ...]:
     """
     Deliver a constant-total-flow, multi-compartment volume-controlled
     breath (algebraic branch-point solve each timestep), then compute the
@@ -497,6 +514,7 @@ def _run_vc_test_breath(comps: Dict, vt_target_ml: float, peep: float,
     t_list, P_list, Q_list, V_list = [], [], [], []
     t_now = 0.0
 
+    Pao_prev = peep
     for _ in range(n_steps):
         C_eff = np.array([
             _compliance_nonlinear(V[i], C_base[i], vt_target_ml * comps["fractions"][i] * 0.6,
@@ -506,18 +524,24 @@ def _run_vc_test_breath(comps: Dict, vt_target_ml: float, peep: float,
         C_eff = np.maximum(C_eff, 0.5)
         R_eff = R_base.copy()
 
+        Q_leak     = _leak_flow(Pao_prev, k_leak)
+        Q_to_comps = Q_total_target - Q_leak
+
         inv_R = 1.0 / np.maximum(R_eff, 0.1)
-        Pao = (Q_total_target + np.sum(V / (C_eff * R_eff)) + peep * np.sum(inv_R)) / np.sum(inv_R)
-        Q_i = (Pao - V / C_eff - peep) / R_eff  # L/s
+        P_branch = (Q_to_comps + np.sum(V / (C_eff * R_eff)) + peep * np.sum(inv_R)) / np.sum(inv_R)
+        Q_i = (P_branch - V / C_eff - peep) / R_eff  # L/s
 
         V = V + Q_i * DT * 1000.0
         V = np.maximum(V, 0.0)
 
         P_ett_drop = _rohrer(Q_total_target, K1_ett, K2_ett)
 
+        Pao = P_branch + P_ett_drop
+        Pao_prev = Pao
+
         t_list.append(t_now)
-        P_list.append(Pao + P_ett_drop)
-        Q_list.append(float(np.sum(Q_i)))
+        P_list.append(Pao)
+        Q_list.append(Q_total_target)
         V_list.append(float(np.sum(V)))
         t_now += DT
 
@@ -552,7 +576,7 @@ def _run_vc_test_breath(comps: Dict, vt_target_ml: float, peep: float,
 
 def _run_pc_breath(comps: Dict, V_start: np.ndarray, P_work: float, peep: float,
                     t_insp: float, t_exp: float, rise_time: float,
-                    stress_index: float, weight_kg: float) -> Tuple[np.ndarray, ...]:
+                    stress_index: float, weight_kg: float, k_leak: float = 0.0) -> Tuple[np.ndarray, ...]:
     """
     Run one full inspiration+expiration cycle at a fixed working pressure
     P_work, starting from V_start (auto-PEEP carry-forward), multi-
@@ -597,9 +621,12 @@ def _run_pc_breath(comps: Dict, V_start: np.ndarray, P_work: float, peep: float,
         Q_i = (P_applied - V / C_eff - peep) / np.maximum(R_eff, 0.1)  # L/s
         V = np.maximum(V + Q_i * DT * 1000.0, 0.0)
 
+        Q_leak = _leak_flow(P_applied, k_leak)
+
+
         t_list.append(t_now)
         P_list.append(P_applied)
-        Q_list.append(float(np.sum(Q_i)))
+        Q_list.append(float(np.sum(Q_i)) + Q_leak)
         V_list.append(float(np.sum(V)))
         t_now += DT
 
@@ -721,6 +748,11 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     comps = _build_compartments(condition, C_global, R_global, peep, peep_ref,
                                  rec_slope, C_chest, population)
 
+    cuff_leak_frac, _ = _resolve_ett_leak_fraction(params)
+    C_lung_total = float(comps["C_base"].sum())
+    dp_nominal = vt_target / max(C_lung_total, 1.0)
+    k_leak = _calibrate_k_leak(cuff_leak_frac, vt_target, t_insp, dp_nominal)
+
     T_list, P_list, Q_list, V_list = [], [], [], []
     pressure_trajectory = np.zeros(n_cycles)
     delivered_vt_trajectory = np.zeros(n_cycles)
@@ -743,7 +775,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
         if is_maneuver_breath:
             t, P, Q, V, P_plat, V_end_insp, dur = _run_vc_test_breath(
                 comps, vt_target, peep, t_insp, stress_index,
-                K1_ett=K1_ett, K2_ett=K2_ett,
+                K1_ett=K1_ett, K2_ett=K2_ett, k_leak=k_leak,
             )
             test_breath_plateau = P_plat
             P_work_this_breath = P_plat  # what breath 1 actually operated at
@@ -782,7 +814,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
         else:
             P_work_this_breath = P_work
             t, P, Q, V, V_end_insp, V_exp_end, dur = _run_pc_breath(
-                comps, V_carry, P_work_this_breath, peep, t_insp, t_exp, rise_time, stress_index, weight_kg,
+                comps, V_carry, P_work_this_breath, peep, t_insp, t_exp, rise_time, stress_index, weight_kg, k_leak,
             )
             V_carry = V_exp_end.copy()
             delivered_vt = float(np.sum(V_end_insp))
@@ -849,8 +881,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
         delivered_vt_final, ppeak_final_breath, peep,
         C_circ=circuit_c, compensated=circ_compensated,
     )
-    cuff_leak_frac, _ = _resolve_ett_leak_fraction(params)
-    delivered_vt_final = max(0.0, delivered_vt_final * (1.0 - cuff_leak_frac))
+
     C_rs_end = np.array([
         _C_rs(_compliance_nonlinear(V_carry[i], comps["C_base"][i],
                                       vt_target * comps["fractions"][i] * 0.6,
@@ -1180,6 +1211,19 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
 
     print("\n" + "=" * 60)
+
+    base = {
+    "vt_target_ml": 420.0, "respiratory_rate": 16.0, "peep_cmH2O": 5.0,
+    "ie_ratio": 0.5, "pressure_ceiling_cmH2O": 25.0,
+    "compliance_ml_per_cmH2O": 80.0, "resistance_cmH2O_L_s": 10.0, "condition": "Normal",
+    }
+    r_no_leak = generate_breath_cycles(base, n_cycles=1, seed=1)  # breath 1 only -- isolates Pattern A
+    r_leak    = generate_breath_cycles({**base, "ett_cuff_leak_fraction": 0.20}, n_cycles=1, seed=1)
+    print("breath-1 (VC test) delivered_vt:", r_no_leak["delivered_vt_ml"], "->", r_leak["delivered_vt_ml"])
+
+    r_no_leak_10 = generate_breath_cycles(base, n_cycles=10, seed=1)  # breath 10 is PC -- isolates Pattern B
+    r_leak_10    = generate_breath_cycles({**base, "ett_cuff_leak_fraction": 0.20}, n_cycles=10, seed=1)
+    print("breath-10 (PC) delivered_vt:", r_no_leak_10["delivered_vt_ml"], "->", r_leak_10["delivered_vt_ml"])
 
     if all_pass:
         print("ALL SMOKE TESTS PASSED")
