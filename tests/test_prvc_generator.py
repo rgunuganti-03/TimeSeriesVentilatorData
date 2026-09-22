@@ -1090,7 +1090,3 @@ class TestParameterGrid:
             f"combinations/mechanics point (4x7x6x3x5), got {expected}"
         )
 
-
-if __name__ == "__main__":
-    r_neo = generate_breath_cycles({**NORMAL_NEONATE_PARAMS}, n_cycles=5)  # PRVC's own neonatal fixture
-    print(r_neo["delivered_vt_ml"], r_neo["is_valid"])

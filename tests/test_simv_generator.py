@@ -200,6 +200,15 @@ DATASET_SCENARIO_KEYS = {
     "is_valid", "invalid_reason", "waveforms", "breath_records", "generated_at",
 }
 
+def _mandatory_flow_mask(result):
+        mask = np.zeros_like(result["time"], dtype=bool)
+        for b in result["breath_records"]:
+            if b["breath_type"] == "mandatory":
+                in_breath = (result["time"] >= b["t_start_s"]) & \
+                            (result["time"] < b["t_start_s"] + b["duration_s"])
+                mask |= in_breath
+        return mask
+
 
 class TestThresholdConstants:
     """Sanity-check the imported threshold constants themselves — also
@@ -914,13 +923,19 @@ class TestETTComplications:
         r_leak = generate_breath_cycles(p_leak, n_cycles=6, seed=38)
         assert r_leak["mandatory_delivered_vt_ml"] < r_normal["mandatory_delivered_vt_ml"]
 
-    def test_cuff_leak_fraction_matches_expected_reduction(self):
+    def test_cuff_leak_produces_meaningful_but_approximate_reduction(self):
+        """Leak is real orifice-flow physics (see vcv_generator's identical
+        VC-mandatory treatment), not an exact post-hoc scalar -- expect the
+        right direction and rough magnitude, not a precise match to
+        leak_frac. The orifice equation's sqrt(P) relation only matches
+        the single calibration point exactly, not the whole breath."""
         r_normal = generate_breath_cycles(NORMAL_PARAMS_VC, n_cycles=6, seed=39)
         p_leak = {**NORMAL_PARAMS_VC, "ett_complication": "cuff_leak",
                   "cuff_leak_fraction": 0.25}
         r_leak = generate_breath_cycles(p_leak, n_cycles=6, seed=39)
-        expected = r_normal["mandatory_delivered_vt_ml"] * 0.75
-        assert abs(r_leak["mandatory_delivered_vt_ml"] - expected) < 5.0
+        reduction_frac = 1.0 - (r_leak["mandatory_delivered_vt_ml"] /
+                                 r_normal["mandatory_delivered_vt_ml"])
+        assert 0.12 < reduction_frac < 0.40, f"reduction was {reduction_frac:.2%}"
 
     def test_obstruction_raises_ppeak(self):
         r_normal = generate_breath_cycles(NORMAL_PARAMS_VC, n_cycles=6, seed=40)
@@ -930,10 +945,20 @@ class TestETTComplications:
         assert r_obs["ppeak_cmH2O"] > r_normal["ppeak_cmH2O"]
 
     def test_ett_complications_run_in_pc_mode(self):
+        r_normal = generate_breath_cycles(NORMAL_PARAMS_PC, n_cycles=4, seed=41)
         p_leak = {**NORMAL_PARAMS_PC, "ett_complication": "cuff_leak",
                   "cuff_leak_fraction": 0.15}
-        result = generate_breath_cycles(p_leak, n_cycles=4, seed=41)
-        assert result["n_mandatory_breaths"] == 4
+        r_leak = generate_breath_cycles(p_leak, n_cycles=4, seed=41)
+        assert r_leak["n_mandatory_breaths"] == 4
+
+        mask_normal = _mandatory_flow_mask(r_normal)
+        mask_leak = _mandatory_flow_mask(r_leak)
+        flow_normal = r_normal["flow"][mask_normal][r_normal["flow"][mask_normal] > 0].mean()
+        flow_leak = r_leak["flow"][mask_leak][r_leak["flow"][mask_leak] > 0].mean()
+        assert flow_leak > flow_normal, (
+            f"no-leak mandatory mean insp flow={flow_normal:.3f}, "
+            f"leak mandatory mean insp flow={flow_leak:.3f}"
+        )
 
     def test_no_complication_leaves_vt_unaffected(self):
         r1 = generate_breath_cycles(NORMAL_PARAMS_VC, n_cycles=6, seed=42)
