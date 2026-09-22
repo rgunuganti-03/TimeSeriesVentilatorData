@@ -1100,11 +1100,15 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                     V_comps, comps, C_chest, peep, t_insp_mand,
                     params["flow_pattern"], vt_target, K1_eff, K2_eff,
                     stress_index, vt_ref_per_comp, vt_full_per_comp, k_leak)
+                time_to_peak_flow_this_breath = None
             else:
                 insp_p = float(params["insp_pressure_cmH2O"])
                 seg = _run_mandatory_pc_inspiration(
                     V_comps, comps, C_chest, peep, t_insp_mand, rise_time,
                     insp_p, K1_eff, K2_eff, stress_index, vt_ref_per_comp, k_leak)
+                peak_idx = int(np.argmax(seg["flow"])) if seg["flow"].size > 0 else 0
+                time_to_peak_flow_this_breath = (
+                    float(seg["t_rel"][peak_idx]) if seg["t_rel"].size > 0 else None)
 
             delivered_vt = seg["delivered_vt_ml"] 
             _append(seg, t_current)
@@ -1115,6 +1119,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 "ppeak_cmH2O": seg["ppeak_cmH2O"], "t_start_s": t_current,
                 "duration_s": seg["duration"],
                 "pplat_cmH2O": seg["pplat_cmH2O"],
+                "time_to_peak_flow_s": time_to_peak_flow_this_breath,
             })
             V_comps = seg["V_comps"]
             t_mand_start = t_current
@@ -1189,6 +1194,10 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 Q_peak=seg["Q_peak_insp"], flow_cycle_threshold=fct,
                 ps_level=ps_level,
                 Q_demand=Q_demand)
+            
+            peak_idx = int(np.argmax(seg["flow"])) if seg["flow"].size > 0 else 0
+            time_to_peak_flow_this_breath = (
+                float(seg["t_rel"][peak_idx]) if seg["t_rel"].size > 0 else None)
 
             delivered_vt = seg["delivered_vt_ml"] 
             _append(seg, t_current)
@@ -1197,6 +1206,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
                 "dyssynchrony_label": label, "delivered_vt_ml": delivered_vt,
                 "ppeak_cmH2O": seg["ppeak_cmH2O"], "t_start_s": t_current,
                 "duration_s": seg["duration"],
+                "time_to_peak_flow_s": time_to_peak_flow_this_breath,
             })
             V_comps = seg["V_comps"]
             t_current = attempt_onset_t + seg["duration"]
@@ -1229,6 +1239,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
             "delivered_vt_ml": 0.0, "ppeak_cmH2O": float(seg_p.max()) if n_eff_steps else peep,
             "t_start_s": t_current,
             "duration_s": n_eff_steps * DT,
+            "time_to_peak_flow_s": None,
         })
         t_current = attempt_onset_t + n_eff_steps * DT
         next_attempt_t = _advance_schedule(rng, next_attempt_t, t_current, attempt_interval, pmus_cv)

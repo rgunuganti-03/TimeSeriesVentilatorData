@@ -757,6 +757,8 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     pressure_trajectory = np.zeros(n_cycles)
     delivered_vt_trajectory = np.zeros(n_cycles)
 
+    breath_time_to_peak_flow_s: List[Optional[float]] = [None] * n_cycles
+
     t_offset = 0.0
     P_work = peep + (vt_target / C_ASSUMED_FALLBACK)  # closed-form fallback seed
     V_carry = np.zeros(comps["n_comps"])
@@ -818,6 +820,10 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
             )
             V_carry = V_exp_end.copy()
             delivered_vt = float(np.sum(V_end_insp))
+            n_insp_this_breath = max(2, int(round(t_insp / DT)))
+            insp_Q = Q[:n_insp_this_breath]
+            if insp_Q.size > 0:
+                breath_time_to_peak_flow_s[n] = float(t[int(np.argmax(insp_Q))])
 
         T_list.append(t + t_offset)
         P_list.append(P)
@@ -925,6 +931,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
         "pressure_trajectory": pressure_trajectory,
         "delivered_vt_trajectory": delivered_vt_trajectory,
         "ppeak_cmH2O": ppeak,
+        "breath_time_to_peak_flow_s": breath_time_to_peak_flow_s,
         "ppeak_final_breath_cmH2O": ppeak_final_breath, 
         "delivered_vt_ml": delivered_vt_final,
         "driving_p_cmH2O": driving_p,

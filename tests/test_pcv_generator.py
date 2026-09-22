@@ -85,6 +85,7 @@ NORMAL_NEONATE_PARAMS = {
     "resistance_cmH2O_L_s":     80,
     "peep_cmH2O":               5,
     "ie_ratio":                 0.50,
+    "rise_time_s":              0.05,
     "insp_pressure_cmH2O":      7.0,   # placeholder — refine once fix #7 lands
 
     # + whichever engine-specific keys your file's baseline fixture already
@@ -1325,5 +1326,7 @@ class TestParameterGrid:
             f"(7x7x6x3x4), got {expected}"
         )
 if __name__ == "__main__":
-    result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
-    print("time_to_peak_flow_s" in result, list(result.keys()))
+    for insp_p in (5.0, 6.0, 7.0, 8.0, 10.0, 12.0):
+        p = {**NORMAL_NEONATE_PARAMS, "insp_pressure_cmH2O": insp_p}
+        r = generate_breath_cycles(p, n_cycles=5)
+        print(insp_p, r["delivered_vt_ml"], r["is_valid"])

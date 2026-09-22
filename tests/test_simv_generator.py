@@ -469,9 +469,22 @@ class TestNeonatalConditions:
     def test_rds_time_to_peak_flow_shorter_than_normal_neonate(self):
         """Short-tau signature — RDS's collapsed compliance shortens the
         time constant despite unchanged resistance."""
-        r_normal = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
-        r_rds    = generate_breath_cycles(RDS_PARAMS, n_cycles=5)
-        assert r_rds["time_to_peak_flow_s"] < r_normal["time_to_peak_flow_s"]
+        strong_effort = {"effort_rate_per_min": 30.0, "pmus_peak_cmH2O": 20.0,
+                          "trigger_threshold_cmH2O": 0.5}
+        r_normal = generate_breath_cycles(
+            {**NORMAL_NEONATE_PARAMS, **strong_effort}, n_cycles=6, seed=60)
+        r_rds = generate_breath_cycles(
+            {**RDS_PARAMS, **strong_effort}, n_cycles=6, seed=60)
+
+        spont_normal = [b["time_to_peak_flow_s"] for b in r_normal["breath_records"]
+                         if b["breath_type"] == "spontaneous" and b["time_to_peak_flow_s"] is not None]
+        spont_rds = [b["time_to_peak_flow_s"] for b in r_rds["breath_records"]
+                     if b["breath_type"] == "spontaneous" and b["time_to_peak_flow_s"] is not None]
+        assert spont_normal and spont_rds, (
+            "fixture didn't produce spontaneous breaths in one or both runs -- "
+            "adjust strong_effort until n_spontaneous_breaths > 0 for both"
+        )
+        assert np.mean(spont_rds) < np.mean(spont_normal)
         # Use whichever of time_to_peak_flow_s / fill_fraction your file's
         # generator exposes (PCV/PRVC/PSV/SIMV expose time_to_peak_flow_s;
         # VCV does not — use fill_fraction-equivalent reasoning there instead).

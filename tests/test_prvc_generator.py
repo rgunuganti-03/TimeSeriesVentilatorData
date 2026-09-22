@@ -150,7 +150,7 @@ RDS_PARAMS = {
 
 
 CORE_KEYS = {"time", "pressure", "flow", "volume"}
-TRAJECTORY_KEYS = {"pressure_trajectory", "delivered_vt_trajectory"}
+TRAJECTORY_KEYS = {"pressure_trajectory", "delivered_vt_trajectory", "breath_time_to_peak_flow_s"}
 NUMERIC_METRIC_KEYS = {
     "ppeak_cmH2O", "delivered_vt_ml", "driving_p_cmH2O", "mean_paw_cmH2O",
     "auto_peep_cmH2O", "fill_fraction", "minute_vent_l",
@@ -239,6 +239,16 @@ class TestInterfaceContract:
         assert result["breaths_to_converge"] is None or isinstance(
             result["breaths_to_converge"], int
         )
+    
+    def test_breath_time_to_peak_flow_s_shape_and_nullability(self):
+        """Distinct contract from its trajectory siblings: a plain list
+        (not ndarray), length n_cycles, breath 1 always None (flow-
+        prescribed test breath has no peak-flow shape to measure)."""
+        result = generate_breath_cycles(NORMAL_PARAMS, n_cycles=6, seed=0)
+        arr = result["breath_time_to_peak_flow_s"]
+        assert len(arr) == 6
+        assert arr[0] is None
+        assert all(v is None or isinstance(v, float) for v in arr)
 
     def test_missing_required_param_raises_value_error(self):
         bad = {k: v for k, v in NORMAL_PARAMS.items() if k != "vt_target_ml"}
@@ -349,7 +359,10 @@ class TestNeonatalConditions:
         time constant despite unchanged resistance."""
         r_normal = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
         r_rds    = generate_breath_cycles(RDS_PARAMS, n_cycles=5)
-        assert r_rds["time_to_peak_flow_s"] < r_normal["time_to_peak_flow_s"]
+        t_peak_normal = r_normal["breath_time_to_peak_flow_s"][-1]
+        t_peak_rds    = r_rds["breath_time_to_peak_flow_s"][-1]
+        assert t_peak_normal is not None and t_peak_rds is not None
+        assert t_peak_rds < t_peak_normal
         # Use whichever of time_to_peak_flow_s / fill_fraction your file's
         # generator exposes (PCV/PRVC/PSV/SIMV expose time_to_peak_flow_s;
         # VCV does not — use fill_fraction-equivalent reasoning there instead).
