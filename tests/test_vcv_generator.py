@@ -1322,8 +1322,3 @@ class TestParameterGrid:
             f"(4x7x6x3x2), got {expected}"
         )
 
-if __name__ == "__main__":
-    r_normal = generate_breath_cycles(NORMAL_PARAMS_SQR, n_cycles=5)
-    p_leak = {**NORMAL_PARAMS_SQR, "ett_cuff_leak_fraction": 0.20}
-    r_leak = generate_breath_cycles(p_leak, n_cycles=5)
-    print(r_normal["ppeak_cmH2O"], r_leak["ppeak_cmH2O"])

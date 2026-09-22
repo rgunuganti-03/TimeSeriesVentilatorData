@@ -1212,18 +1212,7 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 60)
 
-    base = {
-    "vt_target_ml": 420.0, "respiratory_rate": 16.0, "peep_cmH2O": 5.0,
-    "ie_ratio": 0.5, "pressure_ceiling_cmH2O": 25.0,
-    "compliance_ml_per_cmH2O": 80.0, "resistance_cmH2O_L_s": 10.0, "condition": "Normal",
-    }
-    r_no_leak = generate_breath_cycles(base, n_cycles=1, seed=1)  # breath 1 only -- isolates Pattern A
-    r_leak    = generate_breath_cycles({**base, "ett_cuff_leak_fraction": 0.20}, n_cycles=1, seed=1)
-    print("breath-1 (VC test) delivered_vt:", r_no_leak["delivered_vt_ml"], "->", r_leak["delivered_vt_ml"])
-
-    r_no_leak_10 = generate_breath_cycles(base, n_cycles=10, seed=1)  # breath 10 is PC -- isolates Pattern B
-    r_leak_10    = generate_breath_cycles({**base, "ett_cuff_leak_fraction": 0.20}, n_cycles=10, seed=1)
-    print("breath-10 (PC) delivered_vt:", r_no_leak_10["delivered_vt_ml"], "->", r_leak_10["delivered_vt_ml"])
+    
 
     if all_pass:
         print("ALL SMOKE TESTS PASSED")

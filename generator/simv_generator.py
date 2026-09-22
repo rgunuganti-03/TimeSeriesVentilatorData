@@ -1658,30 +1658,7 @@ if __name__ == "__main__":
 
     n_pass = sum(_results)
 
-    base_vc = {
-    "mandatory_mode": "VC", "tidal_volume_ml": 420.0, "flow_pattern": "square",
-    "respiratory_rate": 8.0, "peep_cmH2O": 5.0, "ie_ratio": 0.5, "rise_time_s": 0.1,
-    "f_window": 0.25, "pressure_support_cmH2O": 10.0, "flow_cycle_threshold": 0.25,
-    "trigger_threshold_cmH2O": 1.5, "pmus_peak_cmH2O": 20.0, "effort_rate_per_min": 30.0,
-    "effort_duration_s": 0.8, "pmus_cv": 0.15, "compliance_ml_per_cmH2O": 60.0,
-    "resistance_cmH2O_L_s": 10.0, "condition": "Normal",
-    }
-    # High effort rate/pmus so spontaneous breaths actually occur -- need both
-    # mandatory (VC) and spontaneous breath types exercised in the same run.
-    r_no_leak = generate_breath_cycles(base_vc, n_cycles=6, seed=60)
-    r_leak    = generate_breath_cycles({**base_vc, "ett_complication": "cuff_leak",
-                                        "cuff_leak_fraction": 0.20}, n_cycles=6, seed=60)
-
-    print("mandatory_delivered_vt_ml:", r_no_leak["mandatory_delivered_vt_ml"], "->", r_leak["mandatory_delivered_vt_ml"])
-    print("spontaneous_delivered_vt_ml:", r_no_leak["spontaneous_delivered_vt_ml"], "->", r_leak["spontaneous_delivered_vt_ml"])
-    print("n_spontaneous_breaths:", r_no_leak["n_spontaneous_breaths"], r_leak["n_spontaneous_breaths"])
-
-    base_pc = {**base_vc, "mandatory_mode": "PC", "insp_pressure_cmH2O": 15.0}
-    del base_pc["tidal_volume_ml"]; del base_pc["flow_pattern"]
-    r_pc_no_leak = generate_breath_cycles(base_pc, n_cycles=6, seed=60)
-    r_pc_leak    = generate_breath_cycles({**base_pc, "ett_complication": "cuff_leak",
-                                            "cuff_leak_fraction": 0.20}, n_cycles=6, seed=60)
-    print("PC mandatory_delivered_vt_ml:", r_pc_no_leak["mandatory_delivered_vt_ml"], "->", r_pc_leak["mandatory_delivered_vt_ml"])
+    
     
     sys.exit(0 if n_pass == n_total else 1)
 

@@ -1188,17 +1188,5 @@ if __name__ == "__main__":
     # ---- Summary --------------------------------------------------------
     n_pass = sum(_results)
 
-    base = {
-    "respiratory_rate": 15, "insp_pressure_cmH2O": 12.0,
-    "compliance_ml_per_cmH2O": 60.0, "resistance_cmH2O_L_s": 8.0,
-    "ie_ratio": 0.5, "peep_cmH2O": 5.0, "rise_time_s": 0.1,
-    "condition": "Normal",
-    }
-    r_no_leak = generate_breath_cycles(base, n_cycles=5)
-    r_leak    = generate_breath_cycles({**base, "ett_cuff_leak_fraction": 0.20}, n_cycles=5)
-
-    print("delivered_vt_ml:", r_no_leak["delivered_vt_ml"], "->", r_leak["delivered_vt_ml"])
-    print("ppeak_cmH2O:    ", r_no_leak["ppeak_cmH2O"], "->", r_leak["ppeak_cmH2O"])
-    print("mean insp flow: ", r_no_leak["flow"][r_no_leak["flow"] > 0].mean(),
-        "->", r_leak["flow"][r_leak["flow"] > 0].mean())
+ 
     sys.exit(0 if n_pass == n_total else 1)
