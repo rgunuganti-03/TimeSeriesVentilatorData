@@ -1680,9 +1680,3 @@ class TestTriggerMechanism:
             f"got trig_rate={trig_rate:.2f}"
         )
 
-if __name__ == "__main__":
-    r_no_leak_1 = generate_breath_cycles(NORMAL_PARAMS, n_cycles=1, seed=45)
-    r_leak_1    = generate_breath_cycles({**NORMAL_PARAMS, "ett_complication": "cuff_leak",
-                                        "cuff_leak_fraction": 0.20}, n_cycles=1, seed=45)
-    print("time span, no leak:", r_no_leak_1["time"][-1])
-    print("time span, leak:   ", r_leak_1["time"][-1])

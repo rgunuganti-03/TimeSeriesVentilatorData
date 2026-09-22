@@ -760,27 +760,36 @@ class TestETTComplications:
         delivered_vt / fill_fraction, but Ppeak still equals PIP
     """
 
-    def test_cuff_leak_reduces_delivered_vt(self):
+    def test_cuff_leak_leaves_delivered_vt_unaffected(self):
+        """PCV is pressure-prescribed: leak inflates reported flow but
+        never reduces the compartment fill (see updated class docstring)."""
         r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
         p_leak = {**NORMAL_PARAMS, "ett_cuff_leak_fraction": 0.20}
         r_leak = generate_breath_cycles(p_leak, n_cycles=3)
-        assert r_leak["delivered_vt_ml"] < r_normal["delivered_vt_ml"]
+        assert abs(r_leak["delivered_vt_ml"] - r_normal["delivered_vt_ml"]) < 5.0
 
-    def test_cuff_leak_fraction_matches_expected_reduction(self):
+    def test_cuff_leak_raises_mean_inspiratory_flow(self):
         r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
         p_leak = {**NORMAL_PARAMS, "ett_cuff_leak_fraction": 0.25}
         r_leak = generate_breath_cycles(p_leak, n_cycles=3)
-        expected = r_normal["delivered_vt_ml"] * 0.75
-        assert abs(r_leak["delivered_vt_ml"] - expected) < 5.0
+        flow_normal = r_normal["flow"][r_normal["flow"] > 0].mean()
+        flow_leak = r_leak["flow"][r_leak["flow"] > 0].mean()
+        assert flow_leak > flow_normal, (
+            f"no-leak mean insp flow={flow_normal:.3f}, "
+            f"leak mean insp flow={flow_leak:.3f}"
+        )
 
-    def test_larger_cuff_leak_produces_larger_vt_loss(self):
+    def test_larger_cuff_leak_produces_larger_flow_inflation(self):
         r_normal = generate_breath_cycles(NORMAL_PARAMS, n_cycles=3)
         p_small = {**NORMAL_PARAMS, "ett_cuff_leak_fraction": 0.10}
         p_large = {**NORMAL_PARAMS, "ett_cuff_leak_fraction": 0.35}
         r_small = generate_breath_cycles(p_small, n_cycles=3)
         r_large = generate_breath_cycles(p_large, n_cycles=3)
-        gap_small = r_normal["delivered_vt_ml"] - r_small["delivered_vt_ml"]
-        gap_large = r_normal["delivered_vt_ml"] - r_large["delivered_vt_ml"]
+        flow_normal = r_normal["flow"][r_normal["flow"] > 0].mean()
+        flow_small = r_small["flow"][r_small["flow"] > 0].mean()
+        flow_large = r_large["flow"][r_large["flow"] > 0].mean()
+        gap_small = flow_small - flow_normal
+        gap_large = flow_large - flow_normal
         assert gap_large > gap_small
 
     def test_cuff_leak_does_not_change_ppeak(self):
