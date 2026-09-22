@@ -670,10 +670,17 @@ def _validate_params(params: Dict) -> None:
     missing = [k for k in REQUIRED_PARAMS if k not in params]
     if missing:
         raise ValueError(f"Missing required PRVC params: {missing}")
-    if params["compliance_ml_per_cmH2O"] <= 0:
-        raise ValueError("compliance_ml_per_cmH2O must be positive")
-    if params["resistance_cmH2O_L_s"] <= 0:
-        raise ValueError("resistance_cmH2O_L_s must be positive")
+    population = params.get("population", "adult")
+    rr_lo, rr_hi = (20, 80)   if population == "neonate" else (5, 35)
+    c_lo,  c_hi  = (0.3, 10)  if population == "neonate" else (5, 150)
+    r_lo,  r_hi  = (40, 200)  if population == "neonate" else (0.5, 50)
+
+    if not (rr_lo <= float(params["respiratory_rate"]) <= rr_hi):
+        raise ValueError(f"respiratory_rate must be {rr_lo}–{rr_hi} bpm")
+    if not (c_lo <= float(params["compliance_ml_per_cmH2O"]) <= c_hi):
+        raise ValueError(f"compliance_ml_per_cmH2O must be {c_lo}–{c_hi} mL/cmH2O")
+    if not (r_lo <= float(params["resistance_cmH2O_L_s"]) <= r_hi):
+        raise ValueError(f"resistance_cmH2O_L_s must be {r_lo}–{r_hi} cmH2O/L/s")
     if params["ie_ratio"] <= 0:
         raise ValueError("ie_ratio must be positive")
 

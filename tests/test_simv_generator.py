@@ -141,7 +141,8 @@ NORMAL_NEONATE_PARAMS = {
     "tidal_volume_ml":          15.0,    # ADD — required when mandatory_mode="VC"
     "flow_pattern":             "square",# ADD — required when mandatory_mode="VC"
     "f_window":                 0.20,    # ADD
-    "insp_pressure_cmH2O":      7.0,  
+    "insp_pressure_cmH2O":      7.0,  # unused -- mandatory_mode is "VC" for this fixture,
+                                          # only read when mandatory_mode == "PC"
     "pressure_support_cmH2O":   8.0,     # ADD
     "flow_cycle_threshold":     0.15,    # ADD
     "trigger_threshold_cmH2O":  0.5,     # ADD
@@ -1343,6 +1344,4 @@ class TestParameterGrid:
             assert isinstance(values, list), f"{key} is not a list"
             assert len(values) >= 2, f"{key} needs >= 2 values for a real sweep"
 
-if __name__ == "__main__":
-    result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
-    print("time_to_peak_flow_s" in result, list(result.keys()))
+

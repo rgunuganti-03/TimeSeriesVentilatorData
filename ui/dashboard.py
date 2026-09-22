@@ -42,7 +42,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from generator.conditions    import get_condition, get_condition_for_mode, get_condition_meta, list_conditions
 from generator.vcv_generator import DEFAULT_CHEST_WALL_COMPLIANCE, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, RECRUITMENT_SLOPES, NEONATE_RECRUITMENT_PARAMS, _peep_recruited_compliance_sigmoid, generate_breath_cycles as _gen_vcv
-from generator.pcv_generator import DEFAULT_CHEST_WALL_COMPLIANCE, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, RECRUITMENT_SLOPES, NEONATE_RECRUITMENT_PARAMS, _peep_recruited_compliance_sigmoid, generate_breath_cycles as _gen_pcv
+from generator.pcv_generator import DEFAULT_CHEST_WALL_COMPLIANCE, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, RECRUITMENT_SLOPES, NEONATE_RECRUITMENT_PARAMS, _peep_recruited_compliance_sigmoid, _peep_recruited_compliance, _C_rs, generate_breath_cycles as _gen_pcv
 from generator.psv_generator import DEFAULT_CHEST_WALL_COMPLIANCE, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, RECRUITMENT_SLOPES, NEONATE_RECRUITMENT_PARAMS, _peep_recruited_compliance_sigmoid, generate_breath_cycles as _gen_psv
 from generator.prvc_generator import DEFAULT_CHEST_WALL_COMPLIANCE, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, RECRUITMENT_SLOPES, NEONATE_RECRUITMENT_PARAMS, _peep_recruited_compliance_sigmoid, generate_breath_cycles as _gen_prvc
 from generator.simv_generator import DEFAULT_CHEST_WALL_COMPLIANCE, NEONATE_DEFAULT_CHEST_WALL_COMPLIANCE, RECRUITMENT_SLOPES, NEONATE_RECRUITMENT_PARAMS, _peep_recruited_compliance_sigmoid, generate_breath_cycles as _gen_simv  
@@ -303,8 +303,8 @@ def _pcv_default_driving_pressure(preset: dict) -> int:
             C, peep, peep_ref, NEONATE_RECRUITMENT_PARAMS[preset["condition"]])
     else:
         slope = RECRUITMENT_SLOPES.get(preset["condition"], 0.0)
-        C_rec = C + slope * max(0.0, peep - peep_ref)
-    C_rs = 1.0 / (1.0 / max(C_rec, 0.1) + 1.0 / max(C_chest, 0.1))
+        C_rec = _peep_recruited_compliance(C, peep, peep_ref, slope)
+    C_rs = _C_rs(C_rec, C_chest)
 
     t_cycle = 60.0 / rr
     t_insp  = t_cycle * ie / (1.0 + ie)
@@ -1389,3 +1389,4 @@ def render():
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
     render_waveform_plot(result, condition_name)
     render_export(result, params, condition_name, engine_name)
+
