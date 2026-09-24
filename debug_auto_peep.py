@@ -1,3 +1,21 @@
+NORMAL_PARAMS = {
+    "vt_target_ml": 420.0,
+    "respiratory_rate": 16,
+    "peep_cmH2O": 5,
+    "ie_ratio": 0.5,
+    "pressure_ceiling_cmH2O": 25.0,
+    "compliance_ml_per_cmH2O": 80.0,
+    "resistance_cmH2O_L_s": 10.0,
+    "condition": "Normal",
+}
+
+SEVERE_ARDS_PARAMS = {
+    **NORMAL_PARAMS,
+    "compliance_ml_per_cmH2O": 18.0,
+    "resistance_cmH2O_L_s": 16.0,
+    "condition": "Severe ARDS",
+    "pressure_ceiling_cmH2O": 15.0,
+}
 NORMAL_NEONATE_PARAMS = {
     "condition":                "Normal Neonate",
     "population":               "neonate",
@@ -39,18 +57,89 @@ import numpy as np
 
 
 
-import generator.psv_generator as psv
+# import generator.prvc_generator as prvc
 
-p_stress = {**NORMAL_NEONATE_PARAMS, "stress_index": 0.85,
-            "pressure_support_cmH2O": 15.0, "pmus_peak_cmH2O": 15.0}
-r = psv.generate_breath_cycles(p_stress, n_cycles=10, seed=50)
-print("delivered_vt_ml:", r["delivered_vt_ml"])
-print("patient_vt_ml:", r["patient_vt_ml"])
-print("ppeak_cmH2O:", r["ppeak_cmH2O"])
-print("is_valid:", r["is_valid"], r["invalid_reason"])
+# r = prvc.generate_breath_cycles(NORMAL_PARAMS, n_cycles=10, seed=1)
+# print("converged:", r["converged"], "delivered_vt_ml (final):", r["delivered_vt_trajectory"][-1])
+# print("pressure_trajectory:", r["pressure_trajectory"])
 
-r_rds = psv.generate_breath_cycles(RDS_PARAMS, n_cycles=10, seed=42)
-print("RDS:", r_rds["is_valid"], r_rds["delivered_vt_ml"], r_rds["ppeak_cmH2O"])
+# # Estimate V_target_per_comp's scale at convergence for comparison:
+# comps = prvc._build_compartments("Normal", 80.0, 10.0, 5.0, 5.0, 0.0, prvc.DEFAULT_CHEST_WALL_COMPLIANCE, "adult")
+# offset = 50.0 * (prvc.IBW_KG / prvc.IBW_KG)  # adult: weight_kg == IBW_KG, offset == 50.0
+# print("V_target_per_comp scale (offset, adult):", offset, " vs. converged delivered VT:", r["delivered_vt_trajectory"][-1])
+
+# r = prvc.generate_breath_cycles(NORMAL_PARAMS, n_cycles=10, seed=1)
+# print("converged:", r["converged"], "delivered_vt_ml (final):", r["delivered_vt_trajectory"][-1])
+# print("V_target_per_comp scale (new, adult):", 420.0 * 1.0, " vs. converged delivered VT:", r["delivered_vt_trajectory"][-1])
+
+# print(NORMAL_PARAMS.get("stress_index", "not set — check default"))
+
+# r_stress = prvc.generate_breath_cycles({**NORMAL_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
+# print("converged:", r_stress["converged"], "delivered_vt_ml (final):", r_stress["delivered_vt_trajectory"][-1])
+# print("pressure_trajectory:", r_stress["pressure_trajectory"])
+
+import generator.prvc_generator as prvc
+
+# _original = prvc._compliance_two_regime
+# def _instrumented(V_mL, C_base, V_ref, stress_index):
+#     V_turnover = 1.4 * max(V_ref, 1.0)
+#     if V_mL > V_turnover:
+#         print(f"REGIME 2 HIT: V={V_mL:.2f} V_ref={V_ref:.2f} V/V_ref={V_mL/V_ref:.2f}")
+#     return _original(V_mL, C_base, V_ref, stress_index)
+# prvc._compliance_two_regime = _instrumented
+
+# r_ards_stress = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
+
+# prvc._compliance_two_regime = _original  # restore immediately after use
+
+# print("converged:", r_ards_stress["converged"])
+# print("delivered_vt_ml (final):", r_ards_stress["delivered_vt_trajectory"][-1])
+# print("pressure_trajectory:", r_ards_stress["pressure_trajectory"])
+r_unbounded = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 1.0}, n_cycles=10, seed=1)
+print("flat converged:", r_unbounded["converged"])
+print("flat trajectory:", r_unbounded["delivered_vt_trajectory"])
+
+prvc._compliance_nonlinear = lambda V_mL, C_base, V_ref, stress_index=1.0: (
+    C_base if abs(stress_index - 1.0) < 0.01 or V_mL <= 0.0
+    else C_base * (max(V_mL / max(V_ref, 1.0), 0.01) ** (1.0 - stress_index))
+)
+r_original = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
+print("original-unbounded converged:", r_original["converged"])
+print("original-unbounded trajectory:", r_original["delivered_vt_trajectory"])
+
+# restore the real dispatch before continuing anything else:
+import importlib
+importlib.reload(prvc)
+
+r_two_regime = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
+print("two-regime converged:", r_two_regime["converged"])
+print("two-regime trajectory:", r_two_regime["delivered_vt_trajectory"])
+# _original = prvc._compliance_two_regime
+# def _instrumented(V_mL, C_base, V_ref, stress_index):
+#     V_turnover = 1.4 * max(V_ref, 1.0)
+#     if V_mL > V_turnover:
+#         print(f"REGIME 2 HIT: V={V_mL:.2f} V_ref={V_ref:.2f} V/V_ref={V_mL/V_ref:.2f}")
+#     return _original(V_mL, C_base, V_ref, stress_index)
+# prvc._compliance_two_regime = _instrumented
+
+# r_stress = prvc.generate_breath_cycles({**NORMAL_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
+
+# prvc._compliance_two_regime = _original
+# print("delivered_vt_ml (final):", r_stress["delivered_vt_trajectory"][-1])
+
+# r_ards_stress = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
+
+r_flat = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 1.0}, n_cycles=10, seed=1)
+print("flat (SI=1.0) delivered_vt_ml (final):", r_flat["delivered_vt_trajectory"][-1])
+
+# import generator.prvc_generator as prvc
+# r_stress = prvc.generate_breath_cycles({**NORMAL_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
+# print("converged:", r_stress["converged"], "delivered_vt_ml (final):", r_stress["delivered_vt_trajectory"][-1])
+# print("pressure_trajectory:", r_stress["pressure_trajectory"])
+
+# r_rds = prvc.generate_breath_cycles(RDS_PARAMS, n_cycles=10, seed=42)
+# print("RDS:", r_rds["converged"], r_rds["delivered_vt_trajectory"][-1], r_rds.get("ppeak_cmH2O"))
+# restore afterward:
 #                             V_turnover_ratio=2.5, stress_index_decline=15.0):
 #     if abs(stress_index - 1.0) < 0.01 or V_mL <= 0.0:
 #         return C_base

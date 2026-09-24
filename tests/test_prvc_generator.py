@@ -451,23 +451,33 @@ class TestTestBreathBootstrap:
             f"Severe ARDS plateau {r_severe['test_breath_plateau_cmH2O']:.1f} should exceed "
             f"Normal plateau {r_normal['test_breath_plateau_cmH2O']:.1f}"
         )
-    def test_run_pc_breath_reference_volume_scales_with_weight(self):
-        """Regression test: V_target_per_comp used a flat 50 mL offset
-        regardless of population before this fix -- silently wrong for any
-        neonatal condition with stress_index != 1.0 (RDS's 0.85)."""
-        from generator.prvc_generator import _run_pc_breath, IBW_KG
+    
+
+    def test_run_pc_breath_reference_volume_scales_with_vt_target(self):
+        """Regression test: V_target_per_comp used to be a flat 50 mL
+        offset (or, briefly, a weight-scaled offset) regardless of the
+        breath's actual target VT -- confirmed a converged adult breath
+        (~405 mL) landed at ~8x that reference, which would have put
+        every converged breath deep in _compliance_two_regime's declining
+        tail by construction. Now anchored directly to vt_target_ml, so
+        different targets must produce genuinely different trajectories
+        under stress_index != 1.0, not just weight (weight_kg no longer
+        drives this reference at all -- see decisions-and-physiology.md)."""
+        from generator.prvc_generator import _run_pc_breath
         comps_light = {"n_comps": 1, "C_base": np.array([1.0]), "R_base": np.array([50.0]),
                     "R_exp_ratio": np.array([1.0]), "tethering": np.array([0.5]),
                     "fractions": np.array([1.0])}
         V_start = np.array([2.0])
 
-        _, _, _, V_neo, *_ = _run_pc_breath(comps_light, V_start, 15.0, 5.0, 0.4, 0.6, 0.05, 0.85, 1.5)
-        _, _, _, V_adult, *_ = _run_pc_breath(comps_light, V_start, 15.0, 5.0, 0.4, 0.6, 0.05, 0.85, IBW_KG)
+        _, _, _, V_small_target, *_ = _run_pc_breath(
+            comps_light, V_start, 15.0, 5.0, 0.4, 0.6, 0.05, 0.85, 1.5, vt_target_ml=15.0)
+        _, _, _, V_large_target, *_ = _run_pc_breath(
+            comps_light, V_start, 15.0, 5.0, 0.4, 0.6, 0.05, 0.85, 70.0, vt_target_ml=420.0)
 
         # With stress_index=0.85 (non-linear), the reference volume genuinely
-        # shapes delivered volume -- a 1.5 kg vs. 70 kg V_target_per_comp
-        # must produce different trajectories, not identical ones.
-        assert not np.allclose(V_neo, V_adult)
+        # shapes delivered volume -- a 15 mL vs. 420 mL vt_target_ml must
+        # produce different trajectories, not identical ones.
+        assert not np.allclose(V_small_target, V_large_target)
 
 # ---------------------------------------------------------------------------
 # Class 4 — Outer loop control (PRVC-specific)

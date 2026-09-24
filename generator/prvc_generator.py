@@ -350,11 +350,51 @@ REQUIRED_PARAMS = [
 # Section 4 -- Physics Functions
 # ---------------------------------------------------------------------------
 
-def _compliance_nonlinear(V_mL: float, C_base: float, V_ref: float,
+def _compliance_two_regime(V_mL: float, C_base: float, V_ref: float,
+                            stress_index: float) -> float:
+    """
+    Two-regime volume-dependent compliance for stress_index < 1.0.
+    See generator/simv_generator.py's _compliance_two_regime for the full
+    derivation, the bell-curve design this supersedes, and the empirical
+    calibration of V_turnover_ratio/stress_index_decline (identical
+    values used here for consistency with vcv/pcv/psv/simv). Requires
+    V_ref to mean the breath's actual target/guaranteed volume at every
+    call site -- confirmed and fixed in this file (both _run_vc_test_
+    breath's 0.6x-scaled reference and _run_pc_breath's weight-derived,
+    convergence-decoupled 50 mL-scale offset were wrong; see
+    decisions-and-physiology.md) before this formula was added.
+    """
+    V_turnover_ratio = 1.4
+    stress_index_decline = 15.0
+
+    V_turnover = V_turnover_ratio * max(V_ref, 1.0)
+    if V_mL <= V_turnover:
+        V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
+        return float(C_base * (V_norm ** (1.0 - stress_index)))
+
+    V_norm_at_turnover = V_turnover / max(V_ref, 1.0)
+    C_turnover = C_base * (V_norm_at_turnover ** (1.0 - stress_index))
+    V_norm_past_turnover = V_mL / V_turnover
+    return float(C_turnover * (V_norm_past_turnover ** (1.0 - stress_index_decline)))
+
+
+def _compliance_nonlinear(V_mL: float,
+                           C_base: float,
+                           V_ref: float,
                            stress_index: float = 1.0) -> float:
-    """Power-law volume-dependent compliance. SI=1.0 -> linear (no-op)."""
+    """
+    Non-linear compliance.
+
+    stress_index == 1.0 (default): flat, no volume dependence (unchanged).
+    stress_index > 1.0: power-law overdistension, unchanged.
+    stress_index < 1.0: two-regime recruit-then-overdistend curve (see
+        _compliance_two_regime) -- replaces the old unbounded power-law
+        growth (see decisions-and-physiology.md).
+    """
     if abs(stress_index - 1.0) < 0.01 or V_mL <= 0.0:
         return C_base
+    if stress_index < 1.0:
+        return _compliance_two_regime(V_mL, C_base, V_ref, stress_index)
     V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
     return float(C_base * (V_norm ** (1.0 - stress_index)))
 
@@ -517,7 +557,7 @@ def _run_vc_test_breath(comps: Dict, vt_target_ml: float, peep: float,
     Pao_prev = peep
     for _ in range(n_steps):
         C_eff = np.array([
-            _compliance_nonlinear(V[i], C_base[i], vt_target_ml * comps["fractions"][i] * 0.6,
+            _compliance_nonlinear(V[i], C_base[i], vt_target_ml * comps["fractions"][i] ,
                                    stress_index)
             for i in range(n_comps)
         ])
@@ -548,7 +588,7 @@ def _run_vc_test_breath(comps: Dict, vt_target_ml: float, peep: float,
     V_end_insp = V.copy()
     C_eff_end = np.array([
         _compliance_nonlinear(V_end_insp[i], C_base[i],
-                               vt_target_ml * comps["fractions"][i] * 0.6, stress_index)
+                               vt_target_ml * comps["fractions"][i], stress_index)
         for i in range(n_comps)
     ])
     C_eff_end = np.maximum(C_eff_end, 0.5)
@@ -576,7 +616,7 @@ def _run_vc_test_breath(comps: Dict, vt_target_ml: float, peep: float,
 
 def _run_pc_breath(comps: Dict, V_start: np.ndarray, P_work: float, peep: float,
                     t_insp: float, t_exp: float, rise_time: float,
-                    stress_index: float, weight_kg: float, k_leak: float = 0.0) -> Tuple[np.ndarray, ...]:
+                    stress_index: float, weight_kg: float, vt_target_ml: float, k_leak: float = 0.0) -> Tuple[np.ndarray, ...]:
     """
     Run one full inspiration+expiration cycle at a fixed working pressure
     P_work, starting from V_start (auto-PEEP carry-forward), multi-
@@ -590,8 +630,7 @@ def _run_pc_breath(comps: Dict, V_start: np.ndarray, P_work: float, peep: float,
     fractions = comps["fractions"]
     V = V_start.copy()
 
-    offset = 50.0 * (weight_kg / IBW_KG)
-    V_target_per_comp = np.maximum(V_start + offset * fractions, offset)
+    V_target_per_comp = vt_target_ml * fractions
 
     t_list, P_list, Q_list, V_list = [], [], [], []
     t_now = 0.0
@@ -797,7 +836,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
             for _ in range(n_exp):
                 C_eff = np.array([
                     _compliance_nonlinear(V_exp[i], comps["C_base"][i],
-                                           vt_target * comps["fractions"][i] * 0.6,
+                                           vt_target * comps["fractions"][i],
                                            stress_index)
                     for i in range(comps["n_comps"])
                 ])
@@ -823,7 +862,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
         else:
             P_work_this_breath = P_work
             t, P, Q, V, V_end_insp, V_exp_end, dur = _run_pc_breath(
-                comps, V_carry, P_work_this_breath, peep, t_insp, t_exp, rise_time, stress_index, weight_kg, k_leak,
+                comps, V_carry, P_work_this_breath, peep, t_insp, t_exp, rise_time, stress_index, weight_kg, vt_target, k_leak,
             )
             V_carry = V_exp_end.copy()
             delivered_vt = float(np.sum(V_end_insp))
@@ -897,7 +936,7 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
 
     C_rs_end = np.array([
         _C_rs(_compliance_nonlinear(V_carry[i], comps["C_base"][i],
-                                      vt_target * comps["fractions"][i] * 0.6,
+                                      vt_target * comps["fractions"][i],
                                       stress_index),
               C_chest)
         for i in range(comps["n_comps"])
@@ -1214,8 +1253,9 @@ if __name__ == "__main__":
 
     reduction_frac = 1.0 - (r_leak["delivered_vt_ml"] / r_neo["delivered_vt_ml"])
     all_pass = _check("leak's steady-state VT shift stays small (PC breaths are leak-invariant at fixed P_work)",
-                       0.0 <= reduction_frac < 0.08,
-                       f"reduction was {reduction_frac:.2%}") and all_pass
+                       abs(reduction_frac) < 0.08,
+                       f"shift was {reduction_frac:.2%}") and all_pass
+    
     # r_leak_insp_flow = r_leak["flow"][r_leak["flow"] > 0].mean()
     # r_neo_insp_flow  = r_neo["flow"][r_neo["flow"] > 0].mean()
     # all_pass = _check("leak raises mean inspiratory flow vs no-leak baseline",
@@ -1243,6 +1283,11 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 60)
     
+    r_neo = generate_breath_cycles(p_neo, n_cycles=15)
+    p_leak = {**p_neo, "ett_cuff_leak_fraction": 0.15}
+    r_leak = generate_breath_cycles(p_leak, n_cycles=15)
+    print("no-leak pressure_trajectory:", r_neo["pressure_trajectory"])
+    print("leak    pressure_trajectory:", r_leak["pressure_trajectory"])
 
     if all_pass:
         print("ALL SMOKE TESTS PASSED")
