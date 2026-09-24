@@ -394,19 +394,51 @@ def _R_exp_dynamic(V_current: float,
     frac_exhaled = 1.0 - float(np.clip(V_current / max(V_end_insp, 1.0), 0.0, 1.0))
     return R_insp * (1.0 + (R_exp_ratio - 1.0) * frac_exhaled)
 
+def _compliance_two_regime(V_mL: float, C_base: float, V_ref: float,
+                            stress_index: float) -> float:
+    """
+    Two-regime volume-dependent compliance for stress_index < 1.0.
+    See generator/simv_generator.py's _compliance_two_regime for the full
+    derivation, the bell-curve design this replaces (found to crush
+    compliance on the recruiting side for partial-fill breaths -- e.g.
+    PCV delivered 6.67 mL instead of 15.25 mL on an otherwise-normal
+    neonatal breath), and the empirical calibration of V_turnover_ratio/
+    stress_index_decline. Identical values used here for consistency;
+    VCV's own guaranteed-full-delivery neonatal RDS stress case (SI=0.85)
+    was confirmed to produce a sane, non-spiking Ppeak (28.98 cmH2O)
+    under this same formula.
+    """
+    V_turnover_ratio = 1.4
+    stress_index_decline = 15.0
+
+    V_turnover = V_turnover_ratio * max(V_ref, 1.0)
+    if V_mL <= V_turnover:
+        V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
+        return float(C_base * (V_norm ** (1.0 - stress_index)))
+
+    V_norm_at_turnover = V_turnover / max(V_ref, 1.0)
+    C_turnover = C_base * (V_norm_at_turnover ** (1.0 - stress_index))
+    V_norm_past_turnover = V_mL / V_turnover
+    return float(C_turnover * (V_norm_past_turnover ** (1.0 - stress_index_decline)))
+
 
 def _compliance_nonlinear(V_mL: float,
                            C_base: float,
                            V_ref: float,
                            stress_index: float = 1.0) -> float:
     """
-    Non-linear compliance via power-law (Grasso/Ranieri stress index form):
-        C(V) = C_base * (V/V_ref) ^ (1 - SI)
+    Non-linear compliance.
 
-    SI = 1.0 → linear (default); SI < 1 → recruitment; SI > 1 → overdistension.
+    stress_index == 1.0 (default): flat, no volume dependence (unchanged).
+    stress_index > 1.0: power-law overdistension, unchanged.
+    stress_index < 1.0: two-regime recruit-then-overdistend curve (see
+        _compliance_two_regime) -- replaces the old unbounded power-law
+        growth (see decisions-and-physiology.md).
     """
     if abs(stress_index - 1.0) < 0.01 or V_mL <= 0.0:
         return C_base
+    if stress_index < 1.0:
+        return _compliance_two_regime(V_mL, C_base, V_ref, stress_index)
     V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
     return float(C_base * (V_norm ** (1.0 - stress_index)))
 
@@ -670,7 +702,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     R_comps_base = R_global * R_frac_arr
 
     # Reference volume for non-linear C (mid-inspiration target per compartment)
-    vt_ref_per_comp = vt_target * 0.5 * fractions
+    vt_ref_per_comp = vt_target * fractions
     vt_full_per_comp = vt_target * fractions     # full target per compartment
 
     # ETT Rohrer coefficients (with obstruction multiplier)

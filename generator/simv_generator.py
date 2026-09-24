@@ -411,12 +411,73 @@ def _R_exp_dynamic(V_current: float, V_end_insp: float, R_insp: float,
     frac_exhaled = 1.0 - float(np.clip(V_current / max(V_end_insp, 1.0), 0.0, 1.0))
     return R_insp * (1.0 + (R_exp_ratio - 1.0) * frac_exhaled)
 
+def _compliance_two_regime(V_mL: float, C_base: float, V_ref: float,
+                            stress_index: float) -> float:
+    """
+    Two-regime volume-dependent compliance for stress_index < 1.0.
+    Regime 1 (V <= V_turnover): the ORIGINAL, unmodified recruiting
+    power-law -- byte-identical to the pre-bell-curve formula, so every
+    typical/well-calibrated breath (VCV's guaranteed full delivery, PCV's
+    high-fill_fraction breaths) sees zero behavioral change. Regime 2
+    (V > V_turnover): an independent declining power-law, continuous
+    with Regime 1 at the seam by construction (both evaluate to the same
+    C_turnover exactly at V_turnover).
+
+    Replaces an earlier bell-curve design (single symmetric logistic-
+    derivative curve) that was found to crush compliance on the
+    RECRUITING side for any breath operating below its own reference
+    volume -- confirmed directly: PCV delivered 6.67 mL instead of
+    15.25 mL on an otherwise-normal neonatal breath under the bell
+    curve, because a single shared width parameter couldn't be narrow
+    enough to bound the pathological tail without also being narrow
+    enough to distort ordinary partial-fill breaths. Two independent
+    regimes remove that coupling entirely (see decisions-and-physiology.md).
+
+    V_turnover_ratio=1.4 and stress_index_decline=15.0 were both
+    calibrated empirically against this project's own reproduction case
+    (SIMV spontaneous breath, COPD, SI=0.85, effort_rate=25,
+    pmus_peak=15, trigger_threshold=1.0, seed=37) -- confirmed via a
+    monotonic sweep (2.5->622.6, 1.7->492.0, 1.5->431.7, 1.4->401.1 mL,
+    reduced from an original 782.85 mL unbounded-growth runaway) and
+    cross-checked against two PCV fixtures at multiple fill_fractions
+    (0.887, 0.956) with zero change in output at every ratio tested,
+    confirming those breaths never leave Regime 1. Below ~1.3 the
+    reduction becomes non-monotonic (likely feedback interaction with
+    this file's flow-cycling logic) -- 1.4 is deliberately the last
+    point on the smooth, monotonic side of that boundary, not the
+    single lowest value found. ASSUMPTIONS, not clinically sourced.
+    """
+    V_turnover_ratio = 1.4
+    stress_index_decline = 15.0
+
+    V_turnover = V_turnover_ratio * max(V_ref, 1.0)
+    if V_mL <= V_turnover:
+        V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
+        return float(C_base * (V_norm ** (1.0 - stress_index)))
+
+    V_norm_at_turnover = V_turnover / max(V_ref, 1.0)
+    C_turnover = C_base * (V_norm_at_turnover ** (1.0 - stress_index))
+    V_norm_past_turnover = V_mL / V_turnover
+    return float(C_turnover * (V_norm_past_turnover ** (1.0 - stress_index_decline)))
+
 
 def _compliance_nonlinear(V_mL: float, C_base: float, V_ref: float,
                            stress_index: float = 1.0) -> float:
-    """Power-law volume-dependent compliance. SI=1.0 -> linear (no-op)."""
+    """
+    Non-linear (volume-dependent) compliance.
+
+    stress_index == 1.0 (default): flat, no volume dependence (unchanged).
+    stress_index > 1.0: power-law overdistension, unchanged -- already
+        declines monotonically from V=0, never had a runaway failure mode.
+    stress_index < 1.0: two-regime recruit-then-overdistend curve (see
+        _compliance_two_regime) -- replaces the old unbounded power-law
+        growth that produced a confirmed runaway (see
+        decisions-and-physiology.md).
+    """
     if abs(stress_index - 1.0) < 0.01 or V_mL <= 0.0:
         return C_base
+    if stress_index < 1.0:
+        return _compliance_two_regime(V_mL, C_base, V_ref, stress_index)
     V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
     return float(C_base * (V_norm ** (1.0 - stress_index)))
 
@@ -1029,8 +1090,27 @@ def generate_breath_cycles(params: dict, n_cycles: int = 10,
     comps = _build_compartments(condition, C_global, R_global, peep,
                                  peep_ref, rec_slope, C_chest, population)
     n_comps = comps["n_comps"]
-    vt_ref_per_comp = comps["C_base"] * 5.0    # mid-fill reference, mL
-    vt_full_per_comp = comps["C_base"] * 10.0  # full-fill reference, mL
+
+    if mode == "VC":
+        # VC-mandatory breaths are flow-prescribed and GUARANTEED to
+        # reach tidal_volume_ml. vt_ref_per_comp feeds _compliance_bell's
+        # V_peak -- under the bell curve, compliance DECLINES past V_peak
+        # (unlike the old unbounded power-law curve, where going past
+        # the reference was harmless). The old compliance-derived
+        # reference (C_base*5.0, ~4.34 mL here) sat far below the actual
+        # 15 mL RDS target, putting every successful breath ~8 bell-
+        # widths past its own peak -- compliance collapsed toward the
+        # _C_rs floor and produced a 158 cmH2O pressure spike. Anchoring
+        # V_peak to the FULL target (not a half-target mid-fill
+        # convention, which would still land ~3.3 widths past peak by
+        # construction) puts peak compliance exactly at the breath's
+        # guaranteed end point.
+        vt_target_for_ref = float(params["tidal_volume_ml"])
+        vt_ref_per_comp = vt_target_for_ref * comps["fractions"]
+        vt_full_per_comp = vt_target_for_ref * comps["fractions"]
+    else:
+        vt_ref_per_comp = comps["C_base"] * 5.0    # mid-fill reference, mL
+        vt_full_per_comp = comps["C_base"] * 10.0  # full-fill reference, mL
 
     if population == "neonate":
         vt_ref_per_comp_spont = np.maximum(weight_kg * 6.0 * comps["fractions"], 1.0)
@@ -1669,7 +1749,6 @@ if __name__ == "__main__":
 
     n_pass = sum(_results)
 
-    
     
     sys.exit(0 if n_pass == n_total else 1)
 

@@ -378,14 +378,49 @@ def _R_exp_dynamic(V_current: float,
     frac_exhaled = 1.0 - float(np.clip(V_current / max(V_end_insp, 1.0), 0.0, 1.0))
     return R_insp * (1.0 + (R_exp_ratio - 1.0) * frac_exhaled)
 
+def _compliance_two_regime(V_mL: float, C_base: float, V_ref: float,
+                            stress_index: float) -> float:
+    """
+    Two-regime volume-dependent compliance for stress_index < 1.0.
+    See generator/simv_generator.py's _compliance_two_regime for the full
+    derivation, the bell-curve design this replaces, and the empirical
+    calibration of V_turnover_ratio/stress_index_decline (identical
+    values used here for consistency -- PCV's own fill_fraction-based
+    stress cases, 0.887 and 0.956, were confirmed to stay entirely in
+    Regime 1 -- i.e. behaviorally identical to the pre-existing,
+    already-validated formula -- at every ratio tested down to 1.2).
+    """
+    V_turnover_ratio = 1.4
+    stress_index_decline = 15.0
+
+    V_turnover = V_turnover_ratio * max(V_ref, 1.0)
+    if V_mL <= V_turnover:
+        V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
+        return float(C_base * (V_norm ** (1.0 - stress_index)))
+
+    V_norm_at_turnover = V_turnover / max(V_ref, 1.0)
+    C_turnover = C_base * (V_norm_at_turnover ** (1.0 - stress_index))
+    V_norm_past_turnover = V_mL / V_turnover
+    return float(C_turnover * (V_norm_past_turnover ** (1.0 - stress_index_decline)))
+
 
 def _compliance_nonlinear(V_mL: float,
                            C_base: float,
                            V_ref: float,
                            stress_index: float = 1.0) -> float:
-    """Power-law non-linear C: C(V) = C_base * (V/V_ref)^(1-SI)."""
+    """
+    Non-linear compliance.
+
+    stress_index == 1.0 (default): flat, no volume dependence (unchanged).
+    stress_index > 1.0: power-law overdistension, unchanged.
+    stress_index < 1.0: two-regime recruit-then-overdistend curve (see
+        _compliance_two_regime) -- replaces the old unbounded power-law
+        growth (see decisions-and-physiology.md).
+    """
     if abs(stress_index - 1.0) < 0.01 or V_mL <= 0.0:
         return C_base
+    if stress_index < 1.0:
+        return _compliance_two_regime(V_mL, C_base, V_ref, stress_index)
     V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
     return float(C_base * (V_norm ** (1.0 - stress_index)))
 
@@ -566,7 +601,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5) -> dict:
     # In PCV the steady-state volume per compartment ≈ p_insp * C_comps_base[i]
     # so mid-fill reference is half that.
     vt_full_per_comp = p_insp * C_comps_base                 # mL, full per-comp
-    vt_ref_per_comp  = 0.5 * vt_full_per_comp                # mid-fill reference
+    vt_ref_per_comp  = vt_full_per_comp                # mid-fill reference
 
     ett_k1 = ETT_K1_NEONATE_3MM if population == "neonate" else ETT_K1
     ett_k2 = ETT_K2_NEONATE_3MM if population == "neonate" else ETT_K2
@@ -1187,5 +1222,6 @@ if __name__ == "__main__":
 
     # ---- Summary --------------------------------------------------------
     n_pass = sum(_results)
+    
  
     sys.exit(0 if n_pass == n_total else 1)

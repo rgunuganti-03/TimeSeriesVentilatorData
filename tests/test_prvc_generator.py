@@ -922,10 +922,10 @@ class TestPopulationBranching:
         neonate_mechanics = {"respiratory_rate": 50,             # 16 -> below floor of 20
                               "compliance_ml_per_cmH2O": 4.0,      # 80.0 -> above ceiling of 10
                               "resistance_cmH2O_L_s": 80.0}    
-        p_1_5kg = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 1.5,
+        p_1_5kg = {**NORMAL_PARAMS, **neonate_mechanics, "population": "neonate", "weight_kg": 1.5,
                    }  # NORMAL_PARAMS's 16 is below the
                                             # neonatal validation floor of 20
-        p_3_0kg = {**NORMAL_PARAMS, "population": "neonate", "weight_kg": 3.0,
+        p_3_0kg = {**NORMAL_PARAMS, **neonate_mechanics, "population": "neonate", "weight_kg": 3.0,
                    }
         r_1_5 = generate_breath_cycles(p_1_5kg, n_cycles=3)
         r_3_0 = generate_breath_cycles(p_3_0kg, n_cycles=3)
@@ -1119,6 +1119,5 @@ class TestParameterGrid:
             f"Full PRVC ventilator-side grid should be 2,520 "
             f"combinations/mechanics point (4x7x6x3x5), got {expected}"
         )
-if __name__ == "__main__":
-    result = generate_breath_cycles(NORMAL_NEONATE_PARAMS, n_cycles=5)
-    print("time_to_peak_flow_s" in result, list(result.keys()))
+
+

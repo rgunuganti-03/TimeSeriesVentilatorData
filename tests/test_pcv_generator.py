@@ -1326,7 +1326,16 @@ class TestParameterGrid:
             f"(7x7x6x3x4), got {expected}"
         )
 if __name__ == "__main__":
-    for insp_p in (5.0, 6.0, 7.0, 8.0, 10.0, 12.0):
-        p = {**NORMAL_NEONATE_PARAMS, "insp_pressure_cmH2O": insp_p}
-        r = generate_breath_cycles(p, n_cycles=5)
-        print(insp_p, r["delivered_vt_ml"], r["is_valid"])
+    p_neo_stress = {**NORMAL_NEONATE_PARAMS, "stress_index": 0.85, "rise_time_s": 0.0,
+                 "respiratory_rate": 20, "ie_ratio": 1.0}
+    r = generate_breath_cycles(p_neo_stress, n_cycles=5)
+    print("fill_fraction:", r["fill_fraction"])
+    print("delivered_vt_ml:", r["delivered_vt_ml"])
+    print("ppeak_cmH2O:", r["ppeak_cmH2O"])
+    print("is_valid:", r["is_valid"], r["invalid_reason"])
+    p_neo_low_c = {**NORMAL_NEONATE_PARAMS, "stress_index": 0.85, "rise_time_s": 0.0}
+
+    p_flat = {**p_neo_low_c, "stress_index": 1.0}
+    r_flat = generate_breath_cycles(p_flat, n_cycles=5)
+    print("flat (SI=1.0) delivered_vt_ml:", r_flat["delivered_vt_ml"])
+    print("bell (SI=0.85) delivered_vt_ml:", r["delivered_vt_ml"])

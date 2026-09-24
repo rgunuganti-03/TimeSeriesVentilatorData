@@ -463,26 +463,50 @@ def _R_exp_dynamic(V_current: float,
     return R_insp * (1.0 + (R_exp_ratio - 1.0) * frac_exhaled)
 
 
+def _compliance_two_regime(V_mL: float, C_base: float, V_ref: float,
+                            stress_index: float) -> float:
+    """
+    Two-regime volume-dependent compliance for stress_index < 1.0.
+    See generator/simv_generator.py's _compliance_two_regime for the full
+    derivation, the bell-curve design this supersedes, and the empirical
+    calibration of V_turnover_ratio/stress_index_decline (identical
+    values used here for consistency with vcv/pcv/simv). Requires
+    vt_ref_per_comp to mean an unhalved, full reference volume at every
+    call site -- confirmed and fixed in this file (was silently halved
+    at four call sites; see decisions-and-physiology.md) before this
+    formula was added.
+    """
+    V_turnover_ratio = 1.4
+    stress_index_decline = 15.0
+
+    V_turnover = V_turnover_ratio * max(V_ref, 1.0)
+    if V_mL <= V_turnover:
+        V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
+        return float(C_base * (V_norm ** (1.0 - stress_index)))
+
+    V_norm_at_turnover = V_turnover / max(V_ref, 1.0)
+    C_turnover = C_base * (V_norm_at_turnover ** (1.0 - stress_index))
+    V_norm_past_turnover = V_mL / V_turnover
+    return float(C_turnover * (V_norm_past_turnover ** (1.0 - stress_index_decline)))
+
+
 def _compliance_nonlinear(V_mL: float,
                            C_base: float,
                            V_ref: float,
                            stress_index: float = 1.0) -> float:
     """
-    Non-linear (volume-dependent) compliance via power-law approximation.
+    Non-linear compliance.
 
-    Derives from the definition of stress index:
-        P(t) ∝ t^SI during constant-flow VCV
-    which implies:
-        C(V) ∝ C_base * (V / V_ref) ^ (1 - SI)
-
-    SI = 1.0  → constant compliance (linear P-V, straight VCV ramp)
-    SI < 1.0  → compliance rises with volume (tidal recruitment, concave-up)
-    SI > 1.0  → compliance falls with volume (overdistension, concave-down)
-
-    V_ref is typically the mid-inspiration volume for this compartment.
+    stress_index == 1.0 (default): flat, no volume dependence (unchanged).
+    stress_index > 1.0: power-law overdistension, unchanged.
+    stress_index < 1.0: two-regime recruit-then-overdistend curve (see
+        _compliance_two_regime) -- replaces the old unbounded power-law
+        growth (see decisions-and-physiology.md).
     """
     if abs(stress_index - 1.0) < 0.01 or V_mL <= 0.0:
         return C_base
+    if stress_index < 1.0:
+        return _compliance_two_regime(V_mL, C_base, V_ref, stress_index)
     V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
     return float(C_base * (V_norm ** (1.0 - stress_index)))
 
@@ -998,7 +1022,7 @@ def generate_breath_cycles(params: dict,
                 
                 # Passive deflation ODE: dV/dt = -V / (R * C)
                 C_i  = _compliance_nonlinear(
-                    Vi, C_comps_base[i], vt_ref_per_comp[i] * 0.5, stress_index
+                    Vi, C_comps_base[i], vt_ref_per_comp[i] , stress_index
                 )
                 C_rs_i = _C_rs(C_i, C_chest)
                 dVdt_i = -(Vi / max(C_rs_i, 0.1)) / max(Ri_e, 0.1) * 1000.0
@@ -1010,7 +1034,7 @@ def generate_breath_cycles(params: dict,
             V_total    = float(V_comps.sum())
             C_rs_total  = max(C_lung_rec * sum(
             fractions[i] * _compliance_nonlinear(V_comps[i], C_comps_base[i],
-                vt_ref_per_comp[i] * 0.5, stress_index) / max(C_comps_base[i], 0.1)
+                vt_ref_per_comp[i] , stress_index) / max(C_comps_base[i], 0.1)
             for i in range(n_comps)), 0.5)
             C_rs_total = _C_rs(C_rs_total, C_chest)
 
@@ -1036,7 +1060,7 @@ def generate_breath_cycles(params: dict,
         C_lung_eff_now = max(C_lung_rec * sum(
             fractions[i] * _compliance_nonlinear(
                 V_comps[i], C_comps_base[i],
-                vt_ref_per_comp[i] * 0.5, stress_index
+                vt_ref_per_comp[i] , stress_index
             ) / max(C_comps_base[i], 0.1) for i in range(n_comps)
         ), 0.5)
         C_rs_eff_now = _C_rs(C_lung_eff_now, C_chest)   # ← add chest wall
@@ -1116,7 +1140,7 @@ def generate_breath_cycles(params: dict,
             for i in range(n_comps):
                 Vi   = max(V_comps[i], 0.0)
                 C_i  = _compliance_nonlinear(
-                    Vi, C_comps_base[i], vt_ref_per_comp[i] * 0.5, stress_index
+                    Vi, C_comps_base[i], vt_ref_per_comp[i] , stress_index
                 )
                 C_rs_i = _C_rs(C_i, C_chest)
                 Ri_i   = _R_insp_with_tethering(
@@ -1136,7 +1160,7 @@ def generate_breath_cycles(params: dict,
             C_rs_now  = max(C_lung_rec * sum(
                 fractions[i] * _compliance_nonlinear(
                     V_comps[i], C_comps_base[i],
-                    vt_ref_per_comp[i] * 0.5, stress_index
+                    vt_ref_per_comp[i] , stress_index
                 ) / max(C_comps_base[i], 0.1) for i in range(n_comps)
             ), 0.5)
             peep_total_now = peep_e + auto_peep_now
@@ -1212,7 +1236,7 @@ def generate_breath_cycles(params: dict,
             Vi   = max(V_comps[i], 0.0)
             Ri_e = _R_exp_dynamic(Vi, max(V_end_insp_trail[i], 1.0), R_comps_base[i], R_exp_arr[i])
             C_i  = _compliance_nonlinear(
-                Vi, C_comps_base[i], vt_ref_per_comp[i] * 0.5, stress_index
+                Vi, C_comps_base[i], vt_ref_per_comp[i] , stress_index
             )
             C_rs_i = _C_rs(C_i, C_chest)
             dVdt_i = -(Vi / max(C_rs_i, 0.1)) / max(Ri_e, 0.1) * 1000.0
@@ -1223,7 +1247,7 @@ def generate_breath_cycles(params: dict,
         V_total    = float(V_comps.sum())
         C_rs_total = max(C_lung_rec * sum(
             fractions[i] * _compliance_nonlinear(V_comps[i], C_comps_base[i],
-                vt_ref_per_comp[i] * 0.5, stress_index) / max(C_comps_base[i], 0.1)
+                vt_ref_per_comp[i] , stress_index) / max(C_comps_base[i], 0.1)
             for i in range(n_comps)), 0.5)
         C_rs_total = _C_rs(C_rs_total, C_chest)
 

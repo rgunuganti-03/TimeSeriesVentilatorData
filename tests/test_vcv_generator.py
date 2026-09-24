@@ -1324,3 +1324,29 @@ class TestParameterGrid:
             f"(4x7x6x3x2), got {expected}"
         )
 
+if __name__ == "__main__":
+    # r = generate_breath_cycles({**COPD_PARAMS, "stress_index": 0.85,
+    #                          "effort_rate_per_min": 25.0, "pmus_peak_cmH2O": 15.0,
+    #                          "trigger_threshold_cmH2O": 1.0}, n_cycles=10, seed=37)
+    # print(r["spontaneous_delivered_vt_ml"], r["is_valid"])
+    # print(r["invalid_reason"])
+
+    # 
+    # 
+    # r_rds = generate_breath_cycles(RDS_PARAMS, n_cycles=10, seed=42)
+    # idx_peak = int(np.argmax(r_rds["pressure"]))
+    # t_peak = r_rds["time"][idx_peak]
+    # print("peak pressure index/time:", idx_peak, t_peak)
+    # for b in r_rds["breath_records"]:
+    #     if b["t_start_s"] <= t_peak <= b["t_start_s"] + b["duration_s"]:
+    #         print("breath containing the peak:", b)
+    
+    # 
+    # p_neo_low_c = {**NORMAL_NEONATE_PARAMS, "stress_index": 0.85}
+    # r = generate_breath_cycles(p_neo_low_c, n_cycles=5)
+    # print("delivered_vt_ml:", r["delivered_vt_ml"])
+    # print("ppeak_cmH2O:", r["ppeak_cmH2O"])
+    # print("is_valid:", r["is_valid"], r["invalid_reason"])
+
+    r_rds = generate_breath_cycles(RDS_PARAMS, n_cycles=5)
+    print(r_rds["is_valid"], r_rds["invalid_reason"], r_rds["delivered_vt_ml"], r_rds["ppeak_cmH2O"])
