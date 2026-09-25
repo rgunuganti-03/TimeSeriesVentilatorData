@@ -312,6 +312,42 @@ class TestInterfaceContract:
         r10 = generate_breath_cycles(NORMAL_PARAMS, n_cycles=10, seed=0)
         assert len(r10["time"]) > len(r5["time"])
 
+    def test_scenario_ids_encode_every_swept_parameter(self):
+        """Regression test for the scenario-ID collision bug class already
+        caught reactively in PSV, PRVC, and SIMV. Tests _make_scenario_id()
+        directly (no physics simulation) against every parameter this
+        file's own grid actually varies, so it stays correct automatically
+        if the grid changes later -- this is what none of the existing
+        scenario-id tests do, since they only ever run one fixed grid."""
+        from generator.psv_generator import _make_scenario_id, PARAMETER_GRID  # confirm grid var name per file
+
+        base_params = {**NORMAL_PARAMS}  # one complete, valid params dict for this file
+
+        for key, values in PARAMETER_GRID.items():
+            if len(values) < 2:
+                continue
+            ids = {_make_scenario_id("Normal", {**base_params, key: v}) for v in values}
+            assert len(ids) == len(values), (
+                f"varying {key!r} across {values} produced only {len(ids)} "
+                f"distinct scenario_id(s) instead of {len(values)} -- "
+                f"_make_scenario_id is likely not encoding {key!r}"
+            )
+    
+
+    def test_scenario_ids_encode_compliance_and_resistance(self):
+        """Regression test specifically for PSV/SIMV's bug: compliance and
+        resistance are passed as separate arguments to generate_dataset(),
+        not part of its internal grid, so the test above can't catch a
+        missing encoding here -- this needs its own explicit check."""
+        from generator.psv_generator import _make_scenario_id
+
+        base_params = {**NORMAL_PARAMS}
+        id_a = _make_scenario_id("Normal", {**base_params,
+            "compliance_ml_per_cmH2O": 40.0, "resistance_cmH2O_L_s": 8.0})
+        id_b = _make_scenario_id("Normal", {**base_params,
+            "compliance_ml_per_cmH2O": 90.0, "resistance_cmH2O_L_s": 20.0})
+        assert id_a != id_b, "scenario_id doesn't change with compliance/resistance"
+
 
 # ---------------------------------------------------------------------------
 # Class 2 — Physiological Plausibility

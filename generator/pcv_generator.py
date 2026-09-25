@@ -246,7 +246,7 @@ def _resolve_ett_leak_fraction(params: dict) -> Tuple[float, bool]:
 # Section 3 — Condition-Specific Compartment Profiles
 # ---------------------------------------------------------------------------
 # Counts per user spec for VCV/PCV:
-#     Normal: 1 | Mild/Mod/Severe ARDS: 2 | COPD: 3 | Bronchospasm: 1 | Pneumonia: 3
+#     Normal: 1 | Mild/Mod/Severe ARDS: 2 | COPD: 3 | Bronchospasm: 2 | Pneumonia: 3
 COMPARTMENT_PROFILES: Dict = {
     "Normal": [
         {"fraction": 1.00, "C_frac": 1.00, "R_frac": 1.00,

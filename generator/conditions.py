@@ -4,7 +4,7 @@ generator/conditions.py
 Respiratory condition presets for the ventilator waveform simulator.
 
 Each preset defines a complete parameter dictionary that can be passed
-directly to any generator (waveforms.py or ode_solver.py) via
+directly to any generator via
 generate_breath_cycles().
 
 Conditions defined:

@@ -3,25 +3,6 @@ ui/dashboard.py
 ---------------
 Streamlit dashboard for the Ventilator Waveform Simulator.
 
-Phase 3 changes:
-    - Engines: VCV and PCV only (rule-based and ODE models removed)
-    - Mode-specific sidebar parameters:
-        VCV: tidal volume slider, flow pattern radio button
-        PCV: inspiratory pressure slider, rise time slider
-        Both: respiratory rate, compliance, resistance, PEEP, I:E selectbox
-    - Tidal volume hidden in PCV (dependent variable)
-    - Inspiratory pressure hidden in VCV (not a VCV setting)
-    - I:E ratio as selectbox with labeled clinical options (1:1, 1:2, 1:3)
-    - Updated metric strip:
-        VCV: PPeak, Pplat, Driving P, Mean Paw, Peak Flow up,
-             Peak Flow down, Minute Vent, Auto-PEEP
-        PCV: PPeak, Delivered VT, Driving P, Mean Paw, Peak Flow up,
-             Fill Fraction, Minute Vent, Auto-PEEP
-    - Duration removed from metric strip (no clinical value)
-    - Plateau ~P hidden in PCV (equals PPeak by definition)
-
-Aesthetic direction: Clinical dark — precision instrument.
-
 Run from project root:
     streamlit run app.py
 """
