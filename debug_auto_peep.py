@@ -53,133 +53,113 @@ RDS_PARAMS = {
 
 import numpy as np
 
-
-
-
-
-# import generator.prvc_generator as prvc
-
-# r = prvc.generate_breath_cycles(NORMAL_PARAMS, n_cycles=10, seed=1)
-# print("converged:", r["converged"], "delivered_vt_ml (final):", r["delivered_vt_trajectory"][-1])
-# print("pressure_trajectory:", r["pressure_trajectory"])
-
-# # Estimate V_target_per_comp's scale at convergence for comparison:
-# comps = prvc._build_compartments("Normal", 80.0, 10.0, 5.0, 5.0, 0.0, prvc.DEFAULT_CHEST_WALL_COMPLIANCE, "adult")
-# offset = 50.0 * (prvc.IBW_KG / prvc.IBW_KG)  # adult: weight_kg == IBW_KG, offset == 50.0
-# print("V_target_per_comp scale (offset, adult):", offset, " vs. converged delivered VT:", r["delivered_vt_trajectory"][-1])
-
-# r = prvc.generate_breath_cycles(NORMAL_PARAMS, n_cycles=10, seed=1)
-# print("converged:", r["converged"], "delivered_vt_ml (final):", r["delivered_vt_trajectory"][-1])
-# print("V_target_per_comp scale (new, adult):", 420.0 * 1.0, " vs. converged delivered VT:", r["delivered_vt_trajectory"][-1])
-
-# print(NORMAL_PARAMS.get("stress_index", "not set — check default"))
-
-# r_stress = prvc.generate_breath_cycles({**NORMAL_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
-# print("converged:", r_stress["converged"], "delivered_vt_ml (final):", r_stress["delivered_vt_trajectory"][-1])
-# print("pressure_trajectory:", r_stress["pressure_trajectory"])
-
+from generator.conditions import get_condition
+from generator.conditions import get_condition
+import generator.pcv_generator  as pcv
+import generator.psv_generator  as psv
 import generator.prvc_generator as prvc
-
-# _original = prvc._compliance_two_regime
-# def _instrumented(V_mL, C_base, V_ref, stress_index):
-#     V_turnover = 1.4 * max(V_ref, 1.0)
-#     if V_mL > V_turnover:
-#         print(f"REGIME 2 HIT: V={V_mL:.2f} V_ref={V_ref:.2f} V/V_ref={V_mL/V_ref:.2f}")
-#     return _original(V_mL, C_base, V_ref, stress_index)
-# prvc._compliance_two_regime = _instrumented
-
-# r_ards_stress = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
-
-# prvc._compliance_two_regime = _original  # restore immediately after use
-
-# print("converged:", r_ards_stress["converged"])
-# print("delivered_vt_ml (final):", r_ards_stress["delivered_vt_trajectory"][-1])
-# print("pressure_trajectory:", r_ards_stress["pressure_trajectory"])
-r_unbounded = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 1.0}, n_cycles=10, seed=1)
-print("flat converged:", r_unbounded["converged"])
-print("flat trajectory:", r_unbounded["delivered_vt_trajectory"])
-
-prvc._compliance_nonlinear = lambda V_mL, C_base, V_ref, stress_index=1.0: (
-    C_base if abs(stress_index - 1.0) < 0.01 or V_mL <= 0.0
-    else C_base * (max(V_mL / max(V_ref, 1.0), 0.01) ** (1.0 - stress_index))
-)
-r_original = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
-print("original-unbounded converged:", r_original["converged"])
-print("original-unbounded trajectory:", r_original["delivered_vt_trajectory"])
-
-# restore the real dispatch before continuing anything else:
-import importlib
-importlib.reload(prvc)
-
-r_two_regime = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
-print("two-regime converged:", r_two_regime["converged"])
-print("two-regime trajectory:", r_two_regime["delivered_vt_trajectory"])
-# _original = prvc._compliance_two_regime
-# def _instrumented(V_mL, C_base, V_ref, stress_index):
-#     V_turnover = 1.4 * max(V_ref, 1.0)
-#     if V_mL > V_turnover:
-#         print(f"REGIME 2 HIT: V={V_mL:.2f} V_ref={V_ref:.2f} V/V_ref={V_mL/V_ref:.2f}")
-#     return _original(V_mL, C_base, V_ref, stress_index)
-# prvc._compliance_two_regime = _instrumented
-
-# r_stress = prvc.generate_breath_cycles({**NORMAL_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
-
-# prvc._compliance_two_regime = _original
-# print("delivered_vt_ml (final):", r_stress["delivered_vt_trajectory"][-1])
-
-# r_ards_stress = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
-
-r_flat = prvc.generate_breath_cycles({**SEVERE_ARDS_PARAMS, "stress_index": 1.0}, n_cycles=10, seed=1)
-print("flat (SI=1.0) delivered_vt_ml (final):", r_flat["delivered_vt_trajectory"][-1])
-
-# import generator.prvc_generator as prvc
-# r_stress = prvc.generate_breath_cycles({**NORMAL_PARAMS, "stress_index": 0.85}, n_cycles=10, seed=1)
-# print("converged:", r_stress["converged"], "delivered_vt_ml (final):", r_stress["delivered_vt_trajectory"][-1])
-# print("pressure_trajectory:", r_stress["pressure_trajectory"])
-
-# r_rds = prvc.generate_breath_cycles(RDS_PARAMS, n_cycles=10, seed=42)
-# print("RDS:", r_rds["converged"], r_rds["delivered_vt_trajectory"][-1], r_rds.get("ppeak_cmH2O"))
-# restore afterward:
-#                             V_turnover_ratio=2.5, stress_index_decline=15.0):
-#     if abs(stress_index - 1.0) < 0.01 or V_mL <= 0.0:
-#         return C_base
-#     V_turnover = V_turnover_ratio * max(V_ref, 1.0)
-#     if V_mL <= V_turnover:
-#         V_norm = max(V_mL / max(V_ref, 1.0), 0.01)
-#         return float(C_base * (V_norm ** (1.0 - stress_index)))
-#     V_norm_at_turnover = V_turnover / max(V_ref, 1.0)
-#     C_turnover = C_base * (V_norm_at_turnover ** (1.0 - stress_index))
-#     V_norm_past_turnover = V_mL / V_turnover
-#     return float(C_turnover * (V_norm_past_turnover ** (1.0 - stress_index_decline)))
+import generator.simv_generator as simv
 
 
-# import generator.simv_generator as simv
-# _original_simv = simv._compliance_nonlinear
-# simv._compliance_nonlinear = _compliance_two_regime
+def compare_leak(engine_name, generate_fn, extra_params=None, n_cycles=5):
+    params = get_condition("RDS")
+    if extra_params:
+        params.update(extra_params)
 
-# r_copd = simv.generate_breath_cycles(
-#     {**COPD_PARAMS, "stress_index": 0.85, "effort_rate_per_min": 25.0,
-#      "pmus_peak_cmH2O": 15.0, "trigger_threshold_cmH2O": 1.0},
-#     n_cycles=10, seed=37)
+    r_leak = generate_fn(params, n_cycles=n_cycles)
+    r_no_leak = generate_fn({**params, "ett_cuff_leak_fraction": 0.0}, n_cycles=n_cycles)
 
-# simv._compliance_nonlinear = _original_simv
+    vt_leak    = r_leak["delivered_vt_ml"]
+    vt_no_leak = r_no_leak["delivered_vt_ml"]
 
-# print("spontaneous_delivered_vt_ml:", r_copd["spontaneous_delivered_vt_ml"])
-# print("(for reference: 782.85 original bug, 746.76 with si_decline=2.5, "
-#       "579.72 bell-curve d=0.3, 384-457 bell-curve final)")
+    print(f"--- {engine_name} ---")
+    print(f"delivered_vt_ml, leak on  : {vt_leak:.2f} mL")
+    print(f"delivered_vt_ml, leak off : {vt_no_leak:.2f} mL")
+    print(f"reduction: {1.0 - vt_leak / vt_no_leak:.1%}\n")
 
-# import generator.pcv_generator as pcv
-# _original_pcv = pcv._compliance_nonlinear
-# pcv._compliance_nonlinear = _compliance_two_regime
 
-# p_neo_low_c = {**NORMAL_NEONATE_PARAMS, "stress_index": 0.85, "rise_time_s": 0.0}
-# r1 = pcv.generate_breath_cycles(p_neo_low_c, n_cycles=5)
+# --- PCV ---
+# PCV is pressure-controlled, so it needs a commanded inspiratory pressure --
+# the same gap VCV had with flow_pattern. RDS's preset doesn't carry
+# insp_pressure_cmH2O, so I'm supplying a guess (PEEP=6 + ~10 driving
+# pressure). I haven't directly confirmed pcv_generator's REQUIRED_PARAMS
+# in this conversation, so if this throws "Missing required parameter(s)",
+# check generator/pcv_generator.py's _validate_params for the exact name(s)
+# it wants and adjust here.
+compare_leak("PCV", pcv.generate_breath_cycles,
+             extra_params={"insp_pressure_cmH2O": 16.0})
 
-# p_neo_stress = {**NORMAL_NEONATE_PARAMS, "stress_index": 0.85, "rise_time_s": 0.0,
-#                  "respiratory_rate": 20, "ie_ratio": 1.0}
-# r2 = pcv.generate_breath_cycles(p_neo_stress, n_cycles=5)
+# --- PSV ---
+# psv_generator's REQUIRED_PARAMS is fully covered by RDS's preset already
+# (pressure_support_cmH2O, peep_cmH2O, rise_time_s, flow_cycle_threshold,
+# trigger_threshold_cmH2O, pmus_peak_cmH2O, effort_rate_per_min,
+# effort_duration_s, pmus_cv, compliance_ml_per_cmH2O, resistance_cmH2O_L_s)
+# -- confirmed, no extra params needed.
+compare_leak("PSV", psv.generate_breath_cycles)
 
-# pcv._compliance_nonlinear = _original_pcv
+# --- PRVC ---
+# prvc_generator.REQUIRED_PARAMS uses "vt_target_ml", not the
+# "tidal_volume_ml" key conditions.py stores RDS's target volume under --
+# map it across. Also give it more cycles since PRVC needs several breaths
+# to converge (the RDS smoke test elsewhere in the codebase uses 15).
+compare_leak("PRVC", prvc.generate_breath_cycles,
+             extra_params={"vt_target_ml": get_condition("RDS")["tidal_volume_ml"]},
+             n_cycles=15)
 
-# print("PCV case 1:", r1["delivered_vt_ml"], r1["is_valid"], r1["invalid_reason"])
-# print("PCV case 2:", r2["delivered_vt_ml"], r2["is_valid"], r2["invalid_reason"])
+
+
+# compare_leak("SIMV", simv.generate_breath_cycles,
+#              extra_params={
+#                  "mandatory_mode":   "VC",
+#                  "flow_pattern":     "square",
+#                  "f_window":         0.20,
+#                  "respiratory_rate": 30,   # TEST-ONLY override to clear the 10–40 bpm
+#                                            # validity gate — RDS's real rate (50) isn't
+#                                            # physiologically represented by this run
+#              })
+
+params = get_condition("RDS")
+params.update({
+    "mandatory_mode":   "VC",
+    "flow_pattern":     "square",
+    "f_window":         0.20,
+    "respiratory_rate": 30,   # TEST-ONLY override, same caveat as before
+})
+r = simv.generate_breath_cycles(params, n_cycles=5)
+print(sorted(r.keys()))
+
+def compare_leak_simv(engine_name, generate_fn, extra_params, n_cycles=5):
+    params = get_condition("RDS")
+    params.update(extra_params)
+
+    r_leak    = generate_fn({**params, "ett_cuff_leak_fraction": 0.15}, n_cycles=n_cycles)
+    r_no_leak = generate_fn({**params, "ett_cuff_leak_fraction": 0.0},  n_cycles=n_cycles)
+
+    vt_leak    = r_leak["mandatory_delivered_vt_ml"]
+    vt_no_leak = r_no_leak["mandatory_delivered_vt_ml"]
+
+    print(f"--- {engine_name} ---")
+    print(f"mandatory_delivered_vt_ml, leak on  : {vt_leak:.2f} mL")
+    print(f"mandatory_delivered_vt_ml, leak off : {vt_no_leak:.2f} mL")
+    print(f"reduction: {1.0 - vt_leak / vt_no_leak:.1%}\n")
+
+
+compare_leak_simv("SIMV", simv.generate_breath_cycles,
+                   extra_params={
+                       "mandatory_mode":   "VC",
+                       "flow_pattern":     "square",
+                       "f_window":         0.20,
+                       "respiratory_rate": 30,
+                   })
+
+# --- SIMV ---
+# simv_generator needs mandatory_mode set explicitly, and for VC mode,
+# tidal_volume_ml/flow_pattern (already present/added) plus f_window --
+# none of which live in the base conditions.py preset, same category of
+# gap as VCV's flow_pattern.
+# compare_leak("SIMV", simv.generate_breath_cycles,
+#              extra_params={
+#                  "mandatory_mode": "VC",
+#                  "flow_pattern":   "square",
+#                  "f_window":       0.20,
+#              })

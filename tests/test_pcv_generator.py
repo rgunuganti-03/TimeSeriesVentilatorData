@@ -759,8 +759,9 @@ class TestETTComplications:
     """
     PCV is pressure-prescribed/time-cycled, so Ppeak = PIP + PEEP
     regardless of mechanics or ETT complications:
-      - cuff leak: post-hoc volume-balance correction on delivered_vt,
-        no effect on Ppeak or cycling (PCV is time-cycled)
+      - cuff leak: no effect on delivered_vt (compartment fill is set by
+        the pressure-time relationship, not by tube leak) or on Ppeak/
+        cycling; shows up instead as elevated reported inspiratory flow
       - obstruction: scales both ETT Rohrer terms AND per-compartment R,
         reducing fill within the fixed inspiratory time -> lower
         delivered_vt / fill_fraction, but Ppeak still equals PIP

@@ -42,7 +42,7 @@ Produce a formal VCV control loop document that captures the mechanistic descrip
 - The RC time constant and its role in expiratory flow decay are explained
 - The clinical interpretation of PPeak, Pplat, and driving pressure is documented, including the threshold values used in the validity filter and their literature sources
 - The parameter grid is presented in full with ranges, step sizes, and the rationale for each step size
-- The invalidity analysis results are documented per condition tier, matching the actual generation output (Normal 100%, Mild ARDS 87.2%, Moderate ARDS 46.4%, Severe ARDS 14.9%, COPD 86.2%, Bronchospasm 72.1%, Pneumonia 75.0%)
+- The invalidity analysis results are documented per condition tier, matching the actual generation output 
 - The document is written in the author's own words and demonstrates understanding of the physiology, not a reproduction of textbook language
 
 ---

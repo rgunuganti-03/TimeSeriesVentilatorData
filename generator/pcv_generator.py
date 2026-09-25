@@ -121,9 +121,11 @@ ETT complications (overlays):
       compartment R, since intrinsic airway R is fraction of R_global
       → the multiplier hits both the displayed ETT drop and the
       ODE's resistance term).
-    - ETT cuff leak: volume-balance correction on delivered VT
-      (does NOT affect cycling — PCV is time-cycled, so a leak is a
-      measurement note, not a behavior change).
+    - ETT cuff leak: PCV is pressure-prescribed/time-cycled, so compartment
+      fill is governed by the pressure-time relationship regardless of
+      leak at the airway opening — delivered_vt is unaffected. The
+      signature is elevated reported inspiratory flow, not a volume
+      change (does NOT affect cycling — PCV is time-cycled).
 
 Interface contract (identical to vcv_generator and psv_generator)
 ------------------------------------------------------------------

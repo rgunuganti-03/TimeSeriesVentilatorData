@@ -1,6 +1,6 @@
 # CR0023 (draft) — Incorporating Normal Neonate, RDS, and MAS Across All Five Modes
 
-**Author:** Riya Gunuganti (draft prepared with Claude)
+**Author:** Riya Gunuganti 
 **Status:** Proposed — Blockers 1 and 2 decided. Also decided: explicit `"population": "adult"` backfill on the seven existing conditions; omit the driving-pressure and neonatal-VT-ceiling checks rather than invent unsourced thresholds; no separate `NEONATE_ETT_K1`/`K2`/`PS_MAX` constants (reuse adult values until a tube-specific source exists); leak stays the existing fixed-fraction mechanism, default-on; RDS ships as 1 compartment; scenario IDs get population-gated decimal precision; dataset generation uses parallel per-population scripts. One open item remains: whether MAS ships this round with provisional compartment numbers or is deferred until those numbers have a source (see Section 2).
 **Project:** Time Series Ventilator Data
 
@@ -14,23 +14,10 @@ Before touching `conditions.py`, there are two things in the current architectur
 
 `IBW_KG = 70.0` is a module-level constant in `vcv_generator.py`, `pcv_generator.py`, `psv_generator.py`, `prvc_generator.py`, and `simv_generator.py`. Everything downstream is derived from it:
 
-```python
-IBW_KG: float                  = 70.0
-VT_MIN_ML: float                = IBW_KG * 3       # 210 mL
-VT_MAX_ML: float                = IBW_KG * 12      # 840 mL
-PPEAK_MAX_CMHH2O: float         = 50.0
-DRIVING_P_MAX_CMHH2O: float     = 20.0
-INSP_PRESSURE_MAX_CMHH2O: float = 35.0
-PS_MAX_CMHH2O: float            = 20.0
-CIRCUIT_COMPLIANCE_ML_PER_CMH2O: float = 2.5
-DEFAULT_CHEST_WALL_COMPLIANCE: float   = 250.0     # ~inert for an adult
-ETT_K1: float = 5.0   # sized for a 7.5 mm ID tube
-ETT_K2: float = 3.0
-```
 
 A term neonate's whole tidal volume is ~15 mL. `VT_MIN_ML = 210` means **every physiologically correct neonatal breath will be flagged `is_valid = False`** the moment it hits the validity filter — not because the physics is wrong, but because the filter is checking it against a 70 kg adult's floor. Same story for `DEFAULT_CHEST_WALL_COMPLIANCE = 250` (fine as "effectively infinite" for an adult; wrong for a neonate where chest wall compliance is the *dominant*, not negligible, term) and `ETT_K1`/`ETT_K2` (calibrated for a 7.5 mm tube; a neonatal 2.5–3.5 mm tube has much higher Rohrer coefficients).
 
-**DECIDED: option 2 — a second constants block gated by a `population` field.** This section now spells out exactly what that means in each file, because "add NEONATE_ constants" undersells it — there are four distinct consequences that fall out of this choice, and one of them (weight) changes the shape of the constants, not just their values.
+**DECIDED: a second constants block gated by a `population` field.** This section now spells out exactly what that means in each file, because "add NEONATE_ constants" undersells it — there are four distinct consequences that fall out of this choice, and one of them (weight) changes the shape of the constants, not just their values.
 
 #### 1a. `population` becomes a real, load-bearing field — read it once, near the top
 
@@ -40,52 +27,15 @@ population = params.get("population", "adult")
 ```
 Note this is deliberately keyed off `population`, **not** off `condition` name-matching (e.g. `if condition == "RDS"`). That decoupling is what makes the design sound — a test can construct `{"condition": "Normal", "population": "neonate", ...}` and correctly get neonatal thresholds without the generator needing to know the names of all three neonatal conditions. It also means `conditions.py`'s three new entries **must** carry `"population": "neonate"` (already included in the entries drafted below) or they'll silently get adult thresholds despite everything else being correct — worth a dedicated test (see Section 3 below).
 
-**DECIDED: yes, explicit `"population": "adult"` on all seven existing entries.** Every entry already has a `"condition": "<Name>",` line — that's a reliable anchor that appears once per entry, so the mechanical edit is the same in all seven places: add one new line directly after it.
+**DECIDED: explicit `"population": "adult"` on all seven existing entries.** Every entry already has a `"condition": "<Name>",` line — that's a reliable anchor that appears once per entry, so the mechanical edit is the same in all seven places: add one new line directly after it.
 
-```python
-"Normal": {
-    "label":                     "Normal",
-    "description":               ( ... ),
-    "condition":   "Normal",
-    "population":  "adult",                      # ADD THIS LINE
-    "respiratory_rate":         15,
-    ...
-```
-
-```python
-"COPD": {
-    "label":                     "COPD",
-    "description":               ( ... ),
-    "condition":   "COPD",
-    "population":  "adult",                      # ADD THIS LINE
-    "respiratory_rate":          12,
-    ...
-```
-
-Apply the same single-line insertion (`"population": "adult",` immediately after `"condition": "<Name>",`) to Mild ARDS, Moderate ARDS, Severe ARDS, Bronchospasm, and Pneumonia — every entry has that same anchor line, so it's the same edit seven times, not seven different edits. This is a good candidate for `str_replace` calls in your editor scoped to each `"condition": "X",` line specifically, so you don't need to retype each full dict.
 
 #### 1b. The weight-dependent constants can't just be a second fixed number — they need to read `weight_kg`
 
 This is the one place where mirroring the adult pattern exactly would be wrong. `IBW_KG = 70.0` works as a single fixed constant because every adult condition in this simulator implicitly assumes the same ~70 kg reference body. The three neonatal conditions do **not** share one weight — the RDS preset (preterm, 1.5 kg) and the MAS preset (term, 3.2 kg) are genuinely different patients, and `conditions.py` already carries a per-condition `weight_kg` field for exactly this reason. So `VT_MIN_ML`/`VT_MAX_ML` shouldn't become a second *fixed* module constant (`NEONATE_VT_MIN_ML = 9.0`) — that would silently misjudge RDS's 1.5 kg baby against a 3 kg reference. Instead, keep the **per-kg multiplier** as the constant and compute the bound from the scenario's own weight:
 
-```python
-# Module-level — multipliers only, not absolute volumes
-VT_MIN_ML_PER_KG_ADULT:    float = 3.0    # existing behavior, unchanged
-VT_MAX_ML_PER_KG_ADULT:    float = 12.0
-VT_MIN_ML_PER_KG_NEONATE:  float = 4.0    # lung-protective floor — Spaeth 2022 / neonatal consensus
-NEONATE_IBW_KG_DEFAULT:    float = 3.0    # fallback only if weight_kg is somehow absent
 
-# Inside generate_breath_cycles(), after population is read:
-if population == "neonate":
-    weight = float(params.get("weight_kg", NEONATE_IBW_KG_DEFAULT))
-    vt_min_ml = weight * VT_MIN_ML_PER_KG_NEONATE
-    vt_max_ml = None   # DECIDED: no ceiling check for neonates — see below
-else:
-    vt_min_ml = IBW_KG * VT_MIN_ML_PER_KG_ADULT   # identical to current VT_MIN_ML
-    vt_max_ml = IBW_KG * VT_MAX_ML_PER_KG_ADULT
-```
-
-**DECIDED: no `VT_MAX_ML_PER_KG_NEONATE`.** Same reasoning as the driving-pressure decision below — there's no sourced neonatal overdistension ceiling in the research done so far, and 8 mL/kg was a guess, not a finding. Rather than ship a fabricated ceiling, the neonatal validity filter checks the floor only (`delivered_vt < vt_min_ml`) and skips the `delivered_vt > vt_max_ml` branch entirely when `population == "neonate"`. This is a real, if modest, gap in safety coverage — a neonatal scenario with mechanically absurd overdistension wouldn't get caught by this specific check — worth a one-line comment in the validity filter noting the gap is intentional and pending a source, not an oversight. `PPEAK_MAX_CMHH2O` (which you're keeping — see 1c) still catches the most dangerous overdistension cases indirectly, since volume and pressure are coupled.
+**DECIDED: no `VT_MAX_ML_PER_KG_NEONATE`.** Same reasoning as the driving-pressure decision below — there's no sourced neonatal overdistension ceiling in the research done so far, and 8 mL/kg was a guess, not a finding. Rather than ship a fabricated ceiling, the neonatal validity filter checks the floor only (`delivered_vt < vt_min_ml`) and skips the `delivered_vt > vt_max_ml` branch entirely when `population == "neonate"`. This is a real, if modest, gap in safety coverage — a neonatal scenario with mechanically absurd overdistension wouldn't get caught by this specific check — worth a one-line comment in the validity filter noting the gap is intentional and pending a source, not an oversight. `PPEAK_MAX_CMHH2O` still catches the most dangerous overdistension cases indirectly, since volume and pressure are coupled.
 
 This also means `_validate_params()` should treat `weight_kg` as optional-with-a-population-appropriate-default rather than adding it to `REQUIRED_PARAMS` — simpler than building a new conditionally-required-field validation path that doesn't exist anywhere else in the codebase yet.
 
@@ -147,19 +97,6 @@ Selecting "Normal Neonate" from the condition dropdown will load a preset whose 
 
 **DECIDED: population branch in `render_sidebar()`.** Now that Blocker 1 confirmed `population` as the actual field name flowing through `conditions.py`, the branch should read it directly off the loaded preset rather than hardcoding the three neonatal condition names as a string list — that's both less code and means a fourth neonatal condition added to `conditions.py` later gets correct slider treatment automatically, with zero changes to `dashboard.py`:
 
-```python
-preset = get_condition(condition_name)
-is_neonatal = preset.get("population", "adult") == "neonate"
-
-compliance = st.slider(
-    "Compliance (ml/cmH2O)",
-    0.1, 8.0, value=float(preset["compliance_ml_per_cmH2O"]), step=0.1,
-    key=f"compliance_{condition_name}_{engine_name}",
-) if is_neonatal else st.slider(
-    "Compliance (ml/cmH2O)", 5, 150, value=int(preset["compliance_ml_per_cmH2O"]), step=1,
-    key=f"compliance_{condition_name}_{engine_name}",
-)
-```
 
 Same treatment needed for resistance (extend range up to ~200), tidal volume (down to ~5–40 mL, step 1), and effort rate (up to ~70). This is mechanical but touches every mode's slider block in `render_sidebar()`, since compliance/resistance/PEEP are shared across all five engines and tidal volume/effort-rate sliders are duplicated per-engine within the function.
 
@@ -193,99 +130,6 @@ The `3.0`/`70.0` fallback is a local literal rather than an import of `NEONATE_I
 
 Add three new entries to `CONDITIONS`, following the exact same shape as the existing seven (every field every mode needs, even though a given mode may ignore some of them — that's the existing convention, not something new). Proposed starting values, drawn from the physiology write-up already produced for this project (cite: neonatal parameter tables), **with every number that isn't directly literature-sourced flagged inline**:
 
-```python
-"Normal Neonate": {
-    "label":       "Normal Neonate",
-    "description": (
-        "Healthy term neonate (~3 kg) on an uncuffed ETT. Small absolute "
-        "compliance and tidal volume, high absolute resistance from the "
-        "narrow tube, fast rate, short time constant. No lung pathology — "
-        "the neonatal analog of the adult Normal preset."
-    ),
-    "condition":                "Normal Neonate",
-    "population":               "neonate",          # NEW field — see Blocker 1/2
-    "weight_kg":                3.0,
-    "respiratory_rate":         50,
-    "stress_index":             1.00,
-    "tidal_volume_ml":          15,                  # ~5 mL/kg
-    "compliance_ml_per_cmH2O":  4.0,
-    "resistance_cmH2O_L_s":     80,
-    "ie_ratio":                 0.50,                # ~1:2, Ti ~0.4s @ RR50
-    "rise_time_s":              0.05,                # ASSUMPTION — not sourced
-    "peep_cmH2O":               5,
-    "pressure_support_cmH2O":   8,
-    "flow_cycle_threshold":     0.15,                # neonatal range is 5-20%, vs adult ~25%
-    "trigger_threshold_cmH2O":  0.5,                 # ASSUMPTION — weak effort, not sourced
-    "pmus_peak_cmH2O":          5,
-    "effort_rate_per_min":      50,
-    "effort_duration_s":        0.35,
-    "pmus_cv":                  0.20,
-    "pressure_ceiling_cmH2O":   20,
-    "ett_leak_fraction":        0.15,                # NEW field — see Open Decision 1
-},
-
-"RDS": {
-    "label":       "RDS (Respiratory Distress Syndrome)",
-    "description": (
-        "Preterm surfactant deficiency. Severely reduced compliance, "
-        "resistance at the neonatal baseline (not elevated by disease), "
-        "short time constant. Distinct from Severe ARDS: resistance stays "
-        "normal here, and compliance can improve rapidly post-surfactant."
-    ),
-    "condition":                "RDS",
-    "population":               "neonate",
-    "weight_kg":                1.5,                 # preterm — flag if you want a term RDS variant too
-    "respiratory_rate":         50,
-    "stress_index":             0.85,                # ASSUMPTION, ARDS-style recruitable tissue
-    "tidal_volume_ml":          6,                    # ~4 mL/kg floor, preterm
-    "compliance_ml_per_cmH2O":  0.75,                 # 0.5-1 mL/cmH2O, Kumar/PMC7874283
-    "resistance_cmH2O_L_s":     80,                   # NOT elevated — IJRC
-    "ie_ratio":                 0.33,                 # short Ti ~0.3s
-    "rise_time_s":              0.03,                 # ASSUMPTION
-    "peep_cmH2O":                6,
-    "pressure_support_cmH2O":   10,
-    "flow_cycle_threshold":     0.15,
-    "trigger_threshold_cmH2O":  0.5,                  # ASSUMPTION
-    "pmus_peak_cmH2O":          4,                    # weak preterm effort — ASSUMPTION
-    "effort_rate_per_min":      50,
-    "effort_duration_s":        0.30,
-    "pmus_cv":                  0.25,                 # ASSUMPTION
-    "pressure_ceiling_cmH2O":   20,
-    "ett_leak_fraction":        0.15,
-},
-
-"Meconium Aspiration Syndrome": {
-    "label":       "Meconium Aspiration Syndrome",
-    "description": (
-        "Term/post-term infant with heterogeneous lung: ball-valve "
-        "obstruction and gas trapping in some units, atelectatic/"
-        "surfactant-inactivated collapse in others. Requires a "
-        "two-compartment profile — NOT a rescaled COPD/Bronchospasm preset."
-    ),
-    "condition":                "Meconium Aspiration Syndrome",
-    "population":               "neonate",
-    "weight_kg":                3.2,
-    "respiratory_rate":         45,                   # <50 to protect exp. time — Dargaville
-    "stress_index":             1.10,                 # ASSUMPTION — heterogeneity proxy
-    "tidal_volume_ml":          18,                    # ~5.5 mL/kg — Dargaville
-    "compliance_ml_per_cmH2O":  2.5,                   # DIRECTION sourced, MAGNITUDE not — flag
-    "resistance_cmH2O_L_s":     130,                   # DIRECTION sourced, MAGNITUDE not — flag
-    "ie_ratio":                 0.80,                  # long Ti 0.5-0.7s — Goel & Nangia
-    "rise_time_s":              0.05,                  # ASSUMPTION
-    "peep_cmH2O":                5,
-    "pressure_support_cmH2O":  14,
-    "flow_cycle_threshold":     0.20,
-    "trigger_threshold_cmH2O":  0.5,                   # ASSUMPTION
-    "pmus_peak_cmH2O":          6,
-    "effort_rate_per_min":     45,
-    "effort_duration_s":        0.45,
-    "pmus_cv":                  0.25,                  # ASSUMPTION
-    "pressure_ceiling_cmH2O":  25,                     # PIP up to 30-40 reported — leaves headroom
-    "ett_leak_fraction":        0.15,
-},
-```
-
-`get_condition()`, `get_condition_meta()`, `list_conditions()`, `get_all_meta()`, and `_resolve_key()` need **no code changes** — they're already generic over `CONDITIONS.keys()`. Adding these three entries automatically populates the dashboard's condition dropdown. That's the one piece of this that's genuinely free.
 
 ---
 
@@ -293,24 +137,7 @@ Add three new entries to `CONDITIONS`, following the exact same shape as the exi
 
 This is the part with real duplication risk. `COMPARTMENT_PROFILES` and `RECRUITMENT_SLOPES` are copy-pasted across all five files already (that's the same duplication your SIMV control-loop doc flagged as a `lung_physics.py` refactor candidate) — which means **each new condition has to be added correctly in five places**, and a miss in any one of them doesn't crash, it silently falls back to the adult `"Normal"` compartment profile (`COMPARTMENT_PROFILES.get(condition, COMPARTMENT_PROFILES["Normal"])`). That's a silent-wrong-physics bug, not a loud one — exactly the failure mode your docstring/compartment-count cross-referencing already caught once for Bronchospasm.
 
-**Add to `COMPARTMENT_PROFILES` in all five files:**
 
-```python
-"Normal Neonate": [
-    {"fraction": 1.00, "C_frac": 1.00, "R_frac": 1.00,
-     "R_exp_ratio": 1.2, "tethering": 0.80},   # identical shape to adult Normal
-],
-"RDS": [
-    {"fraction": 1.00, "C_frac": 1.00, "R_frac": 1.00,
-     "R_exp_ratio": 1.3, "tethering": 0.30},   # single compartment — OPEN DECISION, see below
-],
-"Meconium Aspiration Syndrome": [
-    {"fraction": 0.50, "C_frac": 0.90, "R_frac": 2.60,
-     "R_exp_ratio": 5.5, "tethering": 0.00},   # obstructive / ball-valve — no tethering, like Bronchospasm
-    {"fraction": 0.50, "C_frac": 0.25, "R_frac": 1.00,
-     "R_exp_ratio": 1.8, "tethering": 0.20},   # atelectatic / surfactant-inactivated — ARDS-like
-],
-```
 
 **STILL OPEN — this is the one decision left in the whole document.** Every number in the MAS split above is a proposed engineering assumption, not a literature value — the physiology write-up was explicit that quantitative two-compartment MAS parameters don't exist for human neonates, only the qualitative structure (obstructive + atelectatic compartments) does. Given your stated preference to omit unsourced numbers rather than ship guesses, MAS genuinely doesn't fit the same "add the constant, flag it as an assumption" treatment the other items got — the *numbers* aren't sourced, but the *shape* (2 compartments) is, which makes MAS different from something like `NEONATE_ETT_K1` where both the number and the need for a separate value were equally ungrounded. Two honest ways to handle that split:
 

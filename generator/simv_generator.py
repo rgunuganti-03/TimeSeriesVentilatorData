@@ -717,7 +717,7 @@ def _validate_params(params: dict) -> None:
             raise ValueError("Missing required parameter(s): ['insp_pressure_cmH2O'] (mandatory_mode='PC')")
 
     population = params.get("population", "adult")
-    rr_lo, rr_hi = (10, 40) if population == "neonate" else (4, 35)
+    rr_lo, rr_hi = (20, 80) if population == "neonate" else (4, 35)
 
     if not (rr_lo <= float(params["respiratory_rate"])          <= rr_hi):
         raise ValueError(f"respiratory_rate must be {rr_lo}–{rr_hi} bpm")

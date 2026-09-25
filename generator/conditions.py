@@ -292,7 +292,7 @@ CONDITIONS = {
         "effort_duration_s":        0.30,
         "pmus_cv":                  0.25,                 # ASSUMPTION
         "pressure_ceiling_cmH2O":   20,
-        "cuff_leak_fraction":       0.15,
+        "ett_cuff_leak_fraction":       0.15,
     },
 }
 

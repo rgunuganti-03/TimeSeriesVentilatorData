@@ -16,7 +16,7 @@ Before implementing the SIMV generator, the control loop logic for Synchronized 
 
 ## Current State
 
-The control loop logic for SIMV has been fully defined and documented in `Docs/control_loops/SIMV_CONTROL_LOOP.md` (427 lines).
+The control loop logic for SIMV has been fully defined and documented in `Docs/control_loops/SIMV_CONTROL_LOOP.md`.
 
 SIMV was specified as introducing no new lung physics — every equation of motion it needs already exists in `vcv_generator.py`, `pcv_generator.py`, and `psv_generator.py`. What it adds is entirely new scheduling logic: the synchronization window. The mandatory-rate macro-cycle length is `T_mand = 60 / respiratory_rate`, and a window of width `W = f_window × T_mand` opens at `T_mand − W` and closes at `T_mand`. Patient effort attempts occurring before the window opens trigger a spontaneous (PSV-style) breath; attempts occurring inside the window trigger a synchronized mandatory breath immediately; if the window closes with no successful trigger, a time-triggered mandatory breath is delivered at the scheduled time to guarantee the set rate. Once a mandatory breath is triggered — synchronized or time-triggered — patient effort plays no further role in its delivery; the breath proceeds exactly as a plain VCV or PCV breath would, matching how neither of those generators has a patient-effort term in its own equation of motion.
 
