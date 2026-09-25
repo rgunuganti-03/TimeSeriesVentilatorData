@@ -25,6 +25,8 @@ A Python simulation platform that generates physiologically accurate mechanical 
 
 **In progress — neonatal/pediatric extension (CR0023):** three new conditions (Normal Neonate, RDS, Meconium Aspiration Syndrome) are being added on top of the adult platform. Neonatal physiology is modeled as genuinely distinct from adult physiology, not a rescaled version of it — much lower absolute compliance, ETT-dominated resistance, faster rates, and ETT leak (VTi > VTe) as a defining feature. Population-gating is implemented across all five generators and the dashboard sidebar; RDS is implemented as a single compartment, MAS is deferred pending two-compartment modeling, and neonatal dataset generation has not yet been run.
 
+**Also completed recently:** a literature-grounded validation pass across roughly 150 parameter values in conditions.py, a mode-family split (paralyzed vs. spontaneously-breathing patients) that resolved a long-standing Bronchospasm preset inconsistency, and a fix to the non-linear compliance model that removed a confirmed runaway bug in delivered volume. See ARCHITECTURE.md for the full write-up of each.
+
 See `ARCHITECTURE.md` for the full technical breakdown, folder structure, and current status by mode.
 
 ---
@@ -132,10 +134,13 @@ New work is broken into small, numbered CRs before implementation. Each ventilat
 ## Status / roadmap
 
 - ✅ All five adult ventilation modes complete, tested, and dataset-generated
+- ✅ Literature-grounded parameter validation pass across ~150 values in conditions.py, including PRVC's COPD-compliance correction and a new ARDSNet plateau (Pplat ≤ 30 cmH2O) check
+- ✅ Two-regime compliance curve fix applied across all five generators, replacing an earlier formula that could produce unbounded delivered-volume growth under low stress-index conditions
 - 🔶 Neonatal/pediatric extension (CR0023) in progress — Normal Neonate and RDS implemented, MAS deferred, neonatal dataset generation not yet run
 - ⏳ Open PRVC refinements (COPD compliance correction, pressure ceiling preset alignment, ARDSnet plateau check)
 - ⏳ `VALIDATION.md` not yet produced
 - ⏳ Additional regression test categories (scenario-ID completeness, cross-generator constant consistency) identified but not yet implemented
+- ⏳ Further physics fixes scoped for upcoming work: leak modeled as real orifice-equation flow, neonatal recruitment-slope unit switch, flow-starvation detection fix, cross-engine VT calibration, SIMV passive-expiration pressure floor, PSV triggered-rate instrumentation
 
 See `ARCHITECTURE.md` → **Known Open Items** for the full list.
 
