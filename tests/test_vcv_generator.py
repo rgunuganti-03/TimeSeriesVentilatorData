@@ -241,7 +241,15 @@ class TestInterfaceContract:
         for key, values in PARAMETER_GRID.items():
             if len(values) < 2:
                 continue
-            ids = {_make_scenario_id("Normal", {**base_params, key: v}) for v in values}
+            if key == "tidal_volume_ml_per_kg":
+                # Every real caller (generate_dataset, both thinned scripts)
+                # derives tidal_volume_ml = vt_per_kg * weight_kg before
+                # calling _make_scenario_id -- it never reads the per-kg key
+                # directly, so this dimension needs the same derivation here.
+                ids = {_make_scenario_id("Normal", {**base_params, "tidal_volume_ml": v * IBW_KG})
+                    for v in values}
+            else:
+                ids = {_make_scenario_id("Normal", {**base_params, key: v}) for v in values}
             assert len(ids) == len(values), (
                 f"varying {key!r} across {values} produced only {len(ids)} "
                 f"distinct scenario_id(s) instead of {len(values)} -- "

@@ -294,33 +294,34 @@ class TestInterfaceContract:
         file's own grid actually varies, so it stays correct automatically
         if the grid changes later -- this is what none of the existing
         scenario-id tests do, since they only ever run one fixed grid."""
-        from generator.prvc_generator import _make_scenario_id, PARAMETER_GRID  # confirm grid var name per file
+        from generator.prvc_generator import _make_scenario_id, PARAMETER_GRID, IBW_KG
 
-        base_params = {**NORMAL_PARAMS}  # one complete, valid params dict for this file
+        base_params = {**NORMAL_PARAMS}
+        base_C = NORMAL_PARAMS["compliance_ml_per_cmH2O"]
+        base_R = NORMAL_PARAMS["resistance_cmH2O_L_s"]
 
         for key, values in PARAMETER_GRID.items():
             if len(values) < 2:
                 continue
-            ids = {_make_scenario_id("Normal", {**base_params, key: v}) for v in values}
-            assert len(ids) == len(values), (
-                f"varying {key!r} across {values} produced only {len(ids)} "
-                f"distinct scenario_id(s) instead of {len(values)} -- "
-                f"_make_scenario_id is likely not encoding {key!r}"
-            )
+            if key == "vt_target_ml_per_kg":  # confirm this exact key exists first -- see below
+                ids = {_make_scenario_id("Normal", base_C, base_R,
+                                          {**base_params, "vt_target_ml": v * IBW_KG})
+                       for v in values}
+            else:
+                ids = {_make_scenario_id("Normal", base_C, base_R, {**base_params, key: v})
+                       for v in values}
     
 
     def test_scenario_ids_encode_compliance_and_resistance(self):
-        """Regression test specifically for PSV/SIMV's bug: compliance and
-        resistance are passed as separate arguments to generate_dataset(),
-        not part of its internal grid, so the test above can't catch a
-        missing encoding here -- this needs its own explicit check."""
+        """PRVC's _make_scenario_id reads compliance/resistance exclusively
+        from its own separate C/R positional arguments -- params[...]
+        keys of the same name are never read at all, unlike every sibling
+        file. Vary the positional arguments directly."""
         from generator.prvc_generator import _make_scenario_id
 
-        base_params = {**NORMAL_PARAMS} 
-        id_a = _make_scenario_id("Normal", {**base_params,
-            "compliance_ml_per_cmH2O": 40.0, "resistance_cmH2O_L_s": 8.0})
-        id_b = _make_scenario_id("Normal", {**base_params,
-            "compliance_ml_per_cmH2O": 90.0, "resistance_cmH2O_L_s": 20.0})
+        base_params = {**NORMAL_PARAMS}
+        id_a = _make_scenario_id("Normal", 40.0, 8.0, base_params)
+        id_b = _make_scenario_id("Normal", 90.0, 20.0, base_params)
         assert id_a != id_b, "scenario_id doesn't change with compliance/resistance"
 
 

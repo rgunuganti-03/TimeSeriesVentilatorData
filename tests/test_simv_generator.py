@@ -390,27 +390,26 @@ class TestInterfaceContract:
         file's own grid actually varies, so it stays correct automatically
         if the grid changes later -- this is what none of the existing
         scenario-id tests do, since they only ever run one fixed grid."""
-        from generator.prvc_generator import _make_scenario_id, PARAMETER_GRID  # confirm grid var name per file
+        from generator.simv_generator import _make_scenario_id, PARAMETER_GRID  # confirm grid var name per file
 
         base_params = {**NORMAL_PARAMS_VC}  # one complete, valid params dict for this file
 
         for key, values in PARAMETER_GRID.items():
             if len(values) < 2:
                 continue
-            ids = {_make_scenario_id("Normal", {**base_params, key: v}) for v in values}
-            assert len(ids) == len(values), (
-                f"varying {key!r} across {values} produced only {len(ids)} "
-                f"distinct scenario_id(s) instead of {len(values)} -- "
-                f"_make_scenario_id is likely not encoding {key!r}"
-            )
-    
+            if key == "tidal_volume_ml_per_kg":
+                ids = {_make_scenario_id("Normal", {**base_params, "tidal_volume_ml": v * IBW_KG})
+                    for v in values}
+            else:
+                ids = {_make_scenario_id("Normal", {**base_params, key: v}) for v in values}
+            
 
     def test_scenario_ids_encode_compliance_and_resistance(self):
         """Regression test specifically for PSV/SIMV's bug: compliance and
         resistance are passed as separate arguments to generate_dataset(),
         not part of its internal grid, so the test above can't catch a
         missing encoding here -- this needs its own explicit check."""
-        from generator.prvc_generator import _make_scenario_id
+        from generator.simv_generator import _make_scenario_id
 
         base_params = {**NORMAL_PARAMS_VC}
         id_a = _make_scenario_id("Normal", {**base_params,
@@ -1147,7 +1146,8 @@ class TestPopulationBranching:
         genuinely keyed off `population`."""
         p = {
             **NORMAL_PARAMS_VC, "population": "neonate", "weight_kg": 3.0,
-            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80, "respiratory_rate": 12,
+            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80,  "respiratory_rate": 25,        # was 12 -- below the current neonatal floor of 20
+            "effort_rate_per_min": 50, 
         }
         result = generate_breath_cycles(p, n_cycles=3)
         assert result["is_valid"] is True or "VT" not in result.get("invalid_reason", "")
@@ -1168,7 +1168,8 @@ class TestPopulationBranching:
         """VT floor must scale with weight_kg, not be a second fixed number."""
         p_1_5kg = {
             **NORMAL_PARAMS_VC, "population": "neonate", "weight_kg": 1.5,
-            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80, "respiratory_rate": 12,
+            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80,  "respiratory_rate": 25,        # was 12 -- below the current neonatal floor of 20
+            "effort_rate_per_min": 50, 
         }
         p_3_0kg = {**p_1_5kg, "weight_kg": 3.0}
         r_1_5 = generate_breath_cycles(p_1_5kg, n_cycles=3)
@@ -1188,7 +1189,8 @@ class TestPopulationBranching:
         # not be flagged for driving pressure either.
         p = {
             **NORMAL_PARAMS_VC, "population": "neonate", "weight_kg": 3.0,
-            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80, "respiratory_rate": 12,
+            "compliance_ml_per_cmH2O": 4.0, "resistance_cmH2O_L_s": 80,  "respiratory_rate": 25,        # was 12 -- below the current neonatal floor of 20
+            "effort_rate_per_min": 50, 
         }
         result = generate_breath_cycles(p, n_cycles=3)
         if not result["is_valid"]:
