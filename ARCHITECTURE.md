@@ -187,7 +187,7 @@ An earlier bell-curve design (a single symmetric logistic-derivative curve) was 
 
 ### 2. Data Layer (`data/`)
 
-Handles structured storage and export. Each ventilation mode writes to its own subdirectory under `data/exports/`, via a shared `generator/dataset_io_helpers.py` module used by all five `generate_<mode>_dataset_thinned.py` scripts.
+Handles structured storage and export. Each ventilation mode writes to its own subdirectory under `data/exports/`.
 
 **CSV format (time-series export):**
 ```
