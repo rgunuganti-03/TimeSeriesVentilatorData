@@ -1,8 +1,8 @@
 # Architecture — Ventilator Waveform Simulator
 
 **Project:** TimeSeriesVentilatorData — Aiden Medical
-**Version:** 0.6 (Five adult modes complete · Neonatal/pediatric extension in progress — CR0023)
-**Date:** August 2026
+**Version:** 0.7 (Five adult modes complete · Neonatal/pediatric extension in progress — CR0023)
+**Date:** September 2026
 
 ---
 
@@ -47,6 +47,13 @@ time-series-ventilator-data/
 ├── generate_psv_dataset_thinned.py
 ├── generate_prvc_dataset_thinned.py
 ├── generate_simv_dataset_thinned.py
+├── generate_vcv__neonatal_dataset_thinned.py
+├── generate_pcv_neonatal_dataset_thinned.py
+├── generate_psv_neonatal_dataset_thinned.py
+├── generate_prvc_neonatal_dataset_thinned.py
+├── generate_simv_neonatal_dataset_thinned.py
+├── neonatal_thinning.py
+
 │
 ├── data/
 │   ├── exports/
@@ -73,7 +80,7 @@ time-series-ventilator-data/
 │       ├── CR0001_PROJECT_STRUCTURE_REVIEW.md
 │       ├── CR0002_DOCUMENTATION_REVIEW.md
 │       ├── ...
-│       └── CR0023_NEONATAL_CONDITIONS_IMPLEMENTATION_PLAN.md                # Neonatal/pediatric extension (in progress)
+│       └── CR0029_TWO_REGIME_COMPLIANCE_CURVE_REDESIGN.md                
 │
 └── requirements.txt                  # Python dependencies
 ```
@@ -160,8 +167,21 @@ Neonatal physiology is treated as genuinely distinct from adult physiology, not 
 - RDS currently ships as a single compartment; MAS is deferred entirely — it requires genuine two-compartment modeling (an obstructive/air-trapping compartment plus an atelectatic/surfactant-inactivated compartment), and is treated as a distinct pathophysiology rather than a rescaled COPD preset
 - Scenario IDs use population-gated ×10 compliance precision for neonatal scenarios, to avoid sub-1-unit rounding collisions across the much finer neonatal compliance range (particularly in RDS sweeps)
 - Neonatal dataset generation will use parallel, population-specific scripts rather than sharing the adult thinned grid
+- Neonatal ETT Rohrer coefficients (K1, K2): no primary source exists for 3.0 mm tubes. Current best-estimate values are K1 ≈ 14.5, K2 ≈ 180 cmH2O/(L/s)², derived from Bourti 2025 and cross-checked against Manczur 2000 (the primary bench source, using 3.0 mm straight tubes). Guttmann 2000 and Hentschel 2011 have been identified as the most likely true primary sources but have not yet been obtained or confirmed.
 
-**Status:** Population-gating constants and the `_neonate_or_adult()` helper are implemented across all five generator files, and the dashboard sidebar already branches correctly on `is_neonatal`. Not yet complete: MAS's two-compartment model, the five neonatal dataset generation scripts, a shared `dataset_io_helpers.py` update for neonatal-specific manifest columns, formal CR0023 write-up, and `VALIDATION.md`.
+**Status:** Population-gating constants and the `_neonate_or_adult()` helper are implemented across all five generator files, and the dashboard sidebar already branches correctly on `is_neonatal`. Not yet complete: MAS's two-compartment model.
+
+### 1b. Two-Regime Compliance Curve 
+
+The non-linear compliance formula (_compliance_nonlinear) used whenever a compartment's stress_index < 1.0 was redesigned across all five generators after a confirmed runaway bug.
+
+The bug. The original unbounded power-law compliance formula for stress_index < 1.0 had no upper bound on lung volume. Reproduced directly (SIMV, spontaneous breath, COPD, stress_index=0.85, effort_rate=25, pmus_peak=15, trigger_threshold=1.0, seed 37), it produced a 782.85 mL delivered volume on a single breath — clinically nonsensical unbounded growth.
+
+The fix. A two-regime formula. Below a turnover volume (V_turnover = V_turnover_ratio × V_ref), compliance follows the original, unmodified recruiting power-law — byte-identical to the pre-fix formula, so ordinary breaths (VCV's guaranteed full delivery, PCV's high-fill-fraction breaths) see zero behavioral change. Above V_turnover, an independent declining power-law takes over, continuous with Regime 1 at the seam by construction. V_turnover_ratio = 1.4 and stress_index_decline = 15.0 are shared across all five generators, calibrated against the SIMV reproduction case (a monotonic sweep from the original 782.85 mL runaway down to 401.1 mL at ratio 1.4) and cross-checked against two PCV fixtures at high fill fractions (0.887, 0.956) with zero behavioral change. Both constants are explicitly flagged as ASSUMPTIONs — tuned against this project's own bug-reproduction case, not against real pressure-volume curve data.
+
+An earlier bell-curve design (a single symmetric logistic-derivative curve) was tried and rejected: it was found to crush compliance on the recruiting side for ordinary partial-fill breaths (confirmed directly — PCV delivered 6.67 mL instead of 15.25 mL on an otherwise-normal neonatal breath), because a single shared width parameter couldn't bound the pathological tail without also distorting ordinary breaths. The two-regime design removes that coupling entirely.
+
+
 
 ---
 
@@ -246,18 +266,16 @@ Work is broken into small, numbered, sequentially-tracked CR documents under `Do
 | PSV | ✅ | ✅ | ✅ | ✅ | ✅ |
 | PRVC | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SIMV | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Neonatal/Pediatric (CR0023) | 🔶 partial | 🔶 partial | 🔶 in progress | ❌ not started | 🔶 sliders gated |
+| Neonatal/Pediatric (CR0023) | 🔶 partial | 🔶 partial | 🔶 Normal Neonate + RDS done, MAS pending | ❌ scripts written, not yet run | 🔶 sliders gated |
 
 ---
 
 ## Known Open Items
 
 - **MAS (Meconium Aspiration Syndrome):** deferred — requires a genuine two-compartment model (obstructive/air-trapping + atelectatic/surfactant-inactivated), distinct from a single-compartment preset
-- **PRVC — COPD compliance:** currently set at 100 mL/cmH₂O; correction to 65–80 mL/cmH₂O identified but not applied
 - **PRVC — `pressure_ceiling_cmH2O` preset misalignment** for Mild ARDS and Pneumonia, not yet resolved
 - **PRVC — unresolved terminal state:** ~20% of scenarios (up to 31% in Normal) are neither converged nor ceiling-limited when `n_cycles` runs out; not yet distinguished empirically between genuine oscillation and an insufficient cycle budget
 - **`VALIDATION.md`** has not yet been produced — no formal document yet defines what "physiologically plausible" means for this project across all modes
-- **Shared `generator/lung_physics.py` refactor:** flagged as an open architecture question (would deduplicate physics logic currently copied across all five generator files) but not undertaken
 
 ---
 
@@ -266,6 +284,7 @@ Work is broken into small, numbered, sequentially-tracked CR documents under `Do
 - **Physiological correctness over rescaling.** RDS is a compliance-collapse disease with near-normal resistance — not a rescaled Severe ARDS. MAS is genuinely heterogeneous and two-compartment — not a rescaled COPD preset. Condition identity is grounded in distinct pathophysiology, not parameter scaling.
 - **Neonatal physiology is not scaled-down adult physiology** — different absolute magnitudes, different dominant mechanisms (ETT resistance vs. airway resistance), and an entirely new phenomenon (leak) with no adult analogue.
 - **Hardcoded safety/validity constants must be population-gated**, not just parameter-gated — an adult-only constant will silently reject valid neonatal input rather than erroring loudly.
+- **Mode-family determines which parameter blocks are active.** VCV, PCV, and PRVC model paralyzed/deeply sedated patients (the patient-effort term is zeroed); PSV and SIMV model spontaneously breathing/recovering patients. Conflating paralyzed- and spontaneous-patient parameters in a single condition preset creates physiological contradictions — this was the root cause of a long-standing Bronchospasm preset inconsistency, now resolved by this split.
 - **`t_cursor` running-sum time tracking** replaces the nominal-clock formula (`t0 = cycle * t_cycle`) to prevent time-monotonicity failures from independently-rounded sample counts.
 - **Condition switching alone does not reduce multi-compartment compliance capacity** — normalization in `C_comps_base` preserves the sum across compartments, so explicit mechanics parameters must be supplied rather than relying on condition switching to imply a mechanics change.
 
