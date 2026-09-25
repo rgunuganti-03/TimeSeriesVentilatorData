@@ -278,6 +278,7 @@ Work is broken into small, numbered, sequentially-tracked CR documents under `Do
 - **Leak as a real orifice-equation flow:** leak is currently modeled as a fixed-fraction scalar (cuff_leak); the remaining fix would model it as real orifice-equation flow, which is what should drive PSV cycling failure and the auto-triggering behavior expected in uncuffed neonatal ETTs
 - **Neonatal recruitment slope units:** currently absolute mL/cmH2O; remaining fix is to switch to fractional units with a saturation cap
 - **Flow starvation detection tautology:** detection currently samples flow at t=0 for Q_at_trigger; the fix is to replace this with Q_peak_insp
+- **Cross-engine VT calibration:** depends on the neonatal recruitment-slope fix above landing first
 
 ---
 
