@@ -276,6 +276,9 @@ Work is broken into small, numbered, sequentially-tracked CR documents under `Do
 - **PRVC — `pressure_ceiling_cmH2O` preset misalignment** for Mild ARDS and Pneumonia, not yet resolved
 - **PRVC — unresolved terminal state:** ~20% of scenarios (up to 31% in Normal) are neither converged nor ceiling-limited when `n_cycles` runs out; not yet distinguished empirically between genuine oscillation and an insufficient cycle budget
 - **`VALIDATION.md`** has not yet been produced — no formal document yet defines what "physiologically plausible" means for this project across all modes
+- Leak as a real orifice-equation flow: leak is currently modeled as a fixed-fraction scalar (cuff_leak); the remaining fix would model it as real orifice-equation flow, which is what should drive PSV cycling failure and the auto-triggering behavior expected in uncuffed neonatal ETTs
+- Neonatal recruitment slope units: currently absolute mL/cmH2O; remaining fix is to switch to fractional units with a saturation cap
+- Flow starvation detection tautology: detection currently samples flow at t=0 for Q_at_trigger; the fix is to replace this with Q_peak_insp
 
 ---
 
