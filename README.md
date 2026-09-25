@@ -101,8 +101,7 @@ time-series-ventilator-data/
 ├── generator/                      # All waveform generation logic
 │   ├── conditions.py                # Condition presets
 │   ├── vcv_generator.py / pcv_generator.py / psv_generator.py /
-│   │   prvc_generator.py / simv_generator.py
-│   └── dataset_io_helpers.py        # Shared dataset export helpers
+│   └──   prvc_generator.py / simv_generator.py
 ├── generate_<mode>_dataset_thinned.py   # One batch generation script per mode
 ├── data/exports/<mode>/             # Generated manifests + generation logs
 ├── ui/dashboard.py                  # Streamlit dashboard
