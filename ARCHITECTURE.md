@@ -247,7 +247,6 @@ Each mode has a dedicated test file (`test_<mode>_generator.py`) covering interf
 **Test categories identified but not yet implemented:**
 - Scenario-ID completeness regression tests (the scenario-ID collision bug class has now been caught independently in PSV, PRVC, and SIMV — each time by the first workflow that actually swept multiple mechanics pairs within a tier, never by a generator's own smoke test)
 - `generate_dataset()` vs. `generate_breath_cycles()` cross-checks
-- `tests/test_cross_generator_consistency.py`, asserting shared constants stay identical across the five generator files
 
 ---
 
