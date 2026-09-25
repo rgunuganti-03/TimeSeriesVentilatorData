@@ -279,6 +279,8 @@ Work is broken into small, numbered, sequentially-tracked CR documents under `Do
 - **Neonatal recruitment slope units:** currently absolute mL/cmH2O; remaining fix is to switch to fractional units with a saturation cap
 - **Flow starvation detection tautology:** detection currently samples flow at t=0 for Q_at_trigger; the fix is to replace this with Q_peak_insp
 - **Cross-engine VT calibration:** depends on the neonatal recruitment-slope fix above landing first
+- **PSV triggered-rate instrumentation and regression test:** still open
+- **PSV-specific two-regime compliance calibration:** the shared V_turnover_ratio/stress_index_decline constants were calibrated against SIMV's reproduction case, not independently re-derived for PSV's own dynamics (see 1b) — assessed as low urgency
 
 ---
 
