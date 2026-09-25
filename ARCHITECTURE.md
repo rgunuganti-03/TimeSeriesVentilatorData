@@ -109,7 +109,7 @@ def generate_breath_cycles(params: dict, n_cycles: int = 5, seed: int = None) ->
     # }
 ```
 
-All five modes are implemented and all have completed control-loop documentation, a literature-grounded parameter grid, generator implementation with unit tests, and a thinned dataset generation run. A future refactor into a shared `generator/lung_physics.py` module has been noted (would let all five generators call the same underlying physics functions instead of maintaining parallel copies that can drift) but has not been undertaken — it is explicitly flagged as an open architecture question rather than resolved.
+All five modes are implemented and all have completed control-loop documentation, a literature-grounded parameter grid, generator implementation with unit tests, and a thinned dataset generation run. 
 
 **VCV — Volume-Controlled Ventilation (complete):**
 - `vcv_generator.py` — the ventilator prescribes flow; pressure is the dependent variable computed from the equation of motion
@@ -144,7 +144,6 @@ All five modes are implemented and all have completed control-loop documentation
 - The only engine among the five that must carry compartment volume and auto-PEEP state continuously across breath-type transitions (mandatory ↔ spontaneous)
 - Explicit breath-stacking prevention built into the scheduling logic
 - Resolved bugs during implementation: missing refractory gap after mandatory breaths, `delivered_vt_ml` reporting absolute rather than delta volume, deterministic attempt timing causing phase-lock between clocks, a missing final expiration causing inflated auto-PEEP readings, and an unphysical negative-pressure floor during passive exhalation — all fixed and covered by regression tests (CR0019–CR0022)
-- A literature accuracy issue was also identified and corrected: an earlier citation of Tokioka et al. 2001 had inverted that paper's actual findings on flow-cycle thresholds
 
 ---
 
@@ -242,7 +241,7 @@ Same interface contract throughout — the UI and data layers require no modific
 
 ## Testing (`tests/`)
 
-Each mode has a dedicated test file (`test_<mode>_generator.py`) covering interface contract, physiological plausibility, waveform shape, all condition presets, and mode-specific behavior (e.g. PSV's `TestDyssynchrony` and `TestETTComplications`, PRVC's convergence/ceiling-limited terminal-state tests, SIMV's compartment-continuity and breath-stacking tests). The full suite stood at 154 tests as of SIMV's completion, before the neonatal extension's test additions.
+Each mode has a dedicated test file (`test_<mode>_generator.py`) covering interface contract, physiological plausibility, waveform shape, all condition presets, and mode-specific behavior (e.g. PSV's `TestDyssynchrony` and `TestETTComplications`, PRVC's convergence/ceiling-limited terminal-state tests, SIMV's compartment-continuity and breath-stacking tests). 
 
 **Test categories identified but not yet implemented:**
 - Scenario-ID completeness regression tests (the scenario-ID collision bug class has now been caught independently in PSV, PRVC, and SIMV — each time by the first workflow that actually swept multiple mechanics pairs within a tier, never by a generator's own smoke test)
