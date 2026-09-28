@@ -184,7 +184,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
+import hashlib
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from generator.simv_generator import generate_breath_cycles, IBW_KG
 from generator.simv_generator import _make_scenario_id
@@ -271,7 +271,7 @@ def _make_deterministic_seed(condition: str, C: float, R: float, mode: str,
     key = (condition, round(C, 1), round(R, 1), mode,
            tuple(round(v, 3) if isinstance(v, float) else v for v in shared_combo),
            tuple(round(v, 3) if isinstance(v, float) else v for v in mode_combo))
-    return int(abs(hash(key))) % (2 ** 31)
+    return int.from_bytes(hashlib.sha256(repr(key).encode("utf-8")).digest()[:4], "big")
 
 
 def _generate_thinned_dataset(condition_name: str, compliance_ml_per_cmH2O: float,

@@ -677,7 +677,6 @@ def _classify_dyssynchrony(triggered: bool,
     Q_peak              : peak inspiratory flow this breath (L/s)
     flow_cycle_threshold: fraction of peak flow at which ventilator cycled
     ps_level            : set pressure support (cmH2O)
-    Q_at_trigger        : flow at the moment of trigger (L/s)
     Q_demand            : estimated patient flow demand = Pmus_peak / R_eff
     """
     if not triggered:

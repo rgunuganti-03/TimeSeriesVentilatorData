@@ -43,7 +43,7 @@ Run with:
 
 import os
 import sys
-
+import subprocess
 import numpy as np
 import pytest
 
@@ -383,6 +383,7 @@ class TestInterfaceContract:
         bad = {**NORMAL_PARAMS_VC, key: bad_value}
         with pytest.raises(ValueError):
             generate_breath_cycles(bad)
+
     def test_scenario_ids_encode_every_swept_parameter(self):
         """Regression test for the scenario-ID collision bug class already
         caught reactively in PSV, PRVC, and SIMV. Tests _make_scenario_id()
@@ -447,7 +448,16 @@ class TestInterfaceContract:
                 assert actual == pytest.approx(expected, rel=1e-6), (
                     f"metrics[{key!r}] mismatch: dataset row={expected}, direct call={actual}"
                 )
-
+    def test_dataset_seeds_stable_across_processes(self):
+        code = ("import json;from generator.simv_generator import generate_dataset;"
+                "rows=generate_dataset('Normal',60.0,10.0,n_cycles=1,max_scenarios=3);"
+                "print(json.dumps([r['seed'] for r in rows]))")
+        outs = []
+        for hs in ("1", "2"):
+            env = {**os.environ, "PYTHONHASHSEED": hs}
+            outs.append(subprocess.run([sys.executable, "-c", code], capture_output=True,
+                                    text=True, env=env, check=True).stdout.strip())
+        assert outs[0] == outs[1], "scenario seeds differ between processes"
 
 # ---------------------------------------------------------------------------
 # Class 2 — Physiological plausibility

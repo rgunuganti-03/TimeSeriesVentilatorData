@@ -109,6 +109,7 @@ RDS_PARAMS = {
     "rise_time_s":              0.03,
     "peep_cmH2O":                6,
     "insp_pressure_cmH2O":      14.0,
+    "stress_index":             0.85,
 }
 
 

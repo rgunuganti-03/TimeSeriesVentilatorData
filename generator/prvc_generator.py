@@ -167,6 +167,7 @@ RISE_TIME_S: float = 0.10
 # testing, but the standard dataset generation uses these for every
 # condition -- see PARAMETER_GRID note above).
 ADAPTATION_STEP_CMH2O_DEFAULT: float = 2.0
+MIN_ADAPTATION_STEP_CMH2O: float = 0.25 
 VT_TOLERANCE_FRAC_DEFAULT: float     = 0.10
 PRESSURE_FLOOR_ABOVE_PEEP: float     = 5.0   # never let working pressure collapse below this
 
@@ -815,6 +816,8 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
     breaths_to_converge: Optional[int] = None
     stable_count = 0
     recent_vts: List[float] = []
+    step_size = adaptation_step
+    prev_err_sign: Optional[float] = None
 
     for n in range(n_cycles):
         breath_num = n + 1
@@ -904,8 +907,20 @@ def generate_breath_cycles(params: Dict, n_cycles: int = 12, seed: int = 0) -> D
 
             if breath_num < n_cycles:
                 if not in_tolerance:
-                    step = adaptation_step if error_frac > 0 else -adaptation_step
-                    P_work_next = P_work_this_breath + step
+                    err_sign = 1.0 if error_frac > 0 else -1.0
+                    if prev_err_sign is not None and err_sign != prev_err_sign:
+                        # Sign flip vs. the last real step = that step
+                        # overshot the tolerance band: halve the step size
+                        # (damping) rather than repeat a fixed-amplitude
+                        # correction forever. Fixes a confirmed, fully
+                        # deterministic limit cycle (PRVC has no stochastic
+                        # elements) where the 2-breath VT averaging window
+                        # makes every other breath look falsely converged,
+                        # causing the controller to alternate step direction
+                        # indefinitely instead of settling.
+                        step_size = max(step_size / 2.0, MIN_ADAPTATION_STEP_CMH2O)
+                    prev_err_sign = err_sign
+                    P_work_next = P_work_this_breath + err_sign * step_size
                 else:
                     P_work_next = P_work_this_breath
                 P_work_ceiling = pressure_ceiling

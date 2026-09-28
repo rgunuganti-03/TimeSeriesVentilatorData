@@ -174,6 +174,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
+import hashlib
 
 import numpy as np
 
@@ -1489,6 +1490,11 @@ def _make_scenario_id(condition_name: str, params: dict) -> str:
 def _timestamp() -> str:
     return datetime.now(timezone.utc).isoformat()
 
+def _stable_seed(*key_parts) -> int:
+    """Process-independent seed. Built-in hash() is salted per process for
+    str, so it cannot give reproducible seeds across runs."""
+    key = repr(key_parts).encode("utf-8")
+    return int.from_bytes(hashlib.sha256(key).digest()[:4], "big") % (2**31)
 
 def generate_dataset(condition_name: str, compliance_ml_per_cmH2O: float,
                       resistance_cmH2O_L_s: float, n_cycles: int = 10,
@@ -1545,9 +1551,9 @@ def generate_dataset(condition_name: str, compliance_ml_per_cmH2O: float,
                 scenario_id = _make_scenario_id(condition_name, params)
                 count += 1
 
-                scenario_seed = int(abs(hash(
-                    (condition_name, mode, shared_combo, mode_combo)
-                )) % (2**31))
+                scenario_seed = _stable_seed(
+                    condition_name, compliance_ml_per_cmH2O, resistance_cmH2O_L_s,
+                    mode, shared_combo, mode_combo)
 
                 try:
                     result = generate_breath_cycles(params, n_cycles=n_cycles, seed=scenario_seed)

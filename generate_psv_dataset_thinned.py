@@ -121,6 +121,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import hashlib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -317,7 +318,11 @@ def _make_deterministic_seed(condition: str, C: float, R: float,
     """
     Compute a deterministic seed from scenario parameters so that the same
     scenario always produces the same stochastic Pmus draws.
-    Uses Python's hash() with a fixed string representation.
+
+    Uses hashlib.sha256 rather than Python's built-in hash(), which is
+    intentionally salted per-process for str/tuple values (PYTHONHASHSEED)
+    and would silently produce a different seed on every run.
+    
     """
     key = (
         condition,
@@ -332,7 +337,7 @@ def _make_deterministic_seed(condition: str, C: float, R: float,
         round(patient["effort_duration_s"], 2),
         round(patient["pmus_cv"], 3),
     )
-    return int(abs(hash(key))) % (2 ** 31)
+    return int.from_bytes(hashlib.sha256(repr(key).encode("utf-8")).digest()[:4], "big") % (2 ** 31)
 
 
 def _dyssynchrony_counts(labels: list) -> dict:

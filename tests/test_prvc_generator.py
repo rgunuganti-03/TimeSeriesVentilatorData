@@ -146,6 +146,7 @@ RDS_PARAMS = {
     "ie_ratio":                 0.33,
     "rise_time_s":              0.03,
     "peep_cmH2O":                6,
+    "stress_index":             0.85,
 }
 
 

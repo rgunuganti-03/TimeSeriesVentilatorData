@@ -85,6 +85,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import hashlib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from generator.prvc_generator import (
@@ -189,8 +190,9 @@ def _generate_thinned_dataset(
         scenario_id = _make_scenario_id(
             condition_name, compliance_ml_per_cmH2O, resistance_cmH2O_L_s, params
         )
-        seed = abs(hash((condition_name, compliance_ml_per_cmH2O,
-                          resistance_cmH2O_L_s, tuple(combo)))) % (2**31)
+        seed = int.from_bytes(hashlib.sha256(repr(
+            (condition_name, compliance_ml_per_cmH2O, resistance_cmH2O_L_s, tuple(combo))
+        ).encode("utf-8")).digest()[:4], "big") % (2**31)
 
         try:
             result = generate_breath_cycles(params, n_cycles=n_cycles, seed=seed)
