@@ -1620,6 +1620,7 @@ def generate_dataset(condition_name: str,
                 "waveforms":      {},
                 "breath_dyssynchrony_labels": [],
                 "generated_at":   _timestamp(),
+                "seed":           scenario_seed,
             })
             continue
 
@@ -1655,6 +1656,7 @@ def generate_dataset(condition_name: str,
             "waveforms":      waveforms,
             "breath_dyssynchrony_labels": result.get("breath_dyssynchrony_labels", []),
             "generated_at":   _timestamp(),
+            "seed":           scenario_seed,
         })
 
     return scenarios

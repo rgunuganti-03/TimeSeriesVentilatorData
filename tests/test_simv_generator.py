@@ -400,6 +400,14 @@ class TestInterfaceContract:
             if key == "tidal_volume_ml_per_kg":
                 ids = {_make_scenario_id("Normal", {**base_params, "tidal_volume_ml": v * IBW_KG})
                     for v in values}
+            elif key == "mandatory_mode":
+                # VC and PC require genuinely different fields (tidal_volume_ml/
+                # flow_pattern vs. insp_pressure_cmH2O) -- overriding just this
+                # one key on a VC-based base_params can't produce a valid PC
+                # scenario, so swap in the matching complete fixture per value
+                # instead.
+                mode_fixtures = {"VC": NORMAL_PARAMS_VC, "PC": NORMAL_PARAMS_PC}
+                ids = {_make_scenario_id("Normal", mode_fixtures[v]) for v in values}
             else:
                 ids = {_make_scenario_id("Normal", {**base_params, key: v}) for v in values}
             
@@ -417,6 +425,28 @@ class TestInterfaceContract:
         id_b = _make_scenario_id("Normal", {**base_params,
             "compliance_ml_per_cmH2O": 90.0, "resistance_cmH2O_L_s": 20.0})
         assert id_a != id_b, "scenario_id doesn't change with compliance/resistance"
+    
+    def test_dataset_row_metrics_match_direct_generate_breath_cycles_call(self):
+        """generate_dataset() is meant to be a thin sweep wrapper around
+        generate_breath_cycles() and nothing else. Pick a real row from a
+        sweep, feed that row's own params straight back into
+        generate_breath_cycles() directly, and confirm the results match --
+        guards against the two code paths silently diverging (a stale
+        default, an unseeded random draw, a metric computed differently)."""
+        scenarios = generate_dataset("Normal", 60.0, 10.0, n_cycles=3,max_scenarios=200)
+        valid_scenarios = [s for s in scenarios if s["is_valid"]]
+        assert valid_scenarios, "fixture produced no valid scenarios to check"
+
+        row = valid_scenarios[len(valid_scenarios) // 2]  # a real mid-sweep row, not just the first
+        direct = generate_breath_cycles(row["params"], n_cycles=3, seed=row["seed"])
+
+        assert direct["is_valid"] == row["is_valid"]
+        for key, expected in row["metrics"].items():
+            actual = direct.get(key)
+            if isinstance(expected, (int, float)):
+                assert actual == pytest.approx(expected, rel=1e-6), (
+                    f"metrics[{key!r}] mismatch: dataset row={expected}, direct call={actual}"
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -1383,25 +1413,8 @@ class TestParameterGrid:
             assert len(values) >= 2, f"{key} needs >= 2 values for a real sweep"
 
 if __name__ == "__main__":
-    # r = generate_breath_cycles({**COPD_PARAMS, "stress_index": 0.85,
-    #                          "effort_rate_per_min": 25.0, "pmus_peak_cmH2O": 15.0,
-    #                          "trigger_threshold_cmH2O": 1.0}, n_cycles=10, seed=37)
-    # print(r["spontaneous_delivered_vt_ml"], r["is_valid"])
-    # print(r["invalid_reason"])
-
-    # 
-    # 
-    # r_rds = generate_breath_cycles(RDS_PARAMS, n_cycles=10, seed=42)
-    # idx_peak = int(np.argmax(r_rds["pressure"]))
-    # t_peak = r_rds["time"][idx_peak]
-    # print("peak pressure index/time:", idx_peak, t_peak)
-    # for b in r_rds["breath_records"]:
-    #     if b["t_start_s"] <= t_peak <= b["t_start_s"] + b["duration_s"]:
-    #         print("breath containing the peak:", b)
     
-    # 
-    p_neo_low_c = {**NORMAL_NEONATE_PARAMS, "stress_index": 0.85}
-    r = generate_breath_cycles(p_neo_low_c, n_cycles=5)
-    print("delivered_vt_ml:", r["delivered_vt_ml"])
-    print("ppeak_cmH2O:", r["ppeak_cmH2O"])
-    print("is_valid:", r["is_valid"], r["invalid_reason"])
+    import time
+    t0 = time.perf_counter()
+    r = generate_dataset("Normal", 60.0, 10.0, n_cycles=3)
+    print(f"{len(r)} scenarios in {time.perf_counter() - t0:.1f}s")

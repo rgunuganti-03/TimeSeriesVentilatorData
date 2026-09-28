@@ -348,6 +348,28 @@ class TestInterfaceContract:
             "compliance_ml_per_cmH2O": 90.0, "resistance_cmH2O_L_s": 20.0})
         assert id_a != id_b, "scenario_id doesn't change with compliance/resistance"
 
+    def test_dataset_row_metrics_match_direct_generate_breath_cycles_call(self):
+        """generate_dataset() is meant to be a thin sweep wrapper around
+        generate_breath_cycles() and nothing else. Pick a real row from a
+        sweep, feed that row's own params straight back into
+        generate_breath_cycles() directly, and confirm the results match --
+        guards against the two code paths silently diverging (a stale
+        default, an unseeded random draw, a metric computed differently)."""
+        scenarios = generate_dataset("Normal", 60.0, 10.0, n_cycles=3)
+        valid_scenarios = [s for s in scenarios if s["is_valid"]]
+        assert valid_scenarios, "fixture produced no valid scenarios to check"
+
+        row = valid_scenarios[len(valid_scenarios) // 2]  # a real mid-sweep row, not just the first
+        direct = generate_breath_cycles(row["params"], n_cycles=3, seed=row["seed"])
+
+        assert direct["is_valid"] == row["is_valid"]
+        for key, expected in row["metrics"].items():
+            actual = direct.get(key)
+            if isinstance(expected, (int, float)):
+                assert actual == pytest.approx(expected, rel=1e-6), (
+                    f"metrics[{key!r}] mismatch: dataset row={expected}, direct call={actual}"
+                )
+
 
 # ---------------------------------------------------------------------------
 # Class 2 — Physiological Plausibility

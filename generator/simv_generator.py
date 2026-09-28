@@ -1545,14 +1545,19 @@ def generate_dataset(condition_name: str, compliance_ml_per_cmH2O: float,
                 scenario_id = _make_scenario_id(condition_name, params)
                 count += 1
 
+                scenario_seed = int(abs(hash(
+                    (condition_name, mode, shared_combo, mode_combo)
+                )) % (2**31))
+
                 try:
-                    result = generate_breath_cycles(params, n_cycles=n_cycles)
+                    result = generate_breath_cycles(params, n_cycles=n_cycles, seed=scenario_seed)
                 except ValueError as e:
                     scenarios.append({
                         "scenario_id": scenario_id, "condition": condition_name,
                         "params": params, "metrics": {}, "is_valid": False,
                         "invalid_reason": str(e), "waveforms": {},
                         "generated_at": _timestamp(),
+                        "seed": scenario_seed,
                     })
                     continue
 
@@ -1579,6 +1584,7 @@ def generate_dataset(condition_name: str, compliance_ml_per_cmH2O: float,
                     "waveforms": waveforms,
                     "breath_records": result.get("breath_records", []),
                     "generated_at": _timestamp(),
+                    "seed": scenario_seed,
                 })
 
     return scenarios
